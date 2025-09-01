@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>racers.fun - Waifu Racing Battles</title>
+    <link rel="icon" type="image/png" href="images/ui/favicon.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div id="animatedBg"></div>
+    <div class="particles" id="particles"></div>
+
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Summoning Waifus...</div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <h1>racers.fun</h1>
+        </div>
+        <div class="wallet-controls">
+            <button class="wallet-btn" id="walletBtn">Connect</button>
+            <div class="wallet-actions" id="walletActions" style="display: none;">
+                <button class="deposit-btn" id="depositBtn">Deposit</button>
+                <button class="withdraw-btn" id="withdrawBtn">Withdraw</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Chat Panel -->
+        <div class="chat-panel" id="chatPanel">
+            <div class="chat-collapse-btn" id="chatCollapseBtn">
+                <div class="notification-badge" id="notificationBadge">3</div>
+                <span class="collapse-icon">◀</span>
+            </div>
+            <div class="chat-header">
+                <div class="online-indicator">
+                    <div class="online-dot"></div>
+                    <span>Online: <span id="onlineCount">1337</span></span>
+                </div>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-container">
+                <input type="text" id="chatInput" placeholder="Connect wallet to chat..." disabled style="width: 100%; padding: 10px 12px; background: rgba(30, 30, 40, 0.9); border: 1px solid rgba(147, 51, 234, 0.5); border-radius: 8px; color: white; font-size: 14px; outline: none; transition: all 0.2s ease;">
+            </div>
+            <div class="chat-rules" id="chatRules">
+                <div class="solana-price">
+                    <span class="price-label">◎</span>
+                    <span class="price-value" id="solanaPrice">$0.00</span>
+                </div>
+                <div class="rules-icons">
+                    <span>🔊</span>
+                    <span>❓</span>
+                    <span>⚖️</span>
+                </div>
+            </div>
+            
+            <!-- Name Selection UI -->
+            <div class="name-selection" id="nameSelection" style="display: none;">
+                <div class="name-input-container">
+                    <input type="text" id="nameInput" placeholder="Enter your username..." maxlength="20" style="width: 100%; padding: 10px 12px; background: rgba(30, 30, 40, 0.9); border: 1px solid rgba(147, 51, 234, 0.5); border-radius: 8px; color: white; font-size: 14px; outline: none; transition: all 0.2s ease;">
+                </div>
+                <button class="confirm-name-btn" id="confirmNameBtn">Confirm Name</button>
+            </div>
+        </div>
+
+        <!-- Game Panel -->
+        <div class="game-panel">
+            <div class="race-info">
+                <div>
+                    <h2 style="font-size: 24px; margin-bottom: 5px;">Race #<span id="raceNumber">1</span></h2>
+                    <span style="color: #9ca3af;">Next race in: <span id="nextRaceTime">60s</span></span>
+                </div>
+                <div class="race-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalPot">0 SOL</div>
+                        <div class="stat-label">Total Pot</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalBets">0</div>
+                        <div class="stat-label">Total Bets</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="myBets">0 SOL</div>
+                        <div class="stat-label">My Bets</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="race-track-container">
+                <canvas id="raceCanvas"></canvas>
+                <div class="race-overlay" id="raceOverlay">
+                    <div class="countdown-display" id="countdown">60</div>
+                </div>
+            </div>
+
+            <!-- Winner Modal -->
+            <div class="winner-modal" id="winnerModal">
+                <div class="winner-content">
+                    <div class="victory-section">
+                        <div class="victory-header">
+                            <h2 class="victory-title">VICTORY!</h2>
+                        </div>
+                        <div class="winner-racer-display" id="winnerDisplay"></div>
+                    </div>
+                    <div class="race-statistics" id="raceStatistics">
+                        <div class="stats-header">
+                            <h3>Race Statistics</h3>
+                        </div>
+                        <div class="pot-summary">
+                            <div class="stats-subheader">
+                                <h4>Pot Summary</h4>
+                            </div>
+                            <div class="stats-content" id="potSummary"></div>
+                        </div>
+                        <div class="top-winners">
+                            <div class="stats-subheader">
+                                <h4>Top Winners</h4>
+                            </div>
+                            <div class="stats-content" id="topWinners"></div>
+                        </div>
+                        <div class="your-results">
+                            <div class="stats-subheader">
+                                <h4>Your Results</h4>
+                            </div>
+                            <div class="stats-content" id="yourResults"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Betting Panel -->
+        <div class="betting-panel">
+            <div class="panel-header">
+                <h2>Place Your Bets</h2>
+            </div>
+            
+            <!-- Character Selection -->
+            <div class="character-selection">
+                <div class="selected-character" id="selectedCharacter">
+                    <h3 id="selectedCharacterName">Select a Character</h3>
+                </div>
+                <div class="character-grid" id="characterGrid"></div>
+            </div>
+            
+            <!-- Betting Options -->
+            <div class="betting-options">
+                <div class="quick-bets">
+                    <h4>Quick Bets</h4>
+                    <div class="quick-bet-buttons">
+                        <button class="quick-bet-btn" data-amount="1">1 SOL</button>
+                        <button class="quick-bet-btn" data-amount="3">3 SOL</button>
+                        <button class="quick-bet-btn" data-amount="5">5 SOL</button>
+                        <input type="number" id="customBetAmount" placeholder="_ SOL" min="0.1" step="0.1">
+                    </div>
+                    <button class="place-bet-btn" id="placeBetBtn">Place Bet - 0.0 SOL</button>
+                </div>
+            </div>
+            
+            <!-- Live Betting Distribution -->
+            <div class="betting-distribution">
+                <div class="distribution-header">
+                    <h4>Live Betting Distribution</h4>
+                    <div class="favorite-info">
+                        <span>Favorite: </span>
+                        <span id="favoriteCharacter">None</span>
+                        <span id="favoritePercentage">(0%)</span>
+                    </div>
+                </div>
+                
+                <div class="distribution-content">
+                    <div class="pie-chart-container">
+                        <canvas id="pieChart" width="250" height="250"></canvas>
+                        <div class="pie-chart-center">
+                            <img src="" alt="" id="centerCharacterImg">
+                        </div>
+
+                    </div>
+                    
+                    <div class="distribution-legend" id="distributionLegend"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deposit Modal -->
+    <div class="deposit-modal" id="depositModal">
+        <div class="deposit-content">
+            <div class="deposit-header">
+                <h2>Deposit</h2>
+                <button class="close-btn" id="closeDepositModal">×</button>
+            </div>
+            
+            <div class="deposit-body">
+                <div class="token-section">
+                    <label>Token</label>
+                    <div class="token-selector">
+                        <div class="token-option selected">
+                            <div class="token-icon">◎</div>
+                            <div class="token-info">
+                                <span class="token-name">SOL</span>
+                                <span class="token-label">Solana</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="balance-section">
+                    <div class="balance-info">
+                        <span class="balance-usd" id="walletBalanceUSD">≈ $0.00 USD</span>
+                        <span class="balance-amount" id="walletBalance">Balance: 0.000 SOL</span>
+                    </div>
+                </div>
+                
+                <div class="amount-section">
+                    <label>Amount</label>
+                    <div class="amount-input-container">
+                        <input type="number" id="depositAmount" placeholder="0.00" step="0.01" min="0.01">
+                        <span class="amount-usd">= $0.00</span>
+                        <div class="token-unit">◎</div>
+                    </div>
+                </div>
+                
+                <div class="fee-info">
+                    <span class="fee-text">Enjoy 0% fees on SOL deposits & withdrawals!</span>
+                </div>
+                
+                <button class="deposit-action-btn" id="confirmDepositBtn">
+                    DEPOSIT NOW
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sound Toggle -->
+    <div class="sound-toggle" id="soundToggle">
+        <span class="sound-icon">��</span>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script type="module" src="privy-loader.js"></script>
+    <script src="script.js"></script>
+</body>
+</html> 
