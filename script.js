@@ -44,8 +44,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         await initializePrivy();
         console.log('✅ Privy initialized');
         
-        await initializeWebSockets();
-        console.log('✅ WebSockets initialized');
+        // Try to initialize WebSockets, but don't fail if it doesn't work
+        try {
+            await initializeWebSockets();
+            console.log('✅ WebSockets initialized');
+        } catch (wsError) {
+            console.warn('⚠️ WebSocket initialization failed, continuing without real-time features:', wsError);
+        }
         
         initializeUI();
         console.log('✅ UI initialized');
@@ -54,11 +59,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('✅ Application started');
         
         console.log('✅ Application initialized successfully');
+        
+        // Hide loading screen
+        hideLoadingScreen();
     } catch (error) {
         console.error('❌ Failed to initialize application:', error);
         showError('Failed to initialize application. Please refresh the page.');
+        
+        // Hide loading screen even if there's an error
+        hideLoadingScreen();
     }
 });
+
+// Hide loading screen
+function hideLoadingScreen() {
+    const loadingScreen = document.getElementById('loadingScreen');
+    if (loadingScreen) {
+        loadingScreen.style.opacity = '0';
+        setTimeout(() => {
+            loadingScreen.style.display = 'none';
+            document.body.classList.add('loaded');
+        }, 500); // Wait for transition
+    }
+}
 
 // Privy initialization
 async function initializePrivy() {
@@ -703,11 +726,13 @@ async function startApplication() {
     try {
         await fetchCurrentRace();
         
-        if (appState.isAuthenticated && appState.currentRace) {
+        // Only try to join race if WebSocket is connected
+        if (appState.isAuthenticated && appState.currentRace && appState.raceSocket && appState.raceSocket.connected) {
             await joinRace(appState.currentRace.id);
         }
         
-        if (appState.isAuthenticated && appState.currentRace) {
+        // Only try to join chat if chat socket is connected
+        if (appState.isAuthenticated && appState.currentRace && appState.chatSocket && appState.chatSocket.connected) {
             appState.chatSocket.emit('join_race_chat', { 
                 raceId: appState.currentRace.id 
             });
@@ -716,7 +741,8 @@ async function startApplication() {
         console.log('✅ Application started');
     } catch (error) {
         console.error('❌ Failed to start application:', error);
-        throw error;
+        // Don't throw error, just log it and continue
+        console.log('⚠️ Continuing without full functionality...');
     }
 }
 
