@@ -8,7 +8,9 @@
     "dev": "nodemon server.js",
     "test": "jest",
     "build": "echo 'Build complete'",
-    "deploy": "railway up"
+    "deploy": "railway up",
+    "rebuild": "npm rebuild",
+    "postinstall": "npm rebuild"
   },
   "dependencies": {
     "express": "^4.18.2",
