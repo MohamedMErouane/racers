@@ -63,14 +63,6 @@
                     <span>⚖️</span>
                 </div>
             </div>
-            
-            <!-- Name Selection UI -->
-            <div class="name-selection" id="nameSelection" style="display: none;">
-                <div class="name-input-container">
-                    <input type="text" id="nameInput" placeholder="Enter your username..." maxlength="20" style="width: 100%; padding: 10px 12px; background: rgba(30, 30, 40, 0.9); border: 1px solid rgba(147, 51, 234, 0.5); border-radius: 8px; color: white; font-size: 14px; outline: none; transition: all 0.2s ease;">
-                </div>
-                <button class="confirm-name-btn" id="confirmNameBtn">Confirm Name</button>
-            </div>
         </div>
 
         <!-- Game Panel -->
@@ -102,41 +94,6 @@
                     <div class="countdown-display" id="countdown">60</div>
                 </div>
             </div>
-
-            <!-- Winner Modal -->
-            <div class="winner-modal" id="winnerModal">
-                <div class="winner-content">
-                    <div class="victory-section">
-                        <div class="victory-header">
-                            <h2 class="victory-title">VICTORY!</h2>
-                        </div>
-                        <div class="winner-racer-display" id="winnerDisplay"></div>
-                    </div>
-                    <div class="race-statistics" id="raceStatistics">
-                        <div class="stats-header">
-                            <h3>Race Statistics</h3>
-                        </div>
-                        <div class="pot-summary">
-                            <div class="stats-subheader">
-                                <h4>Pot Summary</h4>
-                            </div>
-                            <div class="stats-content" id="potSummary"></div>
-                        </div>
-                        <div class="top-winners">
-                            <div class="stats-subheader">
-                                <h4>Top Winners</h4>
-                            </div>
-                            <div class="stats-content" id="topWinners"></div>
-                        </div>
-                        <div class="your-results">
-                            <div class="stats-subheader">
-                                <h4>Your Results</h4>
-                            </div>
-                            <div class="stats-content" id="yourResults"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- Betting Panel -->
@@ -166,142 +123,27 @@
                     <button class="place-bet-btn" id="placeBetBtn">Place Bet - 0.0 SOL</button>
                 </div>
             </div>
-            
-            <!-- Live Betting Distribution -->
-            <div class="betting-distribution">
-                <div class="distribution-header">
-                    <h4>Live Betting Distribution</h4>
-                    <div class="favorite-info">
-                        <span>Favorite: </span>
-                        <span id="favoriteCharacter">None</span>
-                        <span id="favoritePercentage">(0%)</span>
-                    </div>
-                </div>
-                
-                <div class="distribution-content">
-                    <div class="pie-chart-container">
-                        <canvas id="pieChart" width="250" height="250"></canvas>
-                        <div class="pie-chart-center">
-                            <img src="" alt="" id="centerCharacterImg">
-                        </div>
-
-                    </div>
-                    
-                    <div class="distribution-legend" id="distributionLegend"></div>
-                </div>
-            </div>
         </div>
     </div>
 
-    <!-- Deposit Modal -->
-    <div class="deposit-modal" id="depositModal">
-        <div class="deposit-content">
-            <div class="deposit-header">
-                <h2>Deposit</h2>
-                <button class="close-btn" id="closeDepositModal">×</button>
-            </div>
-            
-            <div class="deposit-body">
-                <div class="token-section">
-                    <label>Token</label>
-                    <div class="token-selector">
-                        <div class="token-option selected">
-                            <div class="token-icon">◎</div>
-                            <div class="token-info">
-                                <span class="token-name">SOL</span>
-                                <span class="token-label">Solana</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="balance-section">
-                    <div class="balance-info">
-                        <span class="balance-usd" id="walletBalanceUSD">≈ $0.00 USD</span>
-                        <span class="balance-amount" id="walletBalance">Balance: 0.000 SOL</span>
-                    </div>
-                </div>
-                
-                <div class="amount-section">
-                    <label>Amount</label>
-                    <div class="amount-input-container">
-                        <input type="number" id="depositAmount" placeholder="0.00" step="0.01" min="0.01">
-                        <span class="amount-usd">= $0.00</span>
-                        <div class="token-unit">◎</div>
-                    </div>
-                </div>
-                
-                <div class="fee-info">
-                    <span class="fee-text">Enjoy 0% fees on SOL deposits & withdrawals!</span>
-                </div>
-                
-                <button class="deposit-action-btn" id="confirmDepositBtn">
-                    DEPOSIT NOW
-                </button>
-            </div>
-        </div>
-    </div>
+    <!-- Socket.IO Client -->
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    
+    <!-- Privy SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@privy-io/react-auth@1.8.0/dist/index.umd.js"></script>
+    
+    <!-- Configuration -->
+    <script>
+      window.CONFIG = {
+        WS_URL: 'https://racers-production.up.railway.app',
+        API_URL: 'https://racers-production.up.railway.app/api',
+        RACE_DURATION: 12000,
+        COUNTDOWN_DURATION: 10000,
+        TICK_RATE: 100
+      };
+    </script>
 
-    <!-- Sound Toggle -->
-    <div class="sound-toggle" id="soundToggle">
-        <span class="sound-icon">��</span>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script type="module" src="/privy-loader.js"></script>
+    <!-- Main Application Script -->
     <script src="script.js"></script>
-
-<style>
-  #rf-hud { position: fixed; left: 16px; bottom: 16px; z-index: 9999; font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif; }
-  #rf-timer { background: rgba(0,0,0,0.65); color:#fff; padding: 6px 10px; border-radius: 10px; font-weight: 600; display:inline-block; min-width: 120px; text-align:center; }
-  #rf-round { font-size: 12px; color: #ddd; margin-top: 2px; text-align:center; }
-</style>
-<div id="rf-hud">
-  <div id="rf-timer">race: --s</div>
-  <div id="rf-round">round: --</div>
-</div>
-
-<style>
-  #rf-chat { position: fixed; right: 16px; bottom: 16px; width: 320px; max-height: 50vh; background: rgba(14,14,18,.95); color:#fff; border-radius:12px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.35); font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif; z-index: 9999; }
-  #rf-chat header { padding: 10px 12px; background: #1f1f28; font-weight: 600; }
-  #rf-chat main { padding: 8px; overflow-y: auto; height: 240px; }
-  #rf-chat .chat-line { padding: 2px 0; font-size: 12px; line-height: 1.2; }
-  #rf-chat form { display:flex; gap:6px; padding: 8px; background:#14141a; }
-  #rf-chat input[type="text"]{ flex:1; background:#0e0e12; color:#fff; border:1px solid #2a2a38; border-radius:8px; padding:8px; outline:none; }
-  #rf-chat input[type="submit"]{ background:#6e6ef6; border:none; color:#fff; padding:8px 10px; border-radius:8px; cursor:pointer; }
-</style>
-<div id="rf-chat">
-  <header>live chat</header>
-  <main id="chat-messages"></main>
-  <form id="chat-form">
-    <input id="chat-user" type="text" placeholder="name (optional)" />
-    <input id="chat-input" type="text" placeholder="type a message..." />
-    <input type="submit" value="Send" />
-  </form>
-</div>
-
-<!-- Socket.IO Client -->
-<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
-
-<!-- Privy SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@privy-io/react-auth@1.8.0/dist/index.umd.js"></script>
-
-<!-- Configuration -->
-<script>
-  window.CONFIG = {
-    WS_URL: window.location.hostname === 'racers.fun' 
-      ? 'https://racers.fun' 
-      : 'https://racers-production.up.railway.app',
-    API_URL: window.location.hostname === 'racers.fun' 
-      ? 'https://racers.fun/api' 
-      : 'https://racers-production.up.railway.app/api',
-    RACE_DURATION: 12000,
-    COUNTDOWN_DURATION: 10000,
-    TICK_RATE: 100
-  };
-</script>
-
-<!-- Main Application Script -->
-<script src="script.js"></script>
 </body>
-</html> 
+</html>
