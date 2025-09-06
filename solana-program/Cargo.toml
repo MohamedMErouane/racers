@@ -1,14 +1,14 @@
 [package]
-name = "racers-program"
+name = "racers-vault"
 version = "0.1.0"
 edition = "2021"
-description = "Racers.fun Solana Program for On-Chain Betting"
+description = "Racers.fun Solana Vault for Deposit/Withdraw Only"
 license = "MIT"
 repository = "https://github.com/racersdotfun/racersdotfun"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "racers_program"
+name = "racers_vault"
 
 [features]
 no-entrypoint = []

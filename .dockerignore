@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 */node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Environment variables
 *.env
@@ -26,13 +29,34 @@ build/
 .DS_Store
 Thumbs.db
 
-# Deployment
-.vercel
-.railway
+# Git
+.git/
+.gitignore
 
-# Test coverage
+# Test files
+test/
+tests/
+*.test.js
+*.spec.js
 coverage/
 .nyc_output/
+
+# Documentation
+README.md
+*.md
+docs/
+
+# Development files
+test-*.html
+debug-*.html
+working-*.html
+index-test.html
+
+# Deployment
+.vercel/
+.railway/
+deploy-trigger.txt
+force-deploy.txt
 
 # Temporary files
 *.tmp

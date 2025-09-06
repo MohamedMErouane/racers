@@ -1,0 +1,90 @@
+[
+  {
+    "id": 1,
+    "name": "Sakura",
+    "color": "#ff69b4",
+    "speed": 4.5,
+    "acceleration": 0.15,
+    "special": "Speed Burst",
+    "rarity": "legendary",
+    "avatar": "images/characters/sakura-face.png",
+    "avatar2": "images/characters/sakura-frame1.png"
+  },
+  {
+    "id": 2,
+    "name": "Yuki",
+    "color": "#00bfff",
+    "speed": 4.2,
+    "acceleration": 0.18,
+    "special": "Freeze Time",
+    "rarity": "epic",
+    "avatar": "images/characters/yuki-face.png",
+    "avatar2": "images/characters/yuki-frame1.png"
+  },
+  {
+    "id": 3,
+    "name": "Akane",
+    "color": "#ff4500",
+    "speed": 4.8,
+    "acceleration": 0.12,
+    "special": "Blazing Trail",
+    "rarity": "legendary",
+    "avatar": "images/characters/akane-face.png",
+    "avatar2": "images/characters/akane-frame4.png"
+  },
+  {
+    "id": 4,
+    "name": "Luna",
+    "color": "#9370db",
+    "speed": 4.3,
+    "acceleration": 0.16,
+    "special": "Lunar Shield",
+    "rarity": "epic",
+    "avatar": "images/characters/luna-face.png",
+    "avatar2": "images/characters/luna-frame11.png"
+  },
+  {
+    "id": 5,
+    "name": "Miku",
+    "color": "#00ced1",
+    "speed": 4.6,
+    "acceleration": 0.14,
+    "special": "Sonic Wave",
+    "rarity": "rare",
+    "avatar": "images/characters/miku-face.png",
+    "avatar2": "images/characters/miku-frame1.png"
+  },
+  {
+    "id": 6,
+    "name": "Neko",
+    "color": "#ffd700",
+    "speed": 4.7,
+    "acceleration": 0.13,
+    "special": "Shadow Step",
+    "rarity": "epic",
+    "avatar": "images/characters/neko-face.png",
+    "avatar2": "images/characters/neko-frame1.png"
+  },
+  {
+    "id": 7,
+    "name": "Hana",
+    "color": "#ff1493",
+    "speed": 4.1,
+    "acceleration": 0.17,
+    "special": "Nature's Blessing",
+    "rarity": "rare",
+    "avatar": "images/characters/hana-face.png",
+    "avatar2": "images/characters/hana-frame1.png"
+  },
+  {
+    "id": 8,
+    "name": "Kira",
+    "color": "#ffa500",
+    "speed": 4.4,
+    "acceleration": 0.15,
+    "special": "Stellar Rush",
+    "rarity": "legendary",
+    "avatar": "images/characters/kira-face.png",
+    "avatar2": "images/characters/kira-frame1.png"
+  }
+]
