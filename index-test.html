@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Connection</title>
+</head>
+<body>
+    <h1>Testing Connection</h1>
+    <div id="status">Connecting...</div>
+    <div id="logs"></div>
+
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script>
+        const logs = document.getElementById('logs');
+        const status = document.getElementById('status');
+        
+        function log(message) {
+            console.log(message);
+            logs.innerHTML += '<div>' + new Date().toISOString() + ': ' + message + '</div>';
+        }
+        
+        log('Starting connection test...');
+        
+        // Test API connection
+        fetch('https://racers-production.up.railway.app/health')
+            .then(response => response.json())
+            .then(data => {
+                log('✅ API Health: ' + JSON.stringify(data));
+                status.innerHTML = 'API Connected ✅';
+            })
+            .catch(error => {
+                log('❌ API Error: ' + error.message);
+                status.innerHTML = 'API Failed ❌';
+            });
+        
+        // Test WebSocket connection
+        try {
+            const socket = io('https://racers-production.up.railway.app', {
+                transports: ['polling', 'websocket']
+            });
+            
+            socket.on('connect', () => {
+                log('✅ WebSocket Connected: ' + socket.id);
+                status.innerHTML += ' | WebSocket Connected ✅';
+            });
+            
+            socket.on('disconnect', () => {
+                log('❌ WebSocket Disconnected');
+                status.innerHTML += ' | WebSocket Disconnected ❌';
+            });
+            
+            socket.on('connect_error', (error) => {
+                log('❌ WebSocket Error: ' + error.message);
+                status.innerHTML += ' | WebSocket Error ❌';
+            });
+            
+        } catch (error) {
+            log('❌ WebSocket Init Error: ' + error.message);
+            status.innerHTML += ' | WebSocket Init Error ❌';
+        }
+    </script>
+</body>
+</html>

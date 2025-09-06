@@ -280,17 +280,28 @@
   </form>
 </div>
 
-<!-- Realtime + Privy + Live Race -->
-<script src="https://js.pusher.com/8.3.0/pusher.min.js"></script>
+<!-- Socket.IO Client -->
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+
+<!-- Privy SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@privy-io/react-auth@1.8.0/dist/index.umd.js"></script>
+
+<!-- Configuration -->
 <script>
-  window.PUSHER_KEY = "33af4f3507ff062a6dec";
-  window.PUSHER_CLUSTER = "us2";
-  window.RACE_PERIOD_MS = 10000;
-  window.RACE_SETTLE_MS = 2000;
+  window.CONFIG = {
+    WS_URL: window.location.hostname === 'racers.fun' 
+      ? 'https://racers.fun' 
+      : 'https://racers-production.up.railway.app',
+    API_URL: window.location.hostname === 'racers.fun' 
+      ? 'https://racers.fun/api' 
+      : 'https://racers-production.up.railway.app/api',
+    RACE_DURATION: 12000,
+    COUNTDOWN_DURATION: 10000,
+    TICK_RATE: 100
+  };
 </script>
-<script type="module" src="/privy-loader.js"></script>
-<script type="module" src="/privy-diagnostics.js"></script>
-<script type="module" src="/race-live.js"></script>
-<script type="module" src="/chat-realtime.js"></script>
+
+<!-- Main Application Script -->
+<script src="script.js"></script>
 </body>
 </html> 

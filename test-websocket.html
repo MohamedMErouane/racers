@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Connection Test - Racers.fun</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff88;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid;
+        }
+        .connected { background: rgba(0, 255, 136, 0.1); border-color: #00ff88; }
+        .disconnected { background: rgba(255, 0, 0, 0.1); border-color: #ff0000; }
+        .connecting { background: rgba(255, 165, 0, 0.1); border-color: #ffa500; }
+        .log {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 5px;
+            height: 400px;
+            overflow-y: auto;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 2px 0;
+        }
+        .log-entry.error { color: #ff6b6b; }
+        .log-entry.success { color: #00ff88; }
+        .log-entry.info { color: #60a5fa; }
+        .log-entry.warning { color: #fbbf24; }
+        button {
+            background: #9333ea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #7c3aed; }
+        button:disabled { background: #6b7280; cursor: not-allowed; }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #374151;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #9333ea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 WebSocket Connection Test</h1>
+        <p>Testing real-time connections for Racers.fun backend</p>
+        
+        <div class="status" id="connectionStatus">
+            <strong>Status:</strong> <span id="statusText">Disconnected</span>
+        </div>
+        
+        <div class="test-section">
+            <h3>Connection Controls</h3>
+            <button id="connectBtn" onclick="connect()">Connect</button>
+            <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Race Socket Tests</h3>
+            <button onclick="testJoinRace()">Join Race</button>
+            <button onclick="testLeaveRace()">Leave Race</button>
+            <button onclick="testPlaceBet()">Place Test Bet</button>
+            <button onclick="testGetRaceState()">Get Race State</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Chat Socket Tests</h3>
+            <button onclick="testJoinChat()">Join Chat</button>
+            <button onclick="testLeaveChat()">Leave Chat</button>
+            <button onclick="testSendMessage()">Send Test Message</button>
+            <button onclick="testTyping()">Test Typing</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Connection Log</h3>
+            <div class="log" id="log"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script>
+        let raceSocket = null;
+        let chatSocket = null;
+        let isConnected = false;
+        
+        const CONFIG = {
+            WS_URL: window.location.hostname === 'racers.fun' 
+                ? 'wss://racers.fun' 
+                : 'ws://localhost:3001',
+            API_URL: window.location.hostname === 'racers.fun' 
+                ? 'https://racers.fun/api' 
+                : 'http://localhost:3001/api'
+        };
+        
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            logElement.appendChild(entry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function updateStatus(status, text) {
+            const statusElement = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('statusText');
+            statusElement.className = `status ${status}`;
+            statusText.textContent = text;
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        async function connect() {
+            try {
+                updateStatus('connecting', 'Connecting...');
+                log('Attempting to connect to WebSocket servers...', 'info');
+                
+                // Connect to race socket
+                raceSocket = io(CONFIG.WS_URL, {
+                    auth: {
+                        token: null // No auth for testing
+                    }
+                });
+                
+                // Connect to chat socket
+                chatSocket = io(`${CONFIG.WS_URL}/chat`, {
+                    auth: {
+                        token: null // No auth for testing
+                    }
+                });
+                
+                setupRaceSocketHandlers();
+                setupChatSocketHandlers();
+                
+                log('WebSocket connections initiated', 'success');
+                
+            } catch (error) {
+                log(`Connection failed: ${error.message}`, 'error');
+                updateStatus('disconnected', 'Connection Failed');
+            }
+        }
+        
+        function disconnect() {
+            if (raceSocket) {
+                raceSocket.disconnect();
+                raceSocket = null;
+            }
+            if (chatSocket) {
+                chatSocket.disconnect();
+                chatSocket = null;
+            }
+            isConnected = false;
+            updateStatus('disconnected', 'Disconnected');
+            log('Disconnected from WebSocket servers', 'warning');
+            
+            document.getElementById('connectBtn').disabled = false;
+            document.getElementById('disconnectBtn').disabled = true;
+        }
+        
+        function setupRaceSocketHandlers() {
+            raceSocket.on('connect', () => {
+                log('✅ Race socket connected', 'success');
+                isConnected = true;
+                updateStatus('connected', 'Connected');
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('disconnectBtn').disabled = false;
+            });
+            
+            raceSocket.on('disconnect', () => {
+                log('❌ Race socket disconnected', 'error');
+                isConnected = false;
+                updateStatus('disconnected', 'Disconnected');
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('disconnectBtn').disabled = true;
+            });
+            
+            raceSocket.on('race_state', (data) => {
+                log(`🏁 Race state received: ${JSON.stringify(data, null, 2)}`, 'info');
+            });
+            
+            raceSocket.on('race_update', (data) => {
+                log(`🏃 Race update: ${JSON.stringify(data, null, 2)}`, 'info');
+            });
+            
+            raceSocket.on('race_started', (data) => {
+                log(`🚀 Race started: ${JSON.stringify(data, null, 2)}`, 'success');
+            });
+            
+            raceSocket.on('race_ended', (data) => {
+                log(`🏆 Race ended: ${JSON.stringify(data, null, 2)}`, 'success');
+            });
+            
+            raceSocket.on('countdown_update', (data) => {
+                log(`⏰ Countdown: ${data.countdown}`, 'info');
+            });
+            
+            raceSocket.on('bet_placed', (data) => {
+                log(`💰 Bet placed: ${JSON.stringify(data, null, 2)}`, 'info');
+            });
+            
+            raceSocket.on('user_joined', (data) => {
+                log(`👤 User joined: ${JSON.stringify(data, null, 2)}`, 'info');
+            });
+            
+            raceSocket.on('user_left', (data) => {
+                log(`👋 User left: ${JSON.stringify(data, null, 2)}`, 'info');
+            });
+            
+            raceSocket.on('error', (error) => {
+                log(`❌ Race socket error: ${error.message}`, 'error');
+            });
+        }
+        
+        function setupChatSocketHandlers() {
+            chatSocket.on('connect', () => {
+                log('✅ Chat socket connected', 'success');
+            });
+            
+            chatSocket.on('disconnect', () => {
+                log('❌ Chat socket disconnected', 'error');
+            });
+            
+            chatSocket.on('chat_history', (data) => {
+                log(`💬 Chat history: ${JSON.stringify(data, null, 2)}`, 'info');
+            });
+            
+            chatSocket.on('new_message', (data) => {
+                log(`💬 New message: ${JSON.stringify(data, null, 2)}`, 'info');
+            });
+            
+            chatSocket.on('user_typing', (data) => {
+                log(`⌨️ User typing: ${JSON.stringify(data, null, 2)}`, 'info');
+            });
+            
+            chatSocket.on('user_joined_chat', (data) => {
+                log(`👤 User joined chat: ${JSON.stringify(data, null, 2)}`, 'info');
+            });
+            
+            chatSocket.on('user_left_chat', (data) => {
+                log(`👋 User left chat: ${JSON.stringify(data, null, 2)}`, 'info');
+            });
+            
+            chatSocket.on('error', (error) => {
+                log(`❌ Chat socket error: ${error.message}`, 'error');
+            });
+        }
+        
+        // Test functions
+        function testJoinRace() {
+            if (!raceSocket || !isConnected) {
+                log('❌ Not connected to race socket', 'error');
+                return;
+            }
+            
+            raceSocket.emit('join_race', { raceId: 'test_race_123' });
+            log('📤 Sent join_race event', 'info');
+        }
+        
+        function testLeaveRace() {
+            if (!raceSocket || !isConnected) {
+                log('❌ Not connected to race socket', 'error');
+                return;
+            }
+            
+            raceSocket.emit('leave_race', { raceId: 'test_race_123' });
+            log('📤 Sent leave_race event', 'info');
+        }
+        
+        function testPlaceBet() {
+            if (!raceSocket || !isConnected) {
+                log('❌ Not connected to race socket', 'error');
+                return;
+            }
+            
+            raceSocket.emit('place_bet', {
+                raceId: 'test_race_123',
+                racerId: 1,
+                amount: 1.0
+            });
+            log('📤 Sent place_bet event', 'info');
+        }
+        
+        function testGetRaceState() {
+            if (!raceSocket || !isConnected) {
+                log('❌ Not connected to race socket', 'error');
+                return;
+            }
+            
+            raceSocket.emit('get_race_state', { raceId: 'test_race_123' });
+            log('📤 Sent get_race_state event', 'info');
+        }
+        
+        function testJoinChat() {
+            if (!chatSocket || !isConnected) {
+                log('❌ Not connected to chat socket', 'error');
+                return;
+            }
+            
+            chatSocket.emit('join_race_chat', { raceId: 'test_race_123' });
+            log('📤 Sent join_race_chat event', 'info');
+        }
+        
+        function testLeaveChat() {
+            if (!chatSocket || !isConnected) {
+                log('❌ Not connected to chat socket', 'error');
+                return;
+            }
+            
+            chatSocket.emit('leave_race_chat', { raceId: 'test_race_123' });
+            log('📤 Sent leave_race_chat event', 'info');
+        }
+        
+        function testSendMessage() {
+            if (!chatSocket || !isConnected) {
+                log('❌ Not connected to chat socket', 'error');
+                return;
+            }
+            
+            chatSocket.emit('send_message', {
+                raceId: 'test_race_123',
+                message: 'Test message from WebSocket test'
+            });
+            log('📤 Sent send_message event', 'info');
+        }
+        
+        function testTyping() {
+            if (!chatSocket || !isConnected) {
+                log('❌ Not connected to chat socket', 'error');
+                return;
+            }
+            
+            chatSocket.emit('typing_start', { raceId: 'test_race_123' });
+            log('📤 Sent typing_start event', 'info');
+            
+            setTimeout(() => {
+                chatSocket.emit('typing_stop', { raceId: 'test_race_123' });
+                log('📤 Sent typing_stop event', 'info');
+            }, 2000);
+        }
+        
+        // Auto-connect on page load
+        window.addEventListener('load', () => {
+            log('🚀 WebSocket test page loaded', 'info');
+            log(`Target URL: ${CONFIG.WS_URL}`, 'info');
+        });
+    </script>
+</body>
+</html>

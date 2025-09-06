@@ -1,0 +1,25 @@
+{
+  "name": "racers-fun",
+  "version": "1.0.0",
+  "description": "Real-time waifu racing platform with on-chain betting",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python -m http.server 8000",
+    "build": "echo 'No build step required for static site'",
+    "start": "python -m http.server 8000",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "racing",
+    "gaming",
+    "blockchain",
+    "solana",
+    "betting",
+    "realtime"
+  ],
+  "author": "Racers.fun Team",
+  "license": "MIT",
+  "devDependencies": {
+    "vercel": "^32.0.0"
+  }
+}
