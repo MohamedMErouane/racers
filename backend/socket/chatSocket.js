@@ -7,11 +7,14 @@ function initializeChatSocket(io) {
   io.of('/chat').on('connection', async (socket) => {
     const userId = socket.userId;
     const user = socket.user;
+    const isAuthenticated = socket.isAuthenticated;
 
-    logger.info(`💬 User ${userId} connected to chat`);
+    logger.info(`💬 User ${userId || 'anonymous'} connected to chat (auth: ${isAuthenticated})`);
 
-    // Join user to their personal chat room
-    socket.join(`chat:user:${userId}`);
+    // Join user to their personal chat room only if authenticated
+    if (isAuthenticated && userId) {
+      socket.join(`chat:user:${userId}`);
+    }
 
     // Handle joining race chat
     socket.on('join_race_chat', async (data) => {

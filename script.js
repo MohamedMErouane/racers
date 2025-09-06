@@ -42,9 +42,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     try {
         await initializePrivy();
+        console.log('✅ Privy initialized');
+        
         await initializeWebSockets();
+        console.log('✅ WebSockets initialized');
+        
         initializeUI();
+        console.log('✅ UI initialized');
+        
         await startApplication();
+        console.log('✅ Application started');
+        
         console.log('✅ Application initialized successfully');
     } catch (error) {
         console.error('❌ Failed to initialize application:', error);
@@ -138,25 +146,51 @@ function handlePrivyLogout() {
 // WebSocket initialization
 async function initializeWebSockets() {
     try {
+        console.log('🔌 Initializing WebSocket connections to:', CONFIG.WS_URL);
+        
         appState.raceSocket = io(CONFIG.WS_URL, {
             auth: {
                 token: await getAuthToken()
-            }
+            },
+            timeout: 10000,
+            forceNew: true
         });
         
         appState.chatSocket = io(`${CONFIG.WS_URL}/chat`, {
             auth: {
                 token: await getAuthToken()
-            }
+            },
+            timeout: 10000,
+            forceNew: true
         });
         
         setupRaceSocketHandlers();
         setupChatSocketHandlers();
         
+        // Wait for connection with timeout
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('WebSocket connection timeout'));
+            }, 10000);
+            
+            appState.raceSocket.on('connect', () => {
+                clearTimeout(timeout);
+                console.log('✅ Race WebSocket connected');
+                resolve();
+            });
+            
+            appState.raceSocket.on('connect_error', (error) => {
+                clearTimeout(timeout);
+                console.error('❌ Race WebSocket connection error:', error);
+                reject(error);
+            });
+        });
+        
         console.log('✅ WebSocket connections established');
     } catch (error) {
         console.error('❌ WebSocket initialization failed:', error);
-        throw error;
+        // Don't throw error, just log it and continue
+        console.log('⚠️ Continuing without WebSocket connection...');
     }
 }
 

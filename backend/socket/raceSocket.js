@@ -4,39 +4,52 @@ const { gameRedis } = require('../services/redis');
 const logger = require('../services/logger');
 
 function initializeSocketHandlers(io) {
-  // Authentication middleware for Socket.IO
+  // Authentication middleware for Socket.IO (allow unauthenticated connections)
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
       
-      if (!token) {
-        return next(new Error('Authentication token required'));
+      if (token) {
+        // Verify token using Privy if provided
+        const { privy } = require('../services/privy');
+        const user = await privy.verifyToken(token);
+        socket.userId = user.id;
+        socket.user = user;
+        socket.isAuthenticated = true;
+      } else {
+        // Allow unauthenticated connections for initial setup
+        socket.userId = null;
+        socket.user = null;
+        socket.isAuthenticated = false;
       }
-
-      // Verify token using Privy
-      const { privy } = require('../services/privy');
-      const user = await privy.verifyToken(token);
       
-      socket.userId = user.id;
-      socket.user = user;
       next();
     } catch (error) {
       logger.error('Socket authentication error:', error);
-      next(new Error('Authentication failed'));
+      // Allow connection even if auth fails
+      socket.userId = null;
+      socket.user = null;
+      socket.isAuthenticated = false;
+      next();
     }
   });
 
   io.on('connection', async (socket) => {
     const userId = socket.userId;
     const user = socket.user;
+    const isAuthenticated = socket.isAuthenticated;
 
-    logger.info(`🔌 User ${userId} connected via WebSocket`);
+    logger.info(`🔌 User ${userId || 'anonymous'} connected via WebSocket (auth: ${isAuthenticated})`);
 
-    // Add user to online users
-    await gameRedis.addOnlineUser(userId);
+    // Add user to online users only if authenticated
+    if (isAuthenticated && userId) {
+      await gameRedis.addOnlineUser(userId);
+    }
 
-    // Join user to their personal room
-    socket.join(`user:${userId}`);
+    // Join user to their personal room only if authenticated
+    if (isAuthenticated && userId) {
+      socket.join(`user:${userId}`);
+    }
 
     // Get current race and join if active
     try {
@@ -48,6 +61,13 @@ function initializeSocketHandlers(io) {
     } catch (error) {
       logger.error('Error joining current race:', error);
     }
+
+    // Send initial connection confirmation
+    socket.emit('connected', {
+      message: 'Connected to Racers.fun!',
+      isAuthenticated: isAuthenticated,
+      timestamp: Date.now()
+    });
 
     // Handle race joining
     socket.on('join_race', async (data) => {

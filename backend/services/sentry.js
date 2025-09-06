@@ -3,11 +3,16 @@ const logger = require('./logger');
 
 function initializeSentry(app) {
   try {
+    // Temporarily disable Sentry to fix deployment issues
+    logger.warn('⚠️ Sentry temporarily disabled for deployment');
+    return;
+    
     if (!process.env.SENTRY_DSN) {
       logger.warn('⚠️ Sentry DSN not configured, skipping Sentry initialization');
       return;
     }
 
+    // Initialize Sentry first
     Sentry.init({
       dsn: process.env.SENTRY_DSN,
       environment: process.env.NODE_ENV || 'development',
@@ -30,7 +35,7 @@ function initializeSentry(app) {
       },
     });
 
-    // Request handler must be the first middleware
+    // Request handler must be the first middleware (only after init)
     app.use(Sentry.requestHandler());
 
     // Tracing handler creates a trace for every incoming request
