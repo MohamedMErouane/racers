@@ -54,7 +54,7 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'https://racers.fun',
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -98,7 +98,7 @@ app.use('/api/stats', statsRoutes);
 // Initialize Socket.IO
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || 'https://racers.fun',
+    origin: true,
     methods: ['GET', 'POST'],
     credentials: true
   },
