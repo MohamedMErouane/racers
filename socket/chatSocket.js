@@ -1,5 +1,16 @@
 const { verifyPrivyToken } = require('../lib/privy');
 const sanitizeHtml = require('sanitize-html');
+const { z } = require('zod');
+
+// Rate limiting storage (in production, use Redis)
+const messageTimestamps = new Map();
+
+// Validation schema for chat messages
+const chatMessageSchema = z.object({
+  message: z.string().min(1).max(500),
+  username: z.string().min(1).max(50),
+  token: z.string().min(1)
+});
 
 function initializeChatSocket(io) {
   io.on('connection', (socket) => {
@@ -8,22 +19,40 @@ function initializeChatSocket(io) {
     // Listen for chat messages
     socket.on('chat:message', async (data) => {
       try {
-        // Validate data structure
-        if (!data || !data.message || !data.token) {
-          socket.emit('error', { message: 'Invalid message format' });
+        // Validate data structure using Zod schema
+        const validationResult = chatMessageSchema.safeParse(data);
+        if (!validationResult.success) {
+          socket.emit('error', { message: 'Invalid message format or length' });
           return;
         }
         
+        // Rate limiting: max 10 messages per minute per socket
+        const now = Date.now();
+        const socketId = socket.id;
+        const timestamps = messageTimestamps.get(socketId) || [];
+        
+        // Remove timestamps older than 1 minute
+        const recentTimestamps = timestamps.filter(ts => now - ts < 60000);
+        
+        if (recentTimestamps.length >= 10) {
+          socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
+          return;
+        }
+        
+        // Add current timestamp
+        recentTimestamps.push(now);
+        messageTimestamps.set(socketId, recentTimestamps);
+        
         // Verify Privy JWT token
-        const payload = await verifyPrivyToken(data.token);
+        const payload = await verifyPrivyToken(validationResult.data.token);
         
         // Sanitize message content
-        const sanitizedMessage = sanitizeHtml(data.message, {
+        const sanitizedMessage = sanitizeHtml(validationResult.data.message, {
           allowedTags: [],
           allowedAttributes: {}
         });
         
-        const sanitizedUsername = sanitizeHtml(data.username || 'Anonymous', {
+        const sanitizedUsername = sanitizeHtml(validationResult.data.username || 'Anonymous', {
           allowedTags: [],
           allowedAttributes: {}
         });
@@ -52,6 +81,8 @@ function initializeChatSocket(io) {
     
     socket.on('disconnect', () => {
       console.log('❌ Chat socket disconnected:', socket.id);
+      // Clean up rate limiting data for disconnected socket
+      messageTimestamps.delete(socket.id);
     });
   });
   

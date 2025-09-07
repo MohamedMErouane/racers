@@ -1,9 +1,6 @@
 const { Pool } = require('pg');
 const { getRedis } = require('../services/redis');
 
-// Use shared Redis instance
-const redis = getRedis();
-
 // Postgres client
 const pg = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgres://localhost:5432/racers'
@@ -14,6 +11,10 @@ const redisOps = {
   // Chat operations
   async getChatMessages(limit = 100) {
     try {
+      const redis = getRedis();
+      if (!redis) {
+        throw new Error('Redis client not initialized');
+      }
       const messages = await redis.lrange('chat', -limit, -1);
       return messages.map(msg => JSON.parse(msg));
     } catch (error) {
@@ -24,6 +25,10 @@ const redisOps = {
 
   async addChatMessage(message) {
     try {
+      const redis = getRedis();
+      if (!redis) {
+        throw new Error('Redis client not initialized');
+      }
       await redis.rpush('chat', JSON.stringify(message));
       // Keep only last 1000 messages
       await redis.ltrim('chat', -1000, -1);
@@ -35,6 +40,10 @@ const redisOps = {
   // Bet operations
   async getBets(limit = 100) {
     try {
+      const redis = getRedis();
+      if (!redis) {
+        throw new Error('Redis client not initialized');
+      }
       const bets = await redis.lrange('bets', -limit, -1);
       return bets.map(bet => JSON.parse(bet));
     } catch (error) {
@@ -45,6 +54,10 @@ const redisOps = {
 
   async addBet(bet) {
     try {
+      const redis = getRedis();
+      if (!redis) {
+        throw new Error('Redis client not initialized');
+      }
       await redis.rpush('bets', JSON.stringify(bet));
       // Keep only last 1000 bets
       await redis.ltrim('bets', -1000, -1);
@@ -56,6 +69,10 @@ const redisOps = {
   // Race state operations
   async setRaceState(raceId, state) {
     try {
+      const redis = getRedis();
+      if (!redis) {
+        throw new Error('Redis client not initialized');
+      }
       await redis.setex(`race:${raceId}`, 3600, JSON.stringify(state)); // 1 hour TTL
     } catch (error) {
       console.error('Error setting race state:', error);
@@ -64,6 +81,10 @@ const redisOps = {
 
   async getRaceState(raceId) {
     try {
+      const redis = getRedis();
+      if (!redis) {
+        throw new Error('Redis client not initialized');
+      }
       const state = await redis.get(`race:${raceId}`);
       return state ? JSON.parse(state) : null;
     } catch (error) {
@@ -75,6 +96,10 @@ const redisOps = {
   // Pub/Sub for real-time updates
   async publishRaceUpdate(raceId, update) {
     try {
+      const redis = getRedis();
+      if (!redis) {
+        throw new Error('Redis client not initialized');
+      }
       await redis.publish(`race:${raceId}`, JSON.stringify(update));
     } catch (error) {
       console.error('Error publishing race update:', error);
@@ -83,6 +108,10 @@ const redisOps = {
 
   async subscribeToRace(raceId, callback) {
     try {
+      const redis = getRedis();
+      if (!redis) {
+        throw new Error('Redis client not initialized');
+      }
       const subscriber = redis.duplicate();
       await subscriber.subscribe(`race:${raceId}`);
       subscriber.on('message', (channel, message) => {

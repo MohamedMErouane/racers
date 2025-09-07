@@ -43,8 +43,8 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       connectSrc: ["'self'", "https://api.privy.io", "https://auth.privy.io", "wss:", "https:"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://auth.privy.io", "https://cdn.socket.io", "https://cdnjs.cloudflare.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://auth.privy.io", "https://cdn.socket.io", "https://cdnjs.cloudflare.com"],
+      styleSrc: ["'self'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
     },

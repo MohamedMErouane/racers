@@ -1,5 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { startRace, stopRace, getState } from '../server/gameEngine.js';
+
+// Mock dependencies
+vi.mock('../server/db.js', () => ({
+  pg: {
+    logRaceResult: vi.fn()
+  }
+}));
 
 describe('Race Engine', () => {
   let mockIo;

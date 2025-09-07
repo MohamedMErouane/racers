@@ -21,7 +21,6 @@ const betRateLimit = rateLimit({
 // Validation schemas
 const chatMessageSchema = z.object({
   message: z.string().min(1).max(500),
-  userId: z.string().min(1),
   username: z.string().min(1).max(50)
 });
 
@@ -39,25 +38,50 @@ async function requirePrivy(req, res, next) {
   try {
     // Get token from Bearer header or cookie
     const token = getBearerToken(req);
-    
+
     if (!token) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-    
+
     // Verify the Privy JWT token
     const payload = await verifyPrivyToken(token);
-    
+
     // Attach user info to request
     req.user = {
       id: payload.userId || payload.sub,
       address: payload.address,
       verified: true
     };
-    
+
     next();
   } catch (error) {
     console.error('Token verification failed:', error);
     return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+// Middleware to require admin privileges
+function requireAdmin(req, res, next) {
+  try {
+    const adminAddresses = process.env.ADMIN_ADDRESSES ? 
+      process.env.ADMIN_ADDRESSES.split(',').map(addr => addr.trim()) : [];
+    
+    if (adminAddresses.length === 0) {
+      return res.status(503).json({ error: 'Admin configuration not set' });
+    }
+    
+    if (!req.user || !req.user.address) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    if (!adminAddresses.includes(req.user.address)) {
+      return res.status(403).json({ error: 'Admin privileges required' });
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Admin check failed:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
 
@@ -89,33 +113,33 @@ router.get('/race/state', (req, res) => {
   }
 });
 
-// Start a race (requires authentication)
-router.post('/race/start', requirePrivy, (req, res) => {
+// Start a race (requires admin privileges)
+router.post('/race/start', requirePrivy, requireAdmin, (req, res) => {
   try {
     const gameEngine = req.app.get('gameEngine');
     const io = req.app.get('io');
-    
+
     if (!gameEngine || !io) {
       return res.status(503).json({ error: 'Game engine or Socket.IO not available' });
     }
-    
+
     gameEngine.startRace(io);
     res.sendStatus(202);
   } catch (error) {
-    console.error('Error starting race:', error);
-    res.status(500).json({ error: 'Internal server error' });
+      console.error('Error starting race:', error);
+      res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Stop a race (requires authentication)
-router.post('/race/stop', requirePrivy, (req, res) => {
+// Stop a race (requires admin privileges)
+router.post('/race/stop', requirePrivy, requireAdmin, (req, res) => {
   try {
     const gameEngine = req.app.get('gameEngine');
-    
+
     if (!gameEngine) {
       return res.status(503).json({ error: 'Game engine not available' });
     }
-    
+
     gameEngine.stopRace();
     res.sendStatus(202);
   } catch (error) {
@@ -147,8 +171,9 @@ router.post('/chat', chatRateLimit, requirePrivy, validateBody(chatMessageSchema
     });
     
     const message = {
-      ...req.body,
       message: sanitizedMessage,
+      username: req.body.username,
+      userId: req.user.address, // Use authenticated user's address
       timestamp: Date.now()
     };
     
@@ -209,13 +234,25 @@ router.post('/vault/deposit/build', requirePrivy, validateBody(vaultSchema), asy
 router.post('/vault/deposit/process', requirePrivy, async (req, res) => {
   try {
     const solana = require('../server/solana');
-    const { signedTransaction } = req.body;
+    const { pg } = require('../server/db');
+    const { signedTransaction, amount } = req.body;
+    const userAddress = req.user.address;
     
     if (!signedTransaction) {
       return res.status(400).json({ error: 'Signed transaction required' });
     }
     
     const result = await solana.processDepositTransaction(signedTransaction);
+    
+    if (result.success) {
+      // Update user balance
+      const currentBalance = await pg.getUserBalance(userAddress);
+      const newBalance = currentBalance + amount;
+      await pg.updateUserBalance(userAddress, newBalance);
+      
+      result.newBalance = newBalance;
+    }
+    
     res.json(result);
   } catch (error) {
     console.error('Error processing deposit transaction:', error);
@@ -240,13 +277,28 @@ router.post('/vault/withdraw/build', requirePrivy, validateBody(vaultSchema), as
 router.post('/vault/withdraw/process', requirePrivy, async (req, res) => {
   try {
     const solana = require('../server/solana');
-    const { signedTransaction } = req.body;
+    const { pg } = require('../server/db');
+    const { signedTransaction, amount } = req.body;
+    const userAddress = req.user.address;
     
     if (!signedTransaction) {
       return res.status(400).json({ error: 'Signed transaction required' });
     }
     
     const result = await solana.processWithdrawTransaction(signedTransaction);
+    
+    if (result.success) {
+      // Update user balance
+      const currentBalance = await pg.getUserBalance(userAddress);
+      const newBalance = Math.max(0, currentBalance - amount); // Prevent negative balance
+      await pg.updateUserBalance(userAddress, newBalance);
+      
+      // Log to bet history
+      await pg.logBet(userAddress, 'withdraw', 0, amount, 'withdraw');
+      
+      result.newBalance = newBalance;
+    }
+    
     res.json(result);
   } catch (error) {
     console.error('Error processing withdraw transaction:', error);

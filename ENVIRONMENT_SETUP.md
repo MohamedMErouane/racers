@@ -2,10 +2,10 @@
 
 ## **🗄️ SUPABASE DATABASE SETUP**
 
-### **Step 1: Go to Supabase**
-- URL: `https://supabase.com/dashboard`
-- Login with your account
-- Click on project: `<YOUR_SUPABASE_PROJECT_ID>`
+### **Step 1: Set up PostgreSQL Database**
+- Use your preferred PostgreSQL provider (Railway, Supabase, or self-hosted)
+- Create a new database
+- Note the connection string for `DATABASE_URL`
 
 ### **Step 2: Run SQL Script**
 - Click "SQL Editor" in left sidebar
@@ -110,7 +110,7 @@ curl https://your-railway-url.railway.app/health
 ```
 
 ### **Test WebSocket**
-- Open `test-websocket.html` in browser
+- Test WebSocket connection in the main application
 - Update `CONFIG.WS_URL` to your Railway URL
 - Click "Connect"
 
@@ -137,7 +137,7 @@ curl https://your-railway-url.railway.app/health
 
 ## **🎯 SUCCESS CHECKLIST**
 
-- ✅ Database tables created in Supabase
+- ✅ Database tables created in PostgreSQL
 - ✅ Backend deployed to Railway
 - ✅ Environment variables set
 - ✅ Frontend deployed to Vercel

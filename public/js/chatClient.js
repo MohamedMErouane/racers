@@ -35,7 +35,6 @@ export class ChatClient {
         },
         body: JSON.stringify({
           message,
-          userId,
           username
         })
       });

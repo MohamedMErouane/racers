@@ -1,7 +1,31 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 import apiRoutes from '../routes/api.js';
+
+// Mock dependencies
+vi.mock('../server/db.js', () => ({
+  redis: {
+    getChatMessages: vi.fn().mockResolvedValue([]),
+    addChatMessage: vi.fn(),
+    getBets: vi.fn().mockResolvedValue([]),
+    addBet: vi.fn()
+  },
+  pg: {
+    getUserBalance: vi.fn().mockResolvedValue(0),
+    updateUserBalance: vi.fn(),
+    logBet: vi.fn()
+  }
+}));
+
+vi.mock('../server/solana.js', () => ({
+  buildDepositTransaction: vi.fn().mockResolvedValue({ success: true }),
+  processDepositTransaction: vi.fn().mockResolvedValue({ success: true }),
+  buildWithdrawTransaction: vi.fn().mockResolvedValue({ success: true }),
+  processWithdrawTransaction: vi.fn().mockResolvedValue({ success: true }),
+  getVaultBalance: vi.fn().mockResolvedValue(0),
+  initializeVault: vi.fn().mockResolvedValue({ success: true })
+}));
 
 describe('API Routes', () => {
   let app;
@@ -10,6 +34,18 @@ describe('API Routes', () => {
     app = express();
     app.use(express.json());
     app.use('/api', apiRoutes);
+    
+    // Mock game engine
+    app.set('gameEngine', {
+      getState: vi.fn().mockReturnValue({
+        racers: [],
+        status: 'idle',
+        seed: null,
+        tick: 0
+      }),
+      startRace: vi.fn(),
+      stopRace: vi.fn()
+    });
   });
 
   it('should get race state', async () => {

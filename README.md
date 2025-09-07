@@ -16,8 +16,8 @@ A production-ready, on-chain anime racing platform with server-side race engine,
 ## 🛠️ Tech Stack
 
 - **Backend**: Node.js + Express + Socket.IO
-- **Database**: Supabase (PostgreSQL) + Redis
-- **Blockchain**: Solana + Coinbase API
+- **Database**: PostgreSQL + Redis
+- **Blockchain**: Solana
 - **Auth**: Privy Web3 authentication
 - **Frontend**: HTML5 + Canvas + WebSockets
 - **Deployment**: Railway + Vercel
@@ -27,7 +27,7 @@ A production-ready, on-chain anime racing platform with server-side race engine,
 
 - Node.js 20+
 - Redis instance
-- Supabase project
+- PostgreSQL database
 - Solana program deployed
 - Privy app configured
 
@@ -53,15 +53,14 @@ Required environment variables:
 - `PRIVY_APP_ID` - Your Privy app ID
 - `PRIVY_APP_SECRET` - Your Privy app secret
 - `REDIS_URL` - Redis connection string
-- `SUPABASE_URL` - Supabase project URL
-- `SUPABASE_SERVICE_KEY` - Supabase service key
+- `DATABASE_URL` - PostgreSQL connection string
 - `SOLANA_RPC_URL` - Solana RPC endpoint
 - `PROGRAM_ID` - Your Solana program ID
 - `PHANTOM_PRIVATE_KEY` - Phantom wallet private key
 
 ### 3. Database Setup
 
-Run the SQL schema in your Supabase project:
+Run the SQL schema in your PostgreSQL database:
 
 ```sql
 -- Copy contents from setup-database.sql

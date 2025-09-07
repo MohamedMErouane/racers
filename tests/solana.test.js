@@ -28,18 +28,32 @@ describe('Solana Integration', () => {
     expect(initializeSolana).toBeDefined();
   });
 
-  it('should handle deposit operations', async () => {
-    const { deposit } = await import('../server/solana.js');
+  it('should build deposit transactions', async () => {
+    const { buildDepositTransaction } = await import('../server/solana.js');
     
-    expect(deposit).toBeDefined();
-    expect(typeof deposit).toBe('function');
+    expect(buildDepositTransaction).toBeDefined();
+    expect(typeof buildDepositTransaction).toBe('function');
   });
 
-  it('should handle withdraw operations', async () => {
-    const { withdraw } = await import('../server/solana.js');
+  it('should process deposit transactions', async () => {
+    const { processDepositTransaction } = await import('../server/solana.js');
     
-    expect(withdraw).toBeDefined();
-    expect(typeof withdraw).toBe('function');
+    expect(processDepositTransaction).toBeDefined();
+    expect(typeof processDepositTransaction).toBe('function');
+  });
+
+  it('should build withdraw transactions', async () => {
+    const { buildWithdrawTransaction } = await import('../server/solana.js');
+    
+    expect(buildWithdrawTransaction).toBeDefined();
+    expect(typeof buildWithdrawTransaction).toBe('function');
+  });
+
+  it('should process withdraw transactions', async () => {
+    const { processWithdrawTransaction } = await import('../server/solana.js');
+    
+    expect(processWithdrawTransaction).toBeDefined();
+    expect(typeof processWithdrawTransaction).toBe('function');
   });
 
   it('should get vault balance', async () => {
