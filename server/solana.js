@@ -153,6 +153,16 @@ async function buildDepositTransaction(userPublicKey, amount) {
     const userKey = new PublicKey(userPublicKey);
     const vaultAddress = getUserVaultAddress(userKey);
 
+    // Check if vault exists before building transaction
+    try {
+      await program.account.vault.fetch(vaultAddress);
+    } catch (error) {
+      if (error.message.includes('Account does not exist') || error.message.includes('Invalid account discriminator')) {
+        throw new Error('Vault does not exist. Please initialize your vault first by running the vault initialization flow.');
+      }
+      throw error; // Re-throw other errors
+    }
+
     // Create deposit transaction (unsigned)
     const tx = new Transaction().add(
       await program.methods

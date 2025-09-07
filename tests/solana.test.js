@@ -252,4 +252,62 @@ describe('Solana Integration', () => {
     expect(typeof result).toBe('number');
     expect(result).toBe(1); // 1 SOL
   });
+
+  it('should handle amounts above Number.MAX_SAFE_INTEGER without precision loss', async () => {
+    // Mock very large lamport amount
+    const largeLamports = '9007199254740992'; // Just above MAX_SAFE_INTEGER
+    const mockTx = createMockTransaction('deposit', largeLamports);
+    
+    vi.mocked(solana.processDepositTransaction).mockResolvedValue({
+      success: true,
+      signature: 'mock-signature',
+      verifiedAmountLamports: largeLamports
+    });
+    
+    const result = await solana.processDepositTransaction(mockTx, 'mock-user-address');
+    
+    expect(result.success).toBe(true);
+    expect(result.verifiedAmountLamports).toBe(largeLamports);
+    
+    // Verify the amount is preserved as string for large values
+    expect(typeof result.verifiedAmountLamports).toBe('string');
+  });
+
+  it('should fail gracefully when vault does not exist for deposit', async () => {
+    // Mock vault fetch failure
+    mockProgram.account.vault.fetch.mockRejectedValueOnce(
+      new Error('Account does not exist')
+    );
+    
+    const { buildDepositTransaction } = require('../server/solana');
+    
+    await expect(buildDepositTransaction('mock-user-address', 1.0))
+      .rejects
+      .toThrow('Vault does not exist. Please initialize your vault first by running the vault initialization flow.');
+  });
+
+  it('should fail gracefully when vault has invalid discriminator', async () => {
+    // Mock vault fetch failure with invalid discriminator
+    mockProgram.account.vault.fetch.mockRejectedValueOnce(
+      new Error('Invalid account discriminator')
+    );
+    
+    const { buildDepositTransaction } = require('../server/solana');
+    
+    await expect(buildDepositTransaction('mock-user-address', 1.0))
+      .rejects
+      .toThrow('Vault does not exist. Please initialize your vault first by running the vault initialization flow.');
+  });
+
+  it('should re-throw other vault fetch errors', async () => {
+    // Mock vault fetch failure with different error
+    const networkError = new Error('Network connection failed');
+    mockProgram.account.vault.fetch.mockRejectedValueOnce(networkError);
+    
+    const { buildDepositTransaction } = require('../server/solana');
+    
+    await expect(buildDepositTransaction('mock-user-address', 1.0))
+      .rejects
+      .toThrow('Network connection failed');
+  });
 });

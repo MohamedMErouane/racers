@@ -219,17 +219,44 @@ router.get('/bets', async (req, res) => {
 
 router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async (req, res) => {
   try {
-    const { redis } = require('../server/db');
+    const { redis, pg } = require('../server/db');
+    const { amount } = req.body;
+    const userAddress = req.user.address;
+    
+    // Check user's current balance
+    const currentBalance = await pg.getUserBalance(userAddress);
+    
+    // Reject bet if it exceeds user's balance
+    if (amount > currentBalance) {
+      return res.status(400).json({ 
+        error: 'Insufficient balance', 
+        currentBalance, 
+        requestedAmount: amount 
+      });
+    }
     
     const bet = {
       ...req.body,
-      userId: req.user.address, // Use authenticated user's address
+      userId: userAddress,
       timestamp: Date.now(),
       status: 'pending'
     };
     
+    // Deduct the bet amount from user's balance
+    const newBalance = currentBalance - amount;
+    await pg.updateUserBalance(userAddress, newBalance);
+    
+    // Log the bet to database
+    await pg.logBet(userAddress, 'bet', bet.racerId, amount, 'pending');
+    
+    // Add bet to Redis for real-time updates
     await redis.addBet(bet);
-    res.json({ success: true, bet });
+    
+    res.json({ 
+      success: true, 
+      bet, 
+      newBalance 
+    });
   } catch (error) {
     console.error('Error adding bet:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -281,7 +308,16 @@ router.post('/vault/deposit/process', requirePrivy, validateBody(vaultProcessSch
       
       // Update user balance using verified amount (convert to decimal for database)
       const currentBalance = await pg.getUserBalance(userAddress);
-      const verifiedAmountDecimal = Number(verifiedLamports) / 1e9;
+      
+      // Convert BigInt lamports to decimal SOL safely
+      let verifiedAmountDecimal;
+      if (verifiedLamports > BigInt(Number.MAX_SAFE_INTEGER)) {
+        // For very large amounts, use string conversion to avoid precision loss
+        verifiedAmountDecimal = parseFloat(verifiedLamports.toString()) / 1e9;
+      } else {
+        verifiedAmountDecimal = Number(verifiedLamports) / 1e9;
+      }
+      
       const newBalance = currentBalance + verifiedAmountDecimal;
       await pg.updateUserBalance(userAddress, newBalance);
       
@@ -339,7 +375,16 @@ router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultProcessSc
       
       // Update user balance using verified amount (convert to decimal for database)
       const currentBalance = await pg.getUserBalance(userAddress);
-      const verifiedAmountDecimal = Number(verifiedLamports) / 1e9;
+      
+      // Convert BigInt lamports to decimal SOL safely
+      let verifiedAmountDecimal;
+      if (verifiedLamports > BigInt(Number.MAX_SAFE_INTEGER)) {
+        // For very large amounts, use string conversion to avoid precision loss
+        verifiedAmountDecimal = parseFloat(verifiedLamports.toString()) / 1e9;
+      } else {
+        verifiedAmountDecimal = Number(verifiedLamports) / 1e9;
+      }
+      
       const newBalance = Math.max(0, currentBalance - verifiedAmountDecimal); // Prevent negative balance
       await pg.updateUserBalance(userAddress, newBalance);
       

@@ -119,10 +119,12 @@ function startRace(socketIo) {
   
   // Emit race start (countdown phase)
   if (io) {
+    const countdownSeconds = Math.floor(RACE_COUNTDOWN_MS / 1000);
     io.emit('race:start', {
       seed: raceState.seed,
       racers: raceState.racers,
       status: 'countdown',
+      countdown: countdownSeconds,
       roundId: raceState.roundId
     });
   }

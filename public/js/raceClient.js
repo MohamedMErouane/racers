@@ -58,7 +58,7 @@ export class RaceClient {
     if (data.status === 'countdown') {
       // Show countdown UI without starting animations
       this.isRacing = false;
-      this.countdown = data.countdown || 10;
+      this.countdown = data.countdown;
       this.updateRaceUI();
       this.showCountdownUI();
       console.log('⏰ Race countdown started:', data);
