@@ -87,19 +87,9 @@ class RacersApp {
       this.handleBetPlacement(event.detail);
     });
     
-    // Race updates
-    window.addEventListener('race:update', (event) => {
-      this.handleRaceUpdate(event.detail);
-    });
-    
     // Wallet events
     window.addEventListener('wallet:connected', (event) => {
       this.handleWalletConnected(event.detail);
-    });
-    
-    // Chat events
-    window.addEventListener('chat:message', (event) => {
-      this.handleChatMessage(event.detail);
     });
   }
 
@@ -133,23 +123,9 @@ class RacersApp {
     }
   }
 
-  // Handle race update
-  handleRaceUpdate(raceData) {
-    if (this.raceClient) {
-      this.raceClient.updateRaceState(raceData);
-    }
-  }
-
   // Handle wallet connected
   handleWalletConnected(walletData) {
     this.ui.showNotification('Wallet connected successfully!', 'success');
-  }
-
-  // Handle chat message
-  handleChatMessage(messageData) {
-    if (this.chatClient) {
-      this.chatClient.addMessage(messageData);
-    }
   }
 
   // Start the application

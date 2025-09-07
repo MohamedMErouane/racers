@@ -12,6 +12,10 @@ RUN npm ci --omit=dev
 # Copy application code
 COPY . .
 
+# Add build argument for Privy App ID
+ARG PRIVY_APP_ID
+ENV PRIVY_APP_ID=$PRIVY_APP_ID
+
 # Run build to inject environment variables
 RUN npm run build
 

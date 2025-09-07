@@ -84,9 +84,17 @@ The server will start on `http://localhost:3001`
 ### Build and Run
 
 ```bash
+# Set the required environment variable
+export PRIVY_APP_ID=your_privy_app_id_here
+
+# Build the Docker image with the build argument
 npm run docker:build
+
+# Run the container
 npm run docker:run
 ```
+
+**Note:** The `PRIVY_APP_ID` environment variable must be set before building the Docker image, as it's required during the build process.
 
 ### Docker Compose
 

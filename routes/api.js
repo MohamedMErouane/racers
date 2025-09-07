@@ -32,6 +32,11 @@ const vaultSchema = z.object({
   amount: z.number().positive()
 });
 
+const vaultProcessSchema = z.object({
+  amount: z.number().positive(),
+  signedTransaction: z.string()
+});
+
 // Middleware to require Privy authentication
 async function requirePrivy(req, res, next) {
   try {
@@ -246,7 +251,7 @@ router.post('/vault/deposit/build', requirePrivy, validateBody(vaultSchema), asy
   }
 });
 
-router.post('/vault/deposit/process', requirePrivy, validateBody(vaultSchema), async (req, res) => {
+router.post('/vault/deposit/process', requirePrivy, validateBody(vaultProcessSchema), async (req, res) => {
   try {
     const solana = require('../server/solana');
     const { pg } = require('../server/db');
@@ -304,7 +309,7 @@ router.post('/vault/withdraw/build', requirePrivy, validateBody(vaultSchema), as
   }
 });
 
-router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultSchema), async (req, res) => {
+router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultProcessSchema), async (req, res) => {
   try {
     const solana = require('../server/solana');
     const { pg } = require('../server/db');
@@ -351,10 +356,15 @@ router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultSchema), 
   }
 });
 
-router.get('/vault/balance/:userPublicKey', async (req, res) => {
+router.get('/vault/balance/:userPublicKey', requirePrivy, async (req, res) => {
   try {
     const solana = require('../server/solana');
     const { userPublicKey } = req.params;
+    
+    // Verify the user can only access their own balance
+    if (userPublicKey !== req.user.address) {
+      return res.status(403).json({ error: 'Access denied: can only view your own vault balance' });
+    }
     
     const balance = await solana.getVaultBalance(userPublicKey);
     // Handle both string (for large values) and number (for safe values) return types

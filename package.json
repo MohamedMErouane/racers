@@ -14,8 +14,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "build": "node build.js",
-    "docker:build": "docker build -t racers-fun .",
-    "docker:run": "docker run -p 3000:3000 racers-fun",
+    "docker:build": "docker build --build-arg PRIVY_APP_ID=${PRIVY_APP_ID} -t racers-fun .",
+    "docker:run": "docker run -p 3001:3001 racers-fun",
     "deploy": "npm run build && vercel --prod"
   },
   "dependencies": {
