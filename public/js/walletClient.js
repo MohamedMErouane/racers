@@ -4,6 +4,7 @@ export class WalletClient {
     this.privy = null;
     this.user = null;
     this.isAuthenticated = false;
+    this.accessToken = null;
   }
 
   // Initialize Privy wallet
@@ -14,7 +15,7 @@ export class WalletClient {
       }
       
       this.privy = new Privy({
-        appId: '<YOUR_PRIVY_APP_ID>',
+        appId: window.CONFIG.PRIVY_APP_ID,
         config: {
           loginMethods: ['email', 'wallet'],
           appearance: {
@@ -64,8 +65,8 @@ export class WalletClient {
         };
         
         this.isAuthenticated = true;
+        this.accessToken = accessToken;
         window.userWallet = wallet.address;
-        window.privyToken = accessToken;
         
         // Dispatch wallet connected event
         window.dispatchEvent(new CustomEvent('wallet:connected', {
@@ -84,10 +85,16 @@ export class WalletClient {
   handleLogout() {
     this.user = null;
     this.isAuthenticated = false;
+    this.accessToken = null;
     window.userWallet = null;
     
     this.updateWalletUI();
     console.log('👋 User logged out');
+  }
+
+  // Get access token
+  getAccessToken() {
+    return this.accessToken;
   }
 
   // Connect wallet

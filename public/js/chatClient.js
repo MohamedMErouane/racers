@@ -20,10 +20,18 @@ export class ChatClient {
   // Send chat message
   async sendMessage(message, userId, username) {
     try {
+      // Get token from wallet client
+      const token = window.racersApp?.walletClient?.getAccessToken();
+      if (!token) {
+        console.error('No authentication token available');
+        return false;
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           message,
@@ -35,6 +43,12 @@ export class ChatClient {
       if (response.ok) {
         const result = await response.json();
         this.addMessage(result.message);
+        
+        // Emit socket event for real-time updates
+        if (window.racersApp && window.racersApp.socket) {
+          window.racersApp.socket.emit('chat:message', result.message);
+        }
+        
         return true;
       } else {
         console.error('Failed to send message');
@@ -76,15 +90,25 @@ export class ChatClient {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message';
     
-    const timestamp = new Date(message.timestamp).toLocaleTimeString();
+    const messageContent = document.createElement('div');
+    messageContent.className = 'message-content';
     
-    messageDiv.innerHTML = `
-      <div class="message-content">
-        <div class="username">${message.username}</div>
-        <div class="message-text">${message.message}</div>
-        <div class="timestamp">${timestamp}</div>
-      </div>
-    `;
+    const username = document.createElement('div');
+    username.className = 'username';
+    username.textContent = message.username;
+    
+    const messageText = document.createElement('div');
+    messageText.className = 'message-text';
+    messageText.textContent = message.message;
+    
+    const timestamp = document.createElement('div');
+    timestamp.className = 'timestamp';
+    timestamp.textContent = new Date(message.timestamp).toLocaleTimeString();
+    
+    messageContent.appendChild(username);
+    messageContent.appendChild(messageText);
+    messageContent.appendChild(timestamp);
+    messageDiv.appendChild(messageContent);
     
     return messageDiv;
   }
@@ -119,9 +143,19 @@ export class ChatClient {
     }
   }
 
+  // Setup socket event listeners
+  setupSocketListeners() {
+    if (window.racersApp && window.racersApp.socket) {
+      window.racersApp.socket.on('chat:message', (message) => {
+        this.addMessage(message);
+      });
+    }
+  }
+
   // Initialize chat client
   async initialize() {
     await this.fetchChatHistory();
     this.setupEventListeners();
+    this.setupSocketListeners();
   }
 }

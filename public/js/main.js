@@ -57,33 +57,23 @@ class RacersApp {
   async initializeSocket() {
     return new Promise((resolve, reject) => {
       try {
-        // Load Socket.IO from CDN
-        const script = document.createElement('script');
-        script.src = '/socket.io/socket.io.js';
-        script.onload = () => {
-          this.socket = io();
-          
-          this.socket.on('connect', () => {
-            console.log('✅ Connected to server');
-            resolve();
-          });
-          
-          this.socket.on('disconnect', () => {
-            console.log('❌ Disconnected from server');
-            this.ui.showNotification('Connection lost', 'error');
-          });
-          
-          this.socket.on('connect_error', (error) => {
-            console.error('❌ Connection error:', error);
-            reject(error);
-          });
-        };
+        // Socket.IO is already loaded via script tag in index.html
+        this.socket = io();
         
-        script.onerror = () => {
-          reject(new Error('Failed to load Socket.IO'));
-        };
+        this.socket.on('connect', () => {
+          console.log('✅ Connected to server');
+          resolve();
+        });
         
-        document.head.appendChild(script);
+        this.socket.on('disconnect', () => {
+          console.log('❌ Disconnected from server');
+          this.ui.showNotification('Connection lost', 'error');
+        });
+        
+        this.socket.on('connect_error', (error) => {
+          console.error('❌ Connection error:', error);
+          reject(error);
+        });
       } catch (error) {
         reject(error);
       }
@@ -116,7 +106,9 @@ class RacersApp {
   // Handle bet placement
   async handleBetPlacement(betData) {
     try {
-      if (!window.userWallet) {
+      // Get token from wallet client
+      const token = this.walletClient?.getAccessToken();
+      if (!token) {
         this.ui.showNotification('Please connect your wallet first', 'error');
         return;
       }
@@ -125,12 +117,9 @@ class RacersApp {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${window.privyToken || window.userWallet}`
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...betData,
-          userId: window.userWallet
-        })
+        body: JSON.stringify(betData)
       });
       
       if (response.ok) {

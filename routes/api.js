@@ -27,13 +27,11 @@ const chatMessageSchema = z.object({
 
 const betSchema = z.object({
   racerId: z.number().int().min(1).max(8),
-  amount: z.number().positive().max(100),
-  userId: z.string().min(1)
+  amount: z.number().positive().max(100)
 });
 
 const vaultSchema = z.object({
-  amount: z.number().positive(),
-  userPublicKey: z.string().min(1)
+  amount: z.number().positive()
 });
 
 // Middleware to require Privy authentication
@@ -180,6 +178,7 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
     
     const bet = {
       ...req.body,
+      userId: req.user.address, // Use authenticated user's address
       timestamp: Date.now(),
       status: 'pending'
     };
@@ -196,7 +195,8 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
 router.post('/vault/deposit', requirePrivy, validateBody(vaultSchema), async (req, res) => {
   try {
     const solana = require('../server/solana');
-    const { amount, userPublicKey } = req.body;
+    const { amount } = req.body;
+    const userPublicKey = req.user.address; // Use authenticated user's address
     
     const result = await solana.deposit(userPublicKey, amount);
     res.json(result);
@@ -209,7 +209,8 @@ router.post('/vault/deposit', requirePrivy, validateBody(vaultSchema), async (re
 router.post('/vault/withdraw', requirePrivy, validateBody(vaultSchema), async (req, res) => {
   try {
     const solana = require('../server/solana');
-    const { amount, userPublicKey } = req.body;
+    const { amount } = req.body;
+    const userPublicKey = req.user.address; // Use authenticated user's address
     
     const result = await solana.withdraw(userPublicKey, amount);
     res.json(result);
@@ -235,11 +236,7 @@ router.get('/vault/balance/:userPublicKey', async (req, res) => {
 router.post('/vault/initialize', requirePrivy, async (req, res) => {
   try {
     const solana = require('../server/solana');
-    const { userPublicKey } = req.body;
-    
-    if (!userPublicKey) {
-      return res.status(400).json({ error: 'User public key is required' });
-    }
+    const userPublicKey = req.user.address; // Use authenticated user's address
     
     const result = await solana.initializeVault(userPublicKey);
     res.json(result);
