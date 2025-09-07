@@ -42,7 +42,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'", "https://api.privy.io", "https://auth.privy.io", "wss:", "https:"],
+      connectSrc: ["'self'", "https://api.privy.io", "https://auth.privy.io", "wss:", "https://api.mainnet-beta.solana.com", "https://api.devnet.solana.com"],
       scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://auth.privy.io", "https://cdn.socket.io", "https://cdnjs.cloudflare.com"],
       styleSrc: ["'self'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],

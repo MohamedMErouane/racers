@@ -309,7 +309,7 @@ router.post('/vault/withdraw/process', requirePrivy, async (req, res) => {
       return res.status(400).json({ error: 'Signed transaction required' });
     }
     
-    const result = await solana.processWithdrawTransaction(signedTransaction);
+    const result = await solana.processWithdrawTransaction(signedTransaction, userAddress);
     
     if (result.success) {
       // Verify the claimed amount matches the transaction amount

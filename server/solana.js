@@ -260,10 +260,34 @@ async function buildWithdrawTransaction(userPublicKey, amount) {
 }
 
 // Verify and process signed withdraw transaction
-async function processWithdrawTransaction(signedTransaction) {
+async function processWithdrawTransaction(signedTransaction, expectedUserAddress) {
   try {
     // Deserialize the signed transaction
     const tx = Transaction.from(Buffer.from(signedTransaction, 'base64'));
+    
+    // Verify the transaction signer matches the expected user
+    if (tx.signatures.length === 0) {
+      throw new Error('Transaction has no signatures');
+    }
+    
+    // Get the expected vault address for the user
+    const expectedUserKey = new PublicKey(expectedUserAddress);
+    const expectedVaultAddress = getUserVaultAddress(expectedUserKey);
+    
+    // Verify the instruction accounts match expected vault and user
+    if (tx.instructions.length > 0) {
+      const instruction = tx.instructions[0];
+      if (instruction.programId.equals(program.programId)) {
+        // Verify vault account matches expected vault
+        if (!instruction.keys[0].pubkey.equals(expectedVaultAddress)) {
+          throw new Error('Vault address mismatch');
+        }
+        // Verify user account matches expected user and is a signer
+        if (!instruction.keys[1].pubkey.equals(expectedUserKey) || !instruction.keys[1].isSigner) {
+          throw new Error('User address mismatch or not a signer');
+        }
+      }
+    }
     
     // Extract the actual amount from the transaction
     let verifiedAmount = 0;
@@ -304,7 +328,13 @@ async function getVaultBalance(userPublicKey) {
     const vaultAddress = getUserVaultAddress(userKey);
 
     const vaultInfo = await program.account.vault.fetch(vaultAddress);
-    return vaultInfo.balance / 1e9; // Convert lamports to SOL
+    // Convert BN to number safely, guarding against large values
+    const balanceNumber = vaultInfo.balance.toNumber();
+    if (balanceNumber > Number.MAX_SAFE_INTEGER) {
+      console.warn('Vault balance exceeds safe integer range, using string conversion');
+      return parseFloat(vaultInfo.balance.toString()) / 1e9;
+    }
+    return balanceNumber / 1e9; // Convert lamports to SOL
 
   } catch (error) {
     console.error('❌ Failed to get vault balance:', error);

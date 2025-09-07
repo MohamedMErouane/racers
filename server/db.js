@@ -128,17 +128,18 @@ const redisOps = {
 // Postgres operations
 const pgOps = {
   // Race results
-  async logRaceResult(raceId, seed, winner) {
+  async logRaceResult(raceId, seed, winner, roundId) {
     try {
       const query = `
-        INSERT INTO race_results (race_id, seed, winner, created_at)
-        VALUES ($1, $2, $3, NOW())
+        INSERT INTO race_results (race_id, seed, winner, round_id, created_at)
+        VALUES ($1, $2, $3, $4, NOW())
         ON CONFLICT (race_id) DO UPDATE SET
         seed = EXCLUDED.seed,
         winner = EXCLUDED.winner,
+        round_id = EXCLUDED.round_id,
         created_at = EXCLUDED.created_at
       `;
-      await pg.query(query, [raceId, seed, winner]);
+      await pg.query(query, [raceId, seed, winner, roundId]);
     } catch (error) {
       console.error('Error logging race result:', error);
     }
@@ -149,7 +150,9 @@ const pgOps = {
     try {
       const query = 'SELECT balance FROM user_balances WHERE user_id = $1';
       const result = await pg.query(query, [userId]);
-      return result.rows[0]?.balance || 0;
+      const balance = result.rows[0]?.balance;
+      // Convert string to number, defaulting to 0 if parsing fails
+      return balance ? parseFloat(balance) || 0 : 0;
     } catch (error) {
       console.error('Error getting user balance:', error);
       return 0;
@@ -195,6 +198,7 @@ async function initializeTables() {
         race_id VARCHAR(255) UNIQUE NOT NULL,
         seed VARCHAR(255) NOT NULL,
         winner INTEGER NOT NULL,
+        round_id INTEGER NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);

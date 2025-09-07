@@ -96,6 +96,16 @@ export class WalletClient {
     this.accessToken = null;
     window.userWallet = null;
     
+    // Disable chat input after logout
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+      chatInput.disabled = true;
+      chatInput.placeholder = 'Connect wallet to chat...';
+    }
+    
+    // Dispatch wallet disconnected event
+    window.dispatchEvent(new CustomEvent('wallet:disconnected'));
+    
     this.updateWalletUI();
     console.log('👋 User logged out');
   }
