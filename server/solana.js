@@ -152,10 +152,34 @@ async function buildDepositTransaction(userPublicKey, amount) {
 }
 
 // Verify and process signed deposit transaction
-async function processDepositTransaction(signedTransaction) {
+async function processDepositTransaction(signedTransaction, expectedUserAddress) {
   try {
     // Deserialize the signed transaction
     const tx = Transaction.from(Buffer.from(signedTransaction, 'base64'));
+    
+    // Verify the transaction signer matches the expected user
+    if (tx.signatures.length === 0) {
+      throw new Error('Transaction has no signatures');
+    }
+    
+    // Get the expected vault address for the user
+    const expectedUserKey = new PublicKey(expectedUserAddress);
+    const expectedVaultAddress = getUserVaultAddress(expectedUserKey);
+    
+    // Verify the instruction accounts match expected vault and user
+    if (tx.instructions.length > 0) {
+      const instruction = tx.instructions[0];
+      if (instruction.programId.equals(program.programId)) {
+        // Verify vault account matches expected vault
+        if (!instruction.keys[0].pubkey.equals(expectedVaultAddress)) {
+          throw new Error('Vault address mismatch');
+        }
+        // Verify user account matches expected user and is a signer
+        if (!instruction.keys[1].pubkey.equals(expectedUserKey) || !instruction.keys[1].isSigner) {
+          throw new Error('User address mismatch or not a signer');
+        }
+      }
+    }
     
     // Extract the actual amount from the transaction
     let verifiedAmount = 0;

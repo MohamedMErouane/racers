@@ -74,6 +74,14 @@ export class WalletClient {
         }));
         
         this.updateWalletUI();
+        
+        // Enable chat input after successful authentication
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) {
+          chatInput.disabled = false;
+          chatInput.placeholder = 'Type your message...';
+        }
+        
         console.log('✅ User authenticated:', this.user);
       }
     } catch (error) {

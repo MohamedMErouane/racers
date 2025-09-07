@@ -31,11 +31,14 @@ describe('Race Engine', () => {
     expect(state.racers).toHaveLength(8);
   });
 
-  it('should generate deterministic race results', () => {
+  it('should generate deterministic race results', async () => {
     startRace(mockIo);
     const state1 = getState();
     
-    // Start another race with same seed
+    // Stop the first race before starting another
+    stopRace(null, { restart: false });
+    
+    // Start another race with different seed
     startRace(mockIo);
     const state2 = getState();
     
@@ -47,7 +50,7 @@ describe('Race Engine', () => {
     startRace(mockIo);
     const winner = { id: 1, name: 'Test Racer' };
     
-    stopRace(mockIo, winner);
+    stopRace(winner, { restart: false });
     const state = getState();
     
     expect(state.status).toBe('finished');

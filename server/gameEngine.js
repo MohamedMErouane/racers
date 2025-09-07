@@ -48,7 +48,8 @@ const raceState = {
   tick: 0,
   startTime: null,
   endTime: null,
-  winner: null
+  winner: null,
+  roundId: 0             // Incrementing race number
 };
 
 let raceInterval = null;
@@ -97,6 +98,9 @@ function startRace(socketIo) {
   
   io = socketIo;
   
+  // Increment round ID for new race
+  raceState.roundId++;
+  
   // Generate deterministic seed
   raceState.seed = crypto.randomBytes(32).toString('hex');
   raceState.tick = 0;
@@ -113,7 +117,8 @@ function startRace(socketIo) {
     io.emit('race:start', {
       seed: raceState.seed,
       racers: raceState.racers,
-      status: 'countdown'
+      status: 'countdown',
+      roundId: raceState.roundId
     });
   }
   
@@ -124,7 +129,8 @@ function startRace(socketIo) {
   if (io) {
     io.emit('race:countdown', {
       countdown: countdownSeconds,
-      status: 'countdown'
+      status: 'countdown',
+      roundId: raceState.roundId
     });
   }
   
@@ -136,7 +142,8 @@ function startRace(socketIo) {
       if (io) {
         io.emit('race:countdown', {
           countdown: countdownSeconds,
-          status: 'countdown'
+          status: 'countdown',
+          roundId: raceState.roundId
         });
       }
     } else {
@@ -157,7 +164,8 @@ function startRace(socketIo) {
           racers: raceState.racers,
           startTime: raceState.startTime,
           endTime: raceState.endTime,
-          status: 'racing'
+          status: 'racing',
+          roundId: raceState.roundId
         });
       }
       
@@ -231,7 +239,8 @@ function updateRace() {
       racers: raceState.racers,
       timeElapsed,
       timeRemaining,
-      tick: raceState.tick
+      tick: raceState.tick,
+      roundId: raceState.roundId
     });
   }
 }
@@ -268,15 +277,16 @@ async function stopRace(winner, options = {}) {
       winner: winner,
       seed: raceState.seed,
       results: raceState.racers,
-      endTime: raceState.endTime
+      endTime: raceState.endTime,
+      roundId: raceState.roundId
     });
   }
   
   // Log race results to Postgres
   try {
     const raceId = `race_${raceState.startTime}`;
-    await pg.logRaceResult(raceId, raceState.seed, winner ? winner.id : 0);
-    console.log(`Race Results - Seed: ${raceState.seed}, Winner: ${winner ? winner.name : 'Unknown'}`);
+    await pg.logRaceResult(raceId, raceState.seed, winner ? winner.id : 0, raceState.roundId);
+    console.log(`Race Results - Round: ${raceState.roundId}, Seed: ${raceState.seed}, Winner: ${winner ? winner.name : 'Unknown'}`);
   } catch (error) {
     console.error('Error logging race results:', error);
   }

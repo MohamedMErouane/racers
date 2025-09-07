@@ -257,7 +257,7 @@ router.post('/vault/deposit/process', requirePrivy, async (req, res) => {
       return res.status(400).json({ error: 'Signed transaction required' });
     }
     
-    const result = await solana.processDepositTransaction(signedTransaction);
+    const result = await solana.processDepositTransaction(signedTransaction, userAddress);
     
     if (result.success) {
       // Verify the claimed amount matches the transaction amount

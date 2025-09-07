@@ -40,8 +40,7 @@ export class ChatClient {
 
       if (response.ok) {
         const result = await response.json();
-        this.addMessage(result.message);
-        
+        // Don't add message locally - let the server broadcast handle it
         return true;
       } else {
         console.error('Failed to send message');
