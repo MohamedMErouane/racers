@@ -19,7 +19,7 @@ const redisOps = {
       return messages.map(msg => JSON.parse(msg));
     } catch (error) {
       console.error('Error getting chat messages:', error);
-      return [];
+      throw error; // Rethrow to let callers handle the error
     }
   },
 
@@ -34,6 +34,7 @@ const redisOps = {
       await redis.ltrim('chat', -1000, -1);
     } catch (error) {
       console.error('Error adding chat message:', error);
+      throw error; // Rethrow to let callers handle the error
     }
   },
 
@@ -48,7 +49,7 @@ const redisOps = {
       return bets.map(bet => JSON.parse(bet));
     } catch (error) {
       console.error('Error getting bets:', error);
-      return [];
+      throw error; // Rethrow to let callers handle the error
     }
   },
 
@@ -63,6 +64,7 @@ const redisOps = {
       await redis.ltrim('bets', -1000, -1);
     } catch (error) {
       console.error('Error adding bet:', error);
+      throw error; // Rethrow to let callers handle the error
     }
   },
 
@@ -76,6 +78,7 @@ const redisOps = {
       await redis.setex(`race:${raceId}`, 3600, JSON.stringify(state)); // 1 hour TTL
     } catch (error) {
       console.error('Error setting race state:', error);
+      throw error; // Rethrow to let callers handle the error
     }
   },
 
@@ -89,7 +92,7 @@ const redisOps = {
       return state ? JSON.parse(state) : null;
     } catch (error) {
       console.error('Error getting race state:', error);
-      return null;
+      throw error; // Rethrow to let callers handle the error
     }
   },
 
@@ -103,6 +106,7 @@ const redisOps = {
       await redis.publish(`race:${raceId}`, JSON.stringify(update));
     } catch (error) {
       console.error('Error publishing race update:', error);
+      throw error; // Rethrow to let callers handle the error
     }
   },
 

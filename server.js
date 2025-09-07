@@ -14,7 +14,6 @@ require('dotenv').config();
 // Import custom modules
 const { initializeRedis } = require('./services/redis');
 const { initializeSentry } = require('./services/sentry');
-const { initializePrivy } = require('./services/privy');
 
 // Import socket handlers
 const { initializeChatSocket } = require('./socket/chatSocket');

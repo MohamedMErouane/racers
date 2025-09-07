@@ -137,4 +137,42 @@ describe('Database Operations', () => {
       expect(error.message).toContain('Redis connection failed');
     }
   });
+
+  it('should throw error when Redis is unavailable for getChatMessages', async () => {
+    // Mock Redis error
+    mockRedis.lrange.mockRejectedValueOnce(new Error('Redis connection failed'));
+    
+    const { redis } = await import('../server/db.js');
+    
+    await expect(redis.getChatMessages(10)).rejects.toThrow('Redis connection failed');
+  });
+
+  it('should throw error when Redis is unavailable for addChatMessage', async () => {
+    // Mock Redis error
+    mockRedis.rpush.mockRejectedValueOnce(new Error('Redis connection failed'));
+    
+    const { redis } = await import('../server/db.js');
+    
+    const message = { text: 'test', user: 'test', timestamp: Date.now() };
+    await expect(redis.addChatMessage(message)).rejects.toThrow('Redis connection failed');
+  });
+
+  it('should throw error when Redis is unavailable for getBets', async () => {
+    // Mock Redis error
+    mockRedis.lrange.mockRejectedValueOnce(new Error('Redis connection failed'));
+    
+    const { redis } = await import('../server/db.js');
+    
+    await expect(redis.getBets(10)).rejects.toThrow('Redis connection failed');
+  });
+
+  it('should throw error when Redis is unavailable for addBet', async () => {
+    // Mock Redis error
+    mockRedis.rpush.mockRejectedValueOnce(new Error('Redis connection failed'));
+    
+    const { redis } = await import('../server/db.js');
+    
+    const bet = { racerId: 1, amount: 1, userId: 'test', timestamp: Date.now() };
+    await expect(redis.addBet(bet)).rejects.toThrow('Redis connection failed');
+  });
 });

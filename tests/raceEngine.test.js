@@ -85,4 +85,24 @@ describe('Race Engine', () => {
       expect.any(Number)  // roundId
     );
   });
+
+  it('should generate non-colliding randomness for different racer/tick combinations', () => {
+    const { deterministicRandom } = require('../server/gameEngine');
+    const seed = 'test-seed-123';
+    
+    // Test that different combinations produce different results
+    const result1 = deterministicRandom(seed, 1, 2); // tick=1, racer=2
+    const result2 = deterministicRandom(seed, 2, 1); // tick=2, racer=1
+    
+    // These should be different (no collision)
+    expect(result1).not.toBe(result2);
+    
+    // But same inputs should produce same results (deterministic)
+    const result3 = deterministicRandom(seed, 1, 2);
+    expect(result1).toBe(result3);
+    
+    // Test edge case that previously caused collision
+    const result4 = deterministicRandom(seed, 2, 1); // Same as result2
+    expect(result2).toBe(result4);
+  });
 });

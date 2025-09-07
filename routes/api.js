@@ -357,7 +357,13 @@ router.get('/vault/balance/:userPublicKey', async (req, res) => {
     const { userPublicKey } = req.params;
     
     const balance = await solana.getVaultBalance(userPublicKey);
-    res.json({ balance });
+    // Handle both string (for large values) and number (for safe values) return types
+    const response = { balance };
+    if (typeof balance === 'string') {
+      response.balanceString = balance;
+      response.balance = parseFloat(balance) / 1e9; // Convert to SOL for display
+    }
+    res.json(response);
   } catch (error) {
     console.error('Error getting vault balance:', error);
     res.status(500).json({ error: 'Internal server error' });

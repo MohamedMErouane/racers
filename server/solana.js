@@ -409,13 +409,18 @@ async function getVaultBalance(userPublicKey) {
     const vaultAddress = getUserVaultAddress(userKey);
 
     const vaultInfo = await program.account.vault.fetch(vaultAddress);
-    // Convert BN to number safely, guarding against large values
-    const balanceNumber = vaultInfo.balance.toNumber();
-    if (balanceNumber > Number.MAX_SAFE_INTEGER) {
-      console.warn('Vault balance exceeds safe integer range, using string conversion');
-      return parseFloat(vaultInfo.balance.toString()) / 1e9;
+    // Convert BN to string to avoid precision loss, then parse as BigInt
+    const balanceString = vaultInfo.balance.toString();
+    const balanceBigInt = BigInt(balanceString);
+    
+    // Check if the value is within safe integer range for display
+    if (balanceBigInt > BigInt(Number.MAX_SAFE_INTEGER)) {
+      console.warn('Vault balance exceeds safe integer range, returning as string');
+      return balanceString; // Return as string for large values
     }
-    return balanceNumber / 1e9; // Convert lamports to SOL
+    
+    // Convert to decimal SOL for display only after ensuring safe range
+    return Number(balanceBigInt) / 1e9; // Convert lamports to SOL
 
   } catch (error) {
     console.error('❌ Failed to get vault balance:', error);
@@ -527,5 +532,6 @@ module.exports = {
   getVaultBalance,
   buildInitializeVaultTransaction,
   processInitializeVaultTransaction,
-  getUserVaultAddress
+  getUserVaultAddress,
+  computeDiscriminator
 };

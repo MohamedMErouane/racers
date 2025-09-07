@@ -222,4 +222,34 @@ describe('Solana Integration', () => {
       expect(withdrawDiscriminator.length).toBe(8);
     }).not.toThrow();
   });
+
+  it('should handle large vault balances without precision loss', async () => {
+    // Mock large balance that exceeds Number.MAX_SAFE_INTEGER
+    const largeBalance = '9007199254740992'; // Just above MAX_SAFE_INTEGER
+    mockProgram.account.vault.fetch.mockResolvedValueOnce({
+      balance: { toString: () => largeBalance }
+    });
+    
+    const { getVaultBalance } = require('../server/solana');
+    const result = await getVaultBalance('mock-user-address');
+    
+    // Should return string for large values
+    expect(typeof result).toBe('string');
+    expect(result).toBe(largeBalance);
+  });
+
+  it('should return number for safe vault balances', async () => {
+    // Mock safe balance
+    const safeBalance = '1000000000'; // 1 SOL in lamports
+    mockProgram.account.vault.fetch.mockResolvedValueOnce({
+      balance: { toString: () => safeBalance }
+    });
+    
+    const { getVaultBalance } = require('../server/solana');
+    const result = await getVaultBalance('mock-user-address');
+    
+    // Should return number for safe values
+    expect(typeof result).toBe('number');
+    expect(result).toBe(1); // 1 SOL
+  });
 });

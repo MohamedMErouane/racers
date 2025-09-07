@@ -61,10 +61,10 @@ let raceInterval = null;
 let countdownInterval = null;
 let io = null;
 
-// Deterministic random function using HMAC
-function deterministicRandom(seed, tick) {
+// Deterministic random function using HMAC with composite input
+function deterministicRandom(seed, tick, racerId) {
   const hmac = crypto.createHmac('sha256', seed);
-  hmac.update(tick.toString());
+  hmac.update(`${tick}:${racerId}`); // Composite string to prevent collisions
   const hash = hmac.digest('hex');
   // Convert first 8 characters to a number between 0 and 1
   return parseInt(hash.substring(0, 8), 16) / 0xffffffff;
@@ -207,7 +207,7 @@ function updateRace() {
   raceState.racers.forEach((racer) => {
     if (!racer.finished) {
       // Use deterministic randomness based on seed, tick, and stable racer ID
-      const randomValue = deterministicRandom(raceState.seed, raceState.tick + racer.id);
+      const randomValue = deterministicRandom(raceState.seed, raceState.tick, racer.id);
       const randomFactor = 0.8 + randomValue * 0.4; // 0.8 to 1.2
       const acceleration = racer.acceleration * progress;
       
@@ -317,5 +317,6 @@ module.exports = {
   startRace,
   stopRace,
   getState,
-  refreshRacerStatsCache
+  refreshRacerStatsCache,
+  deterministicRandom
 };
