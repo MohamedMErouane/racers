@@ -237,7 +237,9 @@ function updateRace() {
 }
 
 // Stop the race
-async function stopRace(winner) {
+async function stopRace(winner, options = {}) {
+  const { restart = true } = options;
+  
   if (raceInterval) {
     clearInterval(raceInterval);
     raceInterval = null;
@@ -279,10 +281,12 @@ async function stopRace(winner) {
     console.error('Error logging race results:', error);
   }
   
-  // Start new race after 2 seconds
-  setTimeout(() => {
-    startRace(io);
-  }, 2000);
+  // Start new race after 2 seconds only if restart is true
+  if (restart) {
+    setTimeout(() => {
+      startRace(io);
+    }, 2000);
+  }
 }
 
 // Get current race state

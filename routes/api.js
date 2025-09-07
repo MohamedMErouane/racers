@@ -148,7 +148,7 @@ router.post('/race/stop', requirePrivy, requireAdmin, (req, res) => {
       return res.status(503).json({ error: 'Game engine not available' });
     }
 
-    gameEngine.stopRace();
+    gameEngine.stopRace(null, { restart: false });
     res.sendStatus(202);
   } catch (error) {
     console.error('Error stopping race:', error);
@@ -171,6 +171,7 @@ router.get('/chat', async (req, res) => {
 router.post('/chat', chatRateLimit, requirePrivy, validateBody(chatMessageSchema), async (req, res) => {
   try {
     const { redis } = require('../server/db');
+    const io = req.app.get('io');
     
     // Sanitize the message
     const sanitizedMessage = sanitizeHtml(req.body.message, {
@@ -186,6 +187,12 @@ router.post('/chat', chatRateLimit, requirePrivy, validateBody(chatMessageSchema
     };
     
     await redis.addChatMessage(message);
+    
+    // Broadcast message to all connected clients
+    if (io) {
+      io.emit('chat:message', message);
+    }
+    
     res.json({ success: true, message });
   } catch (error) {
     console.error('Error adding chat message:', error);

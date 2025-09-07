@@ -82,7 +82,10 @@ async function initializeSolana() {
     }
 
     // Create program instance
-    const programId = new PublicKey(process.env.PROGRAM_ID || 'RacersFun1111111111111111111111111111111111');
+    if (!process.env.PROGRAM_ID) {
+      throw new Error('PROGRAM_ID environment variable is required');
+    }
+    const programId = new PublicKey(process.env.PROGRAM_ID);
     program = new Program(idl, programId, provider);
 
     console.log('✅ Solana program initialized');
@@ -158,13 +161,13 @@ async function processDepositTransaction(signedTransaction) {
     let verifiedAmount = 0;
     if (tx.instructions.length > 0) {
       const instruction = tx.instructions[0];
-      // For system program transfers, the amount is in the instruction data
-      if (instruction.programId.equals(SystemProgram.programId)) {
-        // System program transfer instruction data format: [0, 4, amount (8 bytes)]
+      // For custom racers_vault program, decode the instruction data
+      if (instruction.programId.equals(program.programId)) {
+        // Custom program instruction data format: [discriminator (8 bytes), amount (8 bytes)]
         const data = instruction.data;
-        if (data.length >= 12) {
-          // Extract the 8-byte amount (little-endian)
-          verifiedAmount = data.readBigUInt64LE(4) / BigInt(1e9); // Convert lamports to SOL
+        if (data.length >= 16) {
+          // Extract the 8-byte amount (little-endian) after the 8-byte discriminator
+          verifiedAmount = data.readBigUInt64LE(8) / BigInt(1e9); // Convert lamports to SOL
         }
       }
     }
@@ -194,7 +197,8 @@ async function buildWithdrawTransaction(userPublicKey, amount) {
 
     // Check vault balance first
     const vaultInfo = await program.account.vault.fetch(vaultAddress);
-    if (vaultInfo.balance < Math.round(amount * 1e9)) {
+    const requestedAmount = new BN(Math.round(amount * 1e9));
+    if (vaultInfo.balance.lt(requestedAmount)) {
       throw new Error('Insufficient balance in vault');
     }
 
@@ -241,13 +245,13 @@ async function processWithdrawTransaction(signedTransaction) {
     let verifiedAmount = 0;
     if (tx.instructions.length > 0) {
       const instruction = tx.instructions[0];
-      // For system program transfers, the amount is in the instruction data
-      if (instruction.programId.equals(SystemProgram.programId)) {
-        // System program transfer instruction data format: [0, 4, amount (8 bytes)]
+      // For custom racers_vault program, decode the instruction data
+      if (instruction.programId.equals(program.programId)) {
+        // Custom program instruction data format: [discriminator (8 bytes), amount (8 bytes)]
         const data = instruction.data;
-        if (data.length >= 12) {
-          // Extract the 8-byte amount (little-endian)
-          verifiedAmount = data.readBigUInt64LE(4) / BigInt(1e9); // Convert lamports to SOL
+        if (data.length >= 16) {
+          // Extract the 8-byte amount (little-endian) after the 8-byte discriminator
+          verifiedAmount = data.readBigUInt64LE(8) / BigInt(1e9); // Convert lamports to SOL
         }
       }
     }

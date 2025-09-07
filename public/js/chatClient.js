@@ -42,14 +42,6 @@ export class ChatClient {
         const result = await response.json();
         this.addMessage(result.message);
         
-        // Emit socket event for real-time updates (with token for authentication)
-        if (window.racersApp && window.racersApp.socket) {
-          window.racersApp.socket.emit('chat:message', {
-            message: result.message.message,
-            token: token
-          });
-        }
-        
         return true;
       } else {
         console.error('Failed to send message');
