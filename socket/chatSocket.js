@@ -1,6 +1,7 @@
 const { verifyPrivyToken } = require('../lib/privy');
 const sanitizeHtml = require('sanitize-html');
 const { z } = require('zod');
+const { getRedis } = require('../services/redis');
 
 // Validation schema for chat messages
 const chatMessageSchema = z.object({
@@ -23,27 +24,28 @@ function initializeChatSocket(io) {
         }
         
         // Rate limiting: max 10 messages per minute per socket using Redis
-        const { redis } = require('../server/db');
+        const redis = getRedis();
         const now = Date.now();
         const socketId = socket.id;
         const rateLimitKey = `chat_rate_limit:${socketId}`;
         
         try {
-          // Get current timestamps from Redis
-          const timestamps = await redis.lrange(rateLimitKey, 0, -1);
-          
-          // Remove timestamps older than 1 minute
-          const recentTimestamps = timestamps.filter(ts => now - parseInt(ts) < 60000);
-          
-          if (recentTimestamps.length >= 10) {
-            socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
-            return;
+          if (redis) {
+            // Get current timestamps from Redis
+            const timestamps = await redis.lrange(rateLimitKey, 0, -1);
+            
+            // Remove timestamps older than 1 minute
+            const recentTimestamps = timestamps.filter(ts => now - parseInt(ts) < 60000);
+            
+            if (recentTimestamps.length >= 10) {
+              socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
+              return;
+            }
+            
+            // Add current timestamp to Redis list
+            await redis.lpush(rateLimitKey, now.toString());
+            await redis.expire(rateLimitKey, 60); // Expire after 1 minute
           }
-          
-          // Add current timestamp to Redis list
-          await redis.lpush(rateLimitKey, now.toString());
-          await redis.expire(rateLimitKey, 60); // Expire after 1 minute
-          
         } catch (error) {
           console.error('Redis rate limiting error:', error);
           // Fallback: allow message if Redis is unavailable
@@ -92,9 +94,11 @@ function initializeChatSocket(io) {
       console.log('❌ Chat socket disconnected:', socket.id);
       // Clean up rate limiting data for disconnected socket
       try {
-        const { redis } = require('../server/db');
-        const rateLimitKey = `chat_rate_limit:${socket.id}`;
-        await redis.del(rateLimitKey);
+        const redis = getRedis();
+        if (redis) {
+          const rateLimitKey = `chat_rate_limit:${socket.id}`;
+          await redis.del(rateLimitKey);
+        }
       } catch (error) {
         console.error('Error cleaning up rate limit key:', error);
       }

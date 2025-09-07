@@ -352,15 +352,33 @@ router.get('/vault/balance/:userPublicKey', async (req, res) => {
   }
 });
 
-router.post('/vault/initialize', requirePrivy, async (req, res) => {
+router.post('/vault/initialize/build', requirePrivy, async (req, res) => {
   try {
     const solana = require('../server/solana');
     const userPublicKey = req.user.address; // Use authenticated user's address
     
-    const result = await solana.initializeVault(userPublicKey);
+    const result = await solana.buildInitializeVaultTransaction(userPublicKey);
     res.json(result);
   } catch (error) {
-    console.error('Error initializing vault:', error);
+    console.error('Error building vault initialization transaction:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/vault/initialize/process', requirePrivy, async (req, res) => {
+  try {
+    const solana = require('../server/solana');
+    const { signedTransaction } = req.body;
+    const userAddress = req.user.address;
+    
+    if (!signedTransaction) {
+      return res.status(400).json({ error: 'Signed transaction required' });
+    }
+    
+    const result = await solana.processInitializeVaultTransaction(signedTransaction, userAddress);
+    res.json(result);
+  } catch (error) {
+    console.error('Error processing vault initialization transaction:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

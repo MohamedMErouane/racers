@@ -202,10 +202,10 @@ function updateRace() {
   const trackLength = 1000;
   const progress = timeElapsed / 12000; // 12 second race
   
-  raceState.racers.forEach((racer, index) => {
+  raceState.racers.forEach((racer) => {
     if (!racer.finished) {
-      // Use deterministic randomness based on seed and tick
-      const randomValue = deterministicRandom(raceState.seed, raceState.tick + index);
+      // Use deterministic randomness based on seed, tick, and stable racer ID
+      const randomValue = deterministicRandom(raceState.seed, raceState.tick + racer.id);
       const randomFactor = 0.8 + randomValue * 0.4; // 0.8 to 1.2
       const acceleration = racer.acceleration * progress;
       
@@ -232,6 +232,12 @@ function updateRace() {
     if (!a.finished && b.finished) return 1;
     return b.x - a.x;
   });
+  
+  // Check if all racers have finished (early completion)
+  if (raceState.racers.every(r => r.finished)) {
+    stopRace(raceState.racers[0]);
+    return;
+  }
   
   // Emit race update
   if (io) {

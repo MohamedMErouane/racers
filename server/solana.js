@@ -191,7 +191,8 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
         const data = instruction.data;
         if (data.length >= 16) {
           // Extract the 8-byte amount (little-endian) after the 8-byte discriminator
-          verifiedAmount = data.readBigUInt64LE(8) / BigInt(1e9); // Convert lamports to SOL
+          // Convert lamports to decimal SOL value
+          verifiedAmount = Number(data.readBigUInt64LE(8)) / 1e9;
         }
       }
     }
@@ -299,7 +300,8 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
         const data = instruction.data;
         if (data.length >= 16) {
           // Extract the 8-byte amount (little-endian) after the 8-byte discriminator
-          verifiedAmount = data.readBigUInt64LE(8) / BigInt(1e9); // Convert lamports to SOL
+          // Convert lamports to decimal SOL value
+          verifiedAmount = Number(data.readBigUInt64LE(8)) / 1e9;
         }
       }
     }
@@ -342,8 +344,8 @@ async function getVaultBalance(userPublicKey) {
   }
 }
 
-// Initialize user vault
-async function initializeVault(userPublicKey) {
+// Build unsigned vault initialization transaction for client signing
+async function buildInitializeVaultTransaction(userPublicKey) {
   try {
     if (!program) {
       throw new Error('Solana program not initialized');
@@ -356,12 +358,12 @@ async function initializeVault(userPublicKey) {
     try {
       await program.account.vault.fetch(vaultAddress);
       console.log('Vault already exists for user:', userPublicKey);
-      return { success: true, vaultAddress: vaultAddress.toString() };
+      return { success: true, vaultAddress: vaultAddress.toString(), alreadyExists: true };
     } catch (error) {
       // Vault doesn't exist, create it
     }
 
-    // Create initialize vault transaction
+    // Create initialize vault transaction (unsigned)
     const tx = new Transaction().add(
       await program.methods
         .initializeVault()
@@ -373,15 +375,66 @@ async function initializeVault(userPublicKey) {
         .instruction()
     );
 
-    // Send transaction
-    const signature = await connection.sendTransaction(tx, [wallet.payer]);
-    await connection.confirmTransaction(signature);
+    // Set recent blockhash
+    const { blockhash } = await connection.getLatestBlockhash();
+    tx.recentBlockhash = blockhash;
+    tx.feePayer = userKey; // User pays the fee
 
-    console.log(`✅ Vault initialized for user: ${userPublicKey}`);
-    return { success: true, signature, vaultAddress: vaultAddress.toString() };
+    // Serialize transaction for client signing
+    const serializedTx = tx.serialize({ requireAllSignatures: false }).toString('base64');
+
+    console.log(`📝 Vault initialization transaction built for ${userPublicKey}`);
+    return { 
+      success: true, 
+      transaction: serializedTx,
+      vaultAddress: vaultAddress.toString()
+    };
 
   } catch (error) {
-    console.error('❌ Vault initialization failed:', error);
+    console.error('❌ Failed to build vault initialization transaction:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Process signed vault initialization transaction
+async function processInitializeVaultTransaction(signedTransaction, expectedUserAddress) {
+  try {
+    // Deserialize the signed transaction
+    const tx = Transaction.from(Buffer.from(signedTransaction, 'base64'));
+    
+    // Verify the transaction signer matches the expected user
+    if (tx.signatures.length === 0) {
+      throw new Error('Transaction has no signatures');
+    }
+    
+    // Get the expected vault address for the user
+    const expectedUserKey = new PublicKey(expectedUserAddress);
+    const expectedVaultAddress = getUserVaultAddress(expectedUserKey);
+    
+    // Verify the instruction accounts match expected vault and user
+    if (tx.instructions.length > 0) {
+      const instruction = tx.instructions[0];
+      if (instruction.programId.equals(program.programId)) {
+        // Verify vault account matches expected vault
+        if (!instruction.keys[0].pubkey.equals(expectedVaultAddress)) {
+          throw new Error('Vault address mismatch');
+        }
+        // Verify user account matches expected user and is a signer
+        if (!instruction.keys[1].pubkey.equals(expectedUserKey) || !instruction.keys[1].isSigner) {
+          throw new Error('User address mismatch or not a signer');
+        }
+      }
+    }
+    
+    // Send and confirm the transaction
+    const signature = await connection.sendRawTransaction(tx.serialize());
+    await connection.confirmTransaction(signature);
+
+    console.log(`✅ Vault initialization confirmed: ${signature}`);
+    return { success: true, signature };
+
+  } catch (error) {
+    console.error('❌ Vault initialization transaction failed:', error);
     return { success: false, error: error.message };
   }
 }
@@ -393,6 +446,7 @@ module.exports = {
   buildWithdrawTransaction,
   processWithdrawTransaction,
   getVaultBalance,
-  initializeVault,
+  buildInitializeVaultTransaction,
+  processInitializeVaultTransaction,
   getUserVaultAddress
 };
