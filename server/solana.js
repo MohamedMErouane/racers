@@ -9,9 +9,15 @@ let program = null;
 let provider = null;
 let wallet = null;
 
+// Helper function to compute instruction discriminators
+function computeDiscriminator(instructionName) {
+  const hash = anchor.utils.sha256.hash(`global:${instructionName}`);
+  return Buffer.from(hash.slice(0, 16), 'hex');
+}
+
 // Cache instruction discriminators at module scope
-const DEPOSIT_DISCRIMINATOR = anchor.utils.idl.instructionDiscriminator('deposit');
-const WITHDRAW_DISCRIMINATOR = anchor.utils.idl.instructionDiscriminator('withdraw');
+const DEPOSIT_DISCRIMINATOR = computeDiscriminator('deposit');
+const WITHDRAW_DISCRIMINATOR = computeDiscriminator('withdraw');
 
 // Initialize Solana connection and program
 async function initializeSolana() {

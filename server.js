@@ -56,11 +56,38 @@ const connectSrc = [
   "'self'", 
   "https://api.privy.io", 
   "https://auth.privy.io", 
-  "ws:", 
-  "wss:", 
   "https://api.mainnet-beta.solana.com", 
   "https://api.devnet.solana.com"
 ];
+
+// Add WebSocket connections based on environment variables
+function getWebSocketOrigins() {
+  const origins = [];
+  
+  // Add CORS_ORIGIN WebSocket connections
+  const corsOrigin = process.env.CORS_ORIGIN;
+  if (corsOrigin) {
+    corsOrigin.split(',').forEach(origin => {
+      origin = origin.trim();
+      if (origin.startsWith('http://')) {
+        origins.push(origin.replace('http://', 'ws://'));
+      } else if (origin.startsWith('https://')) {
+        origins.push(origin.replace('https://', 'wss://'));
+      }
+    });
+  }
+  
+  // Add SOLANA_WS_URL if configured
+  const solanaWsUrl = process.env.SOLANA_WS_URL;
+  if (solanaWsUrl) {
+    origins.push(solanaWsUrl);
+  }
+  
+  return origins;
+}
+
+// Add WebSocket origins to connectSrc
+connectSrc.push(...getWebSocketOrigins());
 
 // Add custom Solana RPC URL to CSP if configured
 const solanaRpcOrigin = getSolanaRpcOrigin();
@@ -148,7 +175,8 @@ async function initializeServices() {
     console.log('✅ Solana connected');
     
     // Initialize Privy
-    await initializePrivy();
+    const { initPrivy } = require('./lib/privy');
+    initPrivy();
     console.log('✅ Privy initialized');
     
     // Initialize database tables

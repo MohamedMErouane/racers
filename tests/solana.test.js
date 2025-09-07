@@ -70,15 +70,19 @@ vi.mock('@coral-xyz/anchor', () => ({
   AnchorProvider: vi.fn(),
   Wallet: vi.fn(),
   utils: {
-    idl: {
-      instructionDiscriminator: vi.fn((name) => {
-        if (name === 'deposit') return Buffer.from([0x8f, 0x4f, 0x8c, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f]);
-        if (name === 'withdraw') return Buffer.from([0x9f, 0x5f, 0x9c, 0x9a, 0x9b, 0x9d, 0x9e, 0x9f]);
-        return Buffer.alloc(8);
+    sha256: {
+      hash: vi.fn((input) => {
+        // Mock hash function that returns consistent results
+        if (input === 'global:deposit') return '8f4f8c8a8b8d8e8f1234567890abcdef1234567890abcdef1234567890abcdef';
+        if (input === 'global:withdraw') return '9f5f9c9a9b9d9e9f1234567890abcdef1234567890abcdef1234567890abcdef';
+        return '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
       })
     }
   }
 }));
+
+// Import the function we want to test
+const { computeDiscriminator } = require('../server/solana');
 
 describe('Solana Integration', () => {
   beforeEach(() => {
@@ -204,5 +208,18 @@ describe('Solana Integration', () => {
     expect(result.success).toBe(true);
     // Verify the amount is parsed correctly without precision loss
     expect(result.verifiedAmount).toBe(Number(largeAmountLamports) / 1e9);
+  });
+
+  it('should compute discriminators correctly without throwing', () => {
+    // Test that discriminator computation doesn't throw
+    expect(() => {
+      const depositDiscriminator = computeDiscriminator('deposit');
+      const withdrawDiscriminator = computeDiscriminator('withdraw');
+      
+      expect(depositDiscriminator).toBeInstanceOf(Buffer);
+      expect(withdrawDiscriminator).toBeInstanceOf(Buffer);
+      expect(depositDiscriminator.length).toBe(8);
+      expect(withdrawDiscriminator.length).toBe(8);
+    }).not.toThrow();
   });
 });

@@ -155,7 +155,7 @@ const pgOps = {
       return balance ? parseFloat(balance) || 0 : 0;
     } catch (error) {
       console.error('Error getting user balance:', error);
-      return 0;
+      throw error; // Rethrow to let callers handle the error
     }
   },
 
@@ -171,6 +171,7 @@ const pgOps = {
       await pg.query(query, [userId, newBalance]);
     } catch (error) {
       console.error('Error updating user balance:', error);
+      throw error; // Rethrow to let callers handle the error
     }
   },
 
@@ -184,6 +185,7 @@ const pgOps = {
       await pg.query(query, [userId, raceId, racerId, amount, result]);
     } catch (error) {
       console.error('Error logging bet:', error);
+      throw error; // Rethrow to let callers handle the error
     }
   }
 };

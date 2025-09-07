@@ -140,7 +140,7 @@ router.post('/race/start', requirePrivy, requireAdmin, (req, res) => {
 });
 
 // Stop a race (requires admin privileges)
-router.post('/race/stop', requirePrivy, requireAdmin, (req, res) => {
+router.post('/race/stop', requirePrivy, requireAdmin, async (req, res) => {
   try {
     const gameEngine = req.app.get('gameEngine');
 
@@ -148,7 +148,7 @@ router.post('/race/stop', requirePrivy, requireAdmin, (req, res) => {
       return res.status(503).json({ error: 'Game engine not available' });
     }
 
-    gameEngine.stopRace(null, { restart: false });
+    await gameEngine.stopRace(null, { restart: false });
     res.sendStatus(202);
   } catch (error) {
     console.error('Error stopping race:', error);

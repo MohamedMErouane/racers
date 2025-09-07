@@ -65,4 +65,24 @@ describe('Race Engine', () => {
     expect(state).toHaveProperty('seed');
     expect(state).toHaveProperty('tick');
   });
+
+  it('should stop a race during countdown and log with unique ID', async () => {
+    // Start a race (it will be in countdown state)
+    startRace(mockIo);
+    
+    // Stop the race immediately (during countdown when startTime is null)
+    await stopRace(null, { restart: false });
+    
+    const state = getState();
+    expect(state.status).toBe('finished');
+    
+    // Verify that logRaceResult was called with a unique raceId
+    const { pg } = require('../server/db.js');
+    expect(pg.logRaceResult).toHaveBeenCalledWith(
+      expect.stringMatching(/^race_\d+_\d+$/), // Should match race_timestamp_roundId pattern
+      expect.any(String), // seed
+      expect.any(Number), // winner id
+      expect.any(Number)  // roundId
+    );
+  });
 });

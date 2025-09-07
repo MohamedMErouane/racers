@@ -292,7 +292,8 @@ async function stopRace(winner, options = {}) {
   
   // Log race results to Postgres
   try {
-    const raceId = `race_${raceState.startTime}`;
+    // Use startTime if available, otherwise fallback to current time or roundId
+    const raceId = raceState.startTime ? `race_${raceState.startTime}` : `race_${Date.now()}_${raceState.roundId}`;
     await pg.logRaceResult(raceId, raceState.seed, winner ? winner.id : 0, raceState.roundId);
     console.log(`Race Results - Round: ${raceState.roundId}, Seed: ${raceState.seed}, Winner: ${winner ? winner.name : 'Unknown'}`);
   } catch (error) {

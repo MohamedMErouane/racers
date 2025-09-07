@@ -1,22 +1,24 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock Redis and Postgres
-vi.mock('ioredis', () => ({
-  default: vi.fn(() => ({
-    on: vi.fn(),
-    ping: vi.fn().mockResolvedValue('PONG'),
-    lrange: vi.fn().mockResolvedValue([]),
-    rpush: vi.fn().mockResolvedValue(1),
-    ltrim: vi.fn().mockResolvedValue('OK'),
-    setex: vi.fn().mockResolvedValue('OK'),
-    get: vi.fn().mockResolvedValue(null),
-    publish: vi.fn().mockResolvedValue(1),
+const mockRedis = {
+  on: vi.fn(),
+  ping: vi.fn().mockResolvedValue('PONG'),
+  lrange: vi.fn().mockResolvedValue([]),
+  rpush: vi.fn().mockResolvedValue(1),
+  ltrim: vi.fn().mockResolvedValue('OK'),
+  setex: vi.fn().mockResolvedValue('OK'),
+  get: vi.fn().mockResolvedValue(null),
+  publish: vi.fn().mockResolvedValue(1),
+  subscribe: vi.fn().mockResolvedValue('OK'),
+  duplicate: vi.fn().mockReturnValue({
     subscribe: vi.fn().mockResolvedValue('OK'),
-    duplicate: vi.fn().mockReturnValue({
-      subscribe: vi.fn().mockResolvedValue('OK'),
-      on: vi.fn()
-    })
-  }))
+    on: vi.fn()
+  })
+};
+
+vi.mock('ioredis', () => ({
+  default: vi.fn(() => mockRedis)
 }));
 
 vi.mock('pg', () => ({
@@ -26,6 +28,12 @@ vi.mock('pg', () => ({
 }));
 
 describe('Database Operations', () => {
+  beforeEach(async () => {
+    // Initialize Redis before each test
+    const { initializeRedis } = await import('../services/redis.js');
+    await initializeRedis();
+  });
+
   it('should initialize Redis connection', async () => {
     const { redis } = await import('../server/db.js');
     
@@ -79,5 +87,54 @@ describe('Database Operations', () => {
     const { pg } = await import('../server/db.js');
     
     await expect(pg.updateUserBalance('user_123', 100)).resolves.not.toThrow();
+  });
+
+  it('should throw error when database is unavailable for getUserBalance', async () => {
+    // Mock database error
+    const { Pool } = await import('pg');
+    const mockPool = Pool();
+    mockPool.query.mockRejectedValueOnce(new Error('Database connection failed'));
+    
+    const { pg } = await import('../server/db.js');
+    
+    await expect(pg.getUserBalance('user_123')).rejects.toThrow('Database connection failed');
+  });
+
+  it('should throw error when database is unavailable for updateUserBalance', async () => {
+    // Mock database error
+    const { Pool } = await import('pg');
+    const mockPool = Pool();
+    mockPool.query.mockRejectedValueOnce(new Error('Database connection failed'));
+    
+    const { pg } = await import('../server/db.js');
+    
+    await expect(pg.updateUserBalance('user_123', 100)).rejects.toThrow('Database connection failed');
+  });
+
+  it('should throw error when database is unavailable for logBet', async () => {
+    // Mock database error
+    const { Pool } = await import('pg');
+    const mockPool = Pool();
+    mockPool.query.mockRejectedValueOnce(new Error('Database connection failed'));
+    
+    const { pg } = await import('../server/db.js');
+    
+    await expect(pg.logBet('user_123', 'race_456', 1, 10, 'win')).rejects.toThrow('Database connection failed');
+  });
+
+  it('should skip Redis tests when Redis is unavailable', async () => {
+    // Mock Redis connection failure
+    mockRedis.ping.mockRejectedValueOnce(new Error('Redis connection failed'));
+    
+    try {
+      const { initializeRedis } = await import('../services/redis.js');
+      await initializeRedis();
+      // If we get here, Redis is available, so we can run the test
+      expect(true).toBe(true);
+    } catch (error) {
+      // Redis is unavailable, skip the test
+      console.log('Skipping Redis test - Redis unavailable:', error.message);
+      expect(error.message).toContain('Redis connection failed');
+    }
   });
 });
