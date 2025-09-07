@@ -223,27 +223,30 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
       throw new Error('Transaction not signed by expected user');
     }
     
+    // Verify transaction has exactly one instruction
+    if (tx.instructions.length !== 1) {
+      throw new Error(`Transaction must contain exactly one instruction, found ${tx.instructions.length}`);
+    }
+    
     // Verify the instruction accounts match expected vault and user
-    if (tx.instructions.length > 0) {
-      const instruction = tx.instructions[0];
-      if (instruction.programId.equals(program.programId)) {
-        // Verify instruction discriminator matches deposit
-        const data = instruction.data;
-        if (data.length >= 8) {
-          const discriminator = data.slice(0, 8);
-          if (!discriminator.equals(DEPOSIT_DISCRIMINATOR)) {
-            throw new Error('Invalid instruction type: expected deposit');
-          }
+    const instruction = tx.instructions[0];
+    if (instruction.programId.equals(program.programId)) {
+      // Verify instruction discriminator matches deposit
+      const data = instruction.data;
+      if (data.length >= 8) {
+        const discriminator = data.slice(0, 8);
+        if (!discriminator.equals(DEPOSIT_DISCRIMINATOR)) {
+          throw new Error('Invalid instruction type: expected deposit');
         }
-        
-        // Verify vault account matches expected vault
-        if (!instruction.keys[0].pubkey.equals(expectedVaultAddress)) {
-          throw new Error('Vault address mismatch');
-        }
-        // Verify user account matches expected user and is a signer
-        if (!instruction.keys[1].pubkey.equals(expectedUserKey) || !instruction.keys[1].isSigner) {
-          throw new Error('User address mismatch or not a signer');
-        }
+      }
+      
+      // Verify vault account matches expected vault
+      if (!instruction.keys[0].pubkey.equals(expectedVaultAddress)) {
+        throw new Error('Vault address mismatch');
+      }
+      // Verify user account matches expected user and is a signer
+      if (!instruction.keys[1].pubkey.equals(expectedUserKey) || !instruction.keys[1].isSigner) {
+        throw new Error('User address mismatch or not a signer');
       }
     }
     
@@ -354,27 +357,30 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
       throw new Error('Transaction not signed by expected user');
     }
     
+    // Verify transaction has exactly one instruction
+    if (tx.instructions.length !== 1) {
+      throw new Error(`Transaction must contain exactly one instruction, found ${tx.instructions.length}`);
+    }
+    
     // Verify the instruction accounts match expected vault and user
-    if (tx.instructions.length > 0) {
-      const instruction = tx.instructions[0];
-      if (instruction.programId.equals(program.programId)) {
-        // Verify instruction discriminator matches withdraw
-        const data = instruction.data;
-        if (data.length >= 8) {
-          const discriminator = data.slice(0, 8);
-          if (!discriminator.equals(WITHDRAW_DISCRIMINATOR)) {
-            throw new Error('Invalid instruction type: expected withdraw');
-          }
+    const instruction = tx.instructions[0];
+    if (instruction.programId.equals(program.programId)) {
+      // Verify instruction discriminator matches withdraw
+      const data = instruction.data;
+      if (data.length >= 8) {
+        const discriminator = data.slice(0, 8);
+        if (!discriminator.equals(WITHDRAW_DISCRIMINATOR)) {
+          throw new Error('Invalid instruction type: expected withdraw');
         }
-        
-        // Verify vault account matches expected vault
-        if (!instruction.keys[0].pubkey.equals(expectedVaultAddress)) {
-          throw new Error('Vault address mismatch');
-        }
-        // Verify user account matches expected user and is a signer
-        if (!instruction.keys[1].pubkey.equals(expectedUserKey) || !instruction.keys[1].isSigner) {
-          throw new Error('User address mismatch or not a signer');
-        }
+      }
+      
+      // Verify vault account matches expected vault
+      if (!instruction.keys[0].pubkey.equals(expectedVaultAddress)) {
+        throw new Error('Vault address mismatch');
+      }
+      // Verify user account matches expected user and is a signer
+      if (!instruction.keys[1].pubkey.equals(expectedUserKey) || !instruction.keys[1].isSigner) {
+        throw new Error('User address mismatch or not a signer');
       }
     }
     
@@ -434,7 +440,7 @@ async function getVaultBalance(userPublicKey) {
 
   } catch (error) {
     console.error('❌ Failed to get vault balance:', error);
-    return 0;
+    throw error;
   }
 }
 

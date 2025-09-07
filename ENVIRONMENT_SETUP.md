@@ -1,19 +1,34 @@
 # 🔧 ENVIRONMENT SETUP - COPY & PASTE READY
 
-## **🗄️ SUPABASE DATABASE SETUP**
+## **🗄️ POSTGRESQL DATABASE SETUP**
 
 ### **Step 1: Set up PostgreSQL Database**
-- Use your preferred PostgreSQL provider (Railway, Supabase, or self-hosted)
+- Use your preferred PostgreSQL provider (Railway, Neon, or self-hosted)
 - Create a new database
 - Note the connection string for `DATABASE_URL`
 
 ### **Step 2: Run SQL Script**
-- Click "SQL Editor" in left sidebar
-- Click "New Query"
+- Connect to your PostgreSQL database
 - Copy the entire contents of `setup-database.sql` file
-- Paste into the editor
-- Click "Run" button
+- Execute the SQL script to create tables and indexes
 - Wait for "Success" message
+
+---
+
+## **📋 REQUIRED SERVICES**
+
+### **Core Services (Required)**
+- **PostgreSQL**: Database for user balances, bet history, and race results
+- **Redis**: Real-time pub/sub for chat, bets, and race updates
+- **Solana**: Blockchain for vault operations and on-chain transactions
+- **Privy**: Web3 authentication and wallet integration
+
+### **Hosting Services (Required)**
+- **Railway**: Backend hosting and deployment
+- **Vercel**: Frontend hosting and deployment
+
+### **Optional Services**
+- **Sentry**: Error tracking and monitoring
 
 ---
 
@@ -39,15 +54,17 @@ railway deploy
 In Railway dashboard, go to your project → Variables tab → Add these:
 
 ```
+# Required Services
+DATABASE_URL=<YOUR_POSTGRESQL_CONNECTION_STRING>
+REDIS_URL=<YOUR_REDIS_URL>
 PRIVY_APP_ID=<YOUR_PRIVY_APP_ID>
 PRIVY_APP_SECRET=<YOUR_PRIVY_APP_SECRET>
-REDIS_URL=<YOUR_REDIS_URL>
-SUPABASE_URL=<YOUR_SUPABASE_URL>
-SUPABASE_SERVICE_KEY=<YOUR_SUPABASE_SERVICE_KEY>
-COINBASE_API_KEY_ID=<YOUR_COINBASE_API_KEY_ID>
-COINBASE_SECRET=<YOUR_COINBASE_SECRET>
+
+# Solana Configuration
 PHANTOM_PRIVATE_KEY=<YOUR_PHANTOM_PRIVATE_KEY>
 PHANTOM_PUBLIC_KEY=<YOUR_PHANTOM_PUBLIC_KEY>
+
+# Optional Services
 SENTRY_DSN=<YOUR_SENTRY_DSN>
 CORS_ORIGIN=https://racers-vercel-live.vercel.app
 ```
@@ -137,18 +154,25 @@ curl https://your-railway-url.railway.app/health
 
 ## **🎯 SUCCESS CHECKLIST**
 
-- ✅ Database tables created in PostgreSQL
+### **Database & Backend**
+- ✅ PostgreSQL database created and tables initialized
+- ✅ Redis instance configured and connected
 - ✅ Backend deployed to Railway
-- ✅ Environment variables set
-- ✅ Frontend deployed to Vercel
-- ✅ URLs updated in frontend
-- ✅ Privy domain configured
-- ✅ CORS settings updated
-- ✅ Health check responds
-- ✅ WebSocket connects
-- ✅ Wallet connection works
-- ✅ Races start automatically
-- ✅ Users can place bets
-- ✅ Chat messages persist
+- ✅ Environment variables set (PostgreSQL, Redis, Privy, Solana)
+- ✅ Health check responds at `/health`
 
-**Your Racers.fun platform is now live!** 🚀
+### **Frontend & Integration**
+- ✅ Frontend deployed to Vercel
+- ✅ URLs updated in frontend configuration
+- ✅ Privy domain configured for authentication
+- ✅ CORS settings updated in Railway
+
+### **Functionality Tests**
+- ✅ WebSocket connects successfully
+- ✅ Wallet connection works via Privy
+- ✅ Races start automatically every 12 seconds
+- ✅ Users can place bets with balance validation
+- ✅ Chat messages persist and display correctly
+- ✅ Vault operations (deposit/withdraw) function properly
+
+**Your Racers.fun platform is now live with the current architecture!** 🚀

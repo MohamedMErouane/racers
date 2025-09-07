@@ -155,6 +155,12 @@ export class RaceClient {
 
   // Start race visualization
   startRaceVisualization() {
+    // Hide countdown message when race starts
+    const countdownElement = document.getElementById('countdownMessage');
+    if (countdownElement) {
+      countdownElement.style.display = 'none';
+    }
+    
     this.animateRace();
   }
 

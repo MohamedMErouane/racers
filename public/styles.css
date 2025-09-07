@@ -1008,9 +1008,25 @@ body.loaded .chat-collapse-btn {
     letter-spacing: 2px;
 }
 
+.countdown-message {
+    font-size: 24px;
+    font-weight: 600;
+    color: #ffffff;
+    text-align: center;
+    margin-top: 20px;
+    font-family: 'Inter', sans-serif;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    animation: fadeInOut 2s ease-in-out infinite;
+}
+
 @keyframes countdownPulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.1); }
+}
+
+@keyframes fadeInOut {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
 }
 
 /* Anime Racer Cards */

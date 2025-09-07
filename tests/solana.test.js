@@ -310,4 +310,85 @@ describe('Solana Integration', () => {
       .rejects
       .toThrow('Network connection failed');
   });
+
+  it('should throw error instead of returning 0 when RPC fails for getVaultBalance', async () => {
+    // Mock RPC failure
+    const rpcError = new Error('RPC connection failed');
+    mockProgram.account.vault.fetch.mockRejectedValueOnce(rpcError);
+    
+    const { getVaultBalance } = require('../server/solana');
+    
+    await expect(getVaultBalance('mock-user-address'))
+      .rejects
+      .toThrow('RPC connection failed');
+  });
+
+  it('should throw error instead of returning 0 when program is not initialized for getVaultBalance', async () => {
+    // Mock uninitialized program
+    const originalProgram = require('../server/solana').program;
+    require('../server/solana').program = null;
+    
+    const { getVaultBalance } = require('../server/solana');
+    
+    await expect(getVaultBalance('mock-user-address'))
+      .rejects
+      .toThrow('Solana program not initialized');
+    
+    // Restore original program
+    require('../server/solana').program = originalProgram;
+  });
+
+  it('should reject deposit transactions with multiple instructions', async () => {
+    // Mock transaction with multiple instructions
+    const mockTx = {
+      instructions: [
+        { programId: 'mock-program', data: Buffer.from('deposit'), keys: [] },
+        { programId: 'mock-program', data: Buffer.from('extra'), keys: [] }
+      ],
+      signatures: [{ publicKey: 'mock-user' }]
+    };
+    
+    vi.mocked(require('@solana/web3.js').Transaction.from).mockReturnValue(mockTx);
+    
+    const { processDepositTransaction } = require('../server/solana');
+    
+    await expect(processDepositTransaction('mock-signed-tx', 'mock-user-address'))
+      .rejects
+      .toThrow('Transaction must contain exactly one instruction, found 2');
+  });
+
+  it('should reject withdraw transactions with multiple instructions', async () => {
+    // Mock transaction with multiple instructions
+    const mockTx = {
+      instructions: [
+        { programId: 'mock-program', data: Buffer.from('withdraw'), keys: [] },
+        { programId: 'mock-program', data: Buffer.from('extra'), keys: [] }
+      ],
+      signatures: [{ publicKey: 'mock-user' }]
+    };
+    
+    vi.mocked(require('@solana/web3.js').Transaction.from).mockReturnValue(mockTx);
+    
+    const { processWithdrawTransaction } = require('../server/solana');
+    
+    await expect(processWithdrawTransaction('mock-signed-tx', 'mock-user-address'))
+      .rejects
+      .toThrow('Transaction must contain exactly one instruction, found 2');
+  });
+
+  it('should reject deposit transactions with zero instructions', async () => {
+    // Mock transaction with no instructions
+    const mockTx = {
+      instructions: [],
+      signatures: [{ publicKey: 'mock-user' }]
+    };
+    
+    vi.mocked(require('@solana/web3.js').Transaction.from).mockReturnValue(mockTx);
+    
+    const { processDepositTransaction } = require('../server/solana');
+    
+    await expect(processDepositTransaction('mock-signed-tx', 'mock-user-address'))
+      .rejects
+      .toThrow('Transaction must contain exactly one instruction, found 0');
+  });
 });

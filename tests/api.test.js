@@ -98,4 +98,86 @@ describe('API Routes', () => {
       .send({ racerId: 1, amount: 1, userId: 'test' })
       .expect(401);
   });
+
+  it('should reject withdraw build when amount exceeds off-chain balance', async () => {
+    // Mock user with insufficient balance
+    const mockUser = { address: 'test-user-address' };
+    const mockReq = { user: mockUser };
+    
+    // Mock getUserBalance to return insufficient balance
+    const { pg } = require('../server/db');
+    vi.mocked(pg.getUserBalance).mockResolvedValueOnce(5.0); // User has 5 SOL
+    
+    const response = await request(app)
+      .post('/api/vault/withdraw/build')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ amount: 10.0 }) // Requesting 10 SOL (more than available)
+      .expect(400);
+    
+    expect(response.body.error).toBe('Insufficient balance');
+    expect(response.body.currentBalance).toBe(5.0);
+    expect(response.body.requestedAmount).toBe(10.0);
+  });
+
+  it('should allow withdraw build when amount is within off-chain balance', async () => {
+    // Mock user with sufficient balance
+    const mockUser = { address: 'test-user-address' };
+    const mockReq = { user: mockUser };
+    
+    // Mock getUserBalance to return sufficient balance
+    const { pg } = require('../server/db');
+    vi.mocked(pg.getUserBalance).mockResolvedValueOnce(15.0); // User has 15 SOL
+    
+    // Mock buildWithdrawTransaction to return success
+    const solana = require('../server/solana');
+    vi.mocked(solana.buildWithdrawTransaction).mockResolvedValueOnce({
+      success: true,
+      transaction: 'mock-transaction'
+    });
+    
+    const response = await request(app)
+      .post('/api/vault/withdraw/build')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ amount: 10.0 }) // Requesting 10 SOL (within available balance)
+      .expect(200);
+    
+    expect(response.body.success).toBe(true);
+    expect(response.body.transaction).toBe('mock-transaction');
+  });
+
+  it('should log bets with real race ID instead of placeholder', async () => {
+    // Mock game engine state
+    const gameEngine = require('../server/gameEngine');
+    const mockRaceState = {
+      roundId: 123,
+      startTime: 1234567890,
+      status: 'racing'
+    };
+    vi.mocked(gameEngine.getState).mockReturnValue(mockRaceState);
+    
+    // Mock user with sufficient balance
+    const { pg } = require('../server/db');
+    vi.mocked(pg.getUserBalance).mockResolvedValueOnce(10.0);
+    vi.mocked(pg.updateUserBalance).mockResolvedValueOnce();
+    vi.mocked(pg.logBet).mockResolvedValueOnce();
+    
+    // Mock Redis
+    const { redis } = require('../server/db');
+    vi.mocked(redis.addBet).mockResolvedValueOnce();
+    
+    await request(app)
+      .post('/api/bets')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ racerId: 1, amount: 5.0 })
+      .expect(200);
+    
+    // Verify logBet was called with real race ID
+    expect(pg.logBet).toHaveBeenCalledWith(
+      'test-user-address',
+      'race_1234567890', // Real race ID format
+      1,
+      5.0,
+      'pending'
+    );
+  });
 });

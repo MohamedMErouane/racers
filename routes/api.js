@@ -246,8 +246,11 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
     const newBalance = currentBalance - amount;
     await pg.updateUserBalance(userAddress, newBalance);
     
-    // Log the bet to database
-    await pg.logBet(userAddress, 'bet', bet.racerId, amount, 'pending');
+    // Log the bet to database with current race ID
+    const gameEngine = require('../server/gameEngine');
+    const currentRaceState = gameEngine.getState();
+    const raceId = currentRaceState.startTime ? `race_${currentRaceState.startTime}` : `race_${Date.now()}_${currentRaceState.roundId}`;
+    await pg.logBet(userAddress, raceId, bet.racerId, amount, 'pending');
     
     // Add bet to Redis for real-time updates
     await redis.addBet(bet);
@@ -334,8 +337,21 @@ router.post('/vault/deposit/process', requirePrivy, validateBody(vaultProcessSch
 router.post('/vault/withdraw/build', requirePrivy, validateBody(vaultSchema), async (req, res) => {
   try {
     const solana = require('../server/solana');
+    const { pg } = require('../server/db');
     const { amount } = req.body;
     const userPublicKey = req.user.address; // Use authenticated user's address
+    
+    // Check user's off-chain balance before allowing withdraw
+    const currentBalance = await pg.getUserBalance(userPublicKey);
+    
+    // Reject withdraw if it exceeds user's off-chain balance
+    if (amount > currentBalance) {
+      return res.status(400).json({ 
+        error: 'Insufficient balance', 
+        currentBalance, 
+        requestedAmount: amount 
+      });
+    }
     
     const result = await solana.buildWithdrawTransaction(userPublicKey, amount);
     res.json(result);
