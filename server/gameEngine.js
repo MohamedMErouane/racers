@@ -37,6 +37,7 @@ const raceState = {
 };
 
 let raceInterval = null;
+let countdownTimeout = null;
 let io = null;
 
 // Deterministic random function using HMAC
@@ -65,8 +66,18 @@ function initializeRacers() {
 
 // Start a new race
 function startRace(socketIo) {
+  // Guard against double-starting
+  if (raceState.status === 'countdown' || raceState.status === 'racing') {
+    console.log('⚠️ Race already in progress, ignoring start request');
+    return;
+  }
+  
   if (raceInterval) {
     clearInterval(raceInterval);
+  }
+  
+  if (countdownTimeout) {
+    clearTimeout(countdownTimeout);
   }
   
   io = socketIo;
@@ -92,7 +103,7 @@ function startRace(socketIo) {
   }
   
   // Start countdown
-  setTimeout(() => {
+  countdownTimeout = setTimeout(() => {
     // Set timing when racing actually begins
     raceState.startTime = Date.now();
     raceState.endTime = raceState.startTime + 12000; // 12 seconds from now
@@ -187,6 +198,11 @@ async function stopRace(winner) {
   if (raceInterval) {
     clearInterval(raceInterval);
     raceInterval = null;
+  }
+  
+  if (countdownTimeout) {
+    clearTimeout(countdownTimeout);
+    countdownTimeout = null;
   }
   
   raceState.status = 'finished';

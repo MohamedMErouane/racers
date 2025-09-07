@@ -18,7 +18,7 @@
 ## 🗄️ **STEP 1: SETUP DATABASE**
 
 ### **Supabase Setup:**
-1. Go to your Supabase project: `https://qikxavxbpbdzqttvrtdj.supabase.co`
+1. Go to your Supabase project: `https://<YOUR_SUPABASE_PROJECT_ID>.supabase.co`
 2. Open the SQL Editor
 3. Copy and paste the contents of `setup-database.sql`
 4. Run the SQL script to create all tables and indexes

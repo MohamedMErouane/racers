@@ -10,6 +10,18 @@
     {
       "source": "/",
       "destination": "/public/index.html"
+    },
+    {
+      "source": "/js/(.*)",
+      "destination": "/public/js/$1"
+    },
+    {
+      "source": "/css/(.*)",
+      "destination": "/public/css/$1"
+    },
+    {
+      "source": "/images/(.*)",
+      "destination": "/public/images/$1"
     }
   ],
   "headers": [

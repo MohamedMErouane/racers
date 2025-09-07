@@ -192,30 +192,64 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
 });
 
 // Solana vault endpoints
-router.post('/vault/deposit', requirePrivy, validateBody(vaultSchema), async (req, res) => {
+router.post('/vault/deposit/build', requirePrivy, validateBody(vaultSchema), async (req, res) => {
   try {
     const solana = require('../server/solana');
     const { amount } = req.body;
     const userPublicKey = req.user.address; // Use authenticated user's address
     
-    const result = await solana.deposit(userPublicKey, amount);
+    const result = await solana.buildDepositTransaction(userPublicKey, amount);
     res.json(result);
   } catch (error) {
-    console.error('Error processing deposit:', error);
+    console.error('Error building deposit transaction:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-router.post('/vault/withdraw', requirePrivy, validateBody(vaultSchema), async (req, res) => {
+router.post('/vault/deposit/process', requirePrivy, async (req, res) => {
+  try {
+    const solana = require('../server/solana');
+    const { signedTransaction } = req.body;
+    
+    if (!signedTransaction) {
+      return res.status(400).json({ error: 'Signed transaction required' });
+    }
+    
+    const result = await solana.processDepositTransaction(signedTransaction);
+    res.json(result);
+  } catch (error) {
+    console.error('Error processing deposit transaction:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/vault/withdraw/build', requirePrivy, validateBody(vaultSchema), async (req, res) => {
   try {
     const solana = require('../server/solana');
     const { amount } = req.body;
     const userPublicKey = req.user.address; // Use authenticated user's address
     
-    const result = await solana.withdraw(userPublicKey, amount);
+    const result = await solana.buildWithdrawTransaction(userPublicKey, amount);
     res.json(result);
   } catch (error) {
-    console.error('Error processing withdraw:', error);
+    console.error('Error building withdraw transaction:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/vault/withdraw/process', requirePrivy, async (req, res) => {
+  try {
+    const solana = require('../server/solana');
+    const { signedTransaction } = req.body;
+    
+    if (!signedTransaction) {
+      return res.status(400).json({ error: 'Signed transaction required' });
+    }
+    
+    const result = await solana.processWithdrawTransaction(signedTransaction);
+    res.json(result);
+  } catch (error) {
+    console.error('Error processing withdraw transaction:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

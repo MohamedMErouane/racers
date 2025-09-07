@@ -13,7 +13,6 @@ require('dotenv').config();
 
 // Import custom modules
 const { initializeRedis } = require('./services/redis');
-const { initializeSupabase } = require('./services/supabase');
 const { initializeSentry } = require('./services/sentry');
 const { initializePrivy } = require('./services/privy');
 
@@ -113,9 +112,6 @@ async function initializeServices() {
     await initializeRedis();
     console.log('✅ Redis connected');
     
-    // Initialize Supabase
-    await initializeSupabase();
-    console.log('✅ Supabase connected');
     
     // Initialize Solana
     await initializeSolana();

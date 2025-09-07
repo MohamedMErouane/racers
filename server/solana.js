@@ -105,8 +105,8 @@ function getUserVaultAddress(userPublicKey) {
   return vaultAddress;
 }
 
-// Deposit SOL to user's vault
-async function deposit(userPublicKey, amount) {
+// Build unsigned deposit transaction for client signing
+async function buildDepositTransaction(userPublicKey, amount) {
   try {
     if (!program) {
       throw new Error('Solana program not initialized');
@@ -115,10 +115,10 @@ async function deposit(userPublicKey, amount) {
     const userKey = new PublicKey(userPublicKey);
     const vaultAddress = getUserVaultAddress(userKey);
 
-    // Create deposit transaction
+    // Create deposit transaction (unsigned)
     const tx = new Transaction().add(
       await program.methods
-        .deposit(new BN(amount * 1e9)) // Convert SOL to lamports
+        .deposit(new BN(Math.round(amount * 1e9))) // Convert SOL to lamports with proper rounding
         .accounts({
           vault: vaultAddress,
           user: userKey,
@@ -127,21 +127,48 @@ async function deposit(userPublicKey, amount) {
         .instruction()
     );
 
-    // Send transaction
-    const signature = await connection.sendTransaction(tx, [wallet.payer]);
-    await connection.confirmTransaction(signature);
+    // Set recent blockhash
+    const { blockhash } = await connection.getLatestBlockhash();
+    tx.recentBlockhash = blockhash;
+    tx.feePayer = userKey; // User pays the fee
 
-    console.log(`✅ Deposit successful: ${amount} SOL to ${userPublicKey}`);
-    return { success: true, signature };
+    // Serialize transaction for client signing
+    const serializedTx = tx.serialize({ requireAllSignatures: false }).toString('base64');
+
+    console.log(`📝 Deposit transaction built for ${userPublicKey}: ${amount} SOL`);
+    return { 
+      success: true, 
+      transaction: serializedTx,
+      vaultAddress: vaultAddress.toString()
+    };
 
   } catch (error) {
-    console.error('❌ Deposit failed:', error);
+    console.error('❌ Failed to build deposit transaction:', error);
     return { success: false, error: error.message };
   }
 }
 
-// Withdraw SOL from user's vault
-async function withdraw(userPublicKey, amount) {
+// Verify and process signed deposit transaction
+async function processDepositTransaction(signedTransaction) {
+  try {
+    // Deserialize the signed transaction
+    const tx = Transaction.from(Buffer.from(signedTransaction, 'base64'));
+    
+    // Send and confirm the transaction
+    const signature = await connection.sendRawTransaction(tx.serialize());
+    await connection.confirmTransaction(signature);
+
+    console.log(`✅ Deposit transaction confirmed: ${signature}`);
+    return { success: true, signature };
+
+  } catch (error) {
+    console.error('❌ Deposit transaction failed:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Build unsigned withdraw transaction for client signing
+async function buildWithdrawTransaction(userPublicKey, amount) {
   try {
     if (!program) {
       throw new Error('Solana program not initialized');
@@ -152,14 +179,14 @@ async function withdraw(userPublicKey, amount) {
 
     // Check vault balance first
     const vaultInfo = await program.account.vault.fetch(vaultAddress);
-    if (vaultInfo.balance < amount * 1e9) {
+    if (vaultInfo.balance < Math.round(amount * 1e9)) {
       throw new Error('Insufficient balance in vault');
     }
 
-    // Create withdraw transaction
+    // Create withdraw transaction (unsigned)
     const tx = new Transaction().add(
       await program.methods
-        .withdraw(new BN(amount * 1e9)) // Convert SOL to lamports
+        .withdraw(new BN(Math.round(amount * 1e9))) // Convert SOL to lamports with proper rounding
         .accounts({
           vault: vaultAddress,
           user: userKey,
@@ -168,15 +195,42 @@ async function withdraw(userPublicKey, amount) {
         .instruction()
     );
 
-    // Send transaction
-    const signature = await connection.sendTransaction(tx, [wallet.payer]);
+    // Set recent blockhash
+    const { blockhash } = await connection.getLatestBlockhash();
+    tx.recentBlockhash = blockhash;
+    tx.feePayer = userKey; // User pays the fee
+
+    // Serialize transaction for client signing
+    const serializedTx = tx.serialize({ requireAllSignatures: false }).toString('base64');
+
+    console.log(`📝 Withdraw transaction built for ${userPublicKey}: ${amount} SOL`);
+    return { 
+      success: true, 
+      transaction: serializedTx,
+      vaultAddress: vaultAddress.toString()
+    };
+
+  } catch (error) {
+    console.error('❌ Failed to build withdraw transaction:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Verify and process signed withdraw transaction
+async function processWithdrawTransaction(signedTransaction) {
+  try {
+    // Deserialize the signed transaction
+    const tx = Transaction.from(Buffer.from(signedTransaction, 'base64'));
+    
+    // Send and confirm the transaction
+    const signature = await connection.sendRawTransaction(tx.serialize());
     await connection.confirmTransaction(signature);
 
-    console.log(`✅ Withdraw successful: ${amount} SOL from ${userPublicKey}`);
+    console.log(`✅ Withdraw transaction confirmed: ${signature}`);
     return { success: true, signature };
 
   } catch (error) {
-    console.error('❌ Withdraw failed:', error);
+    console.error('❌ Withdraw transaction failed:', error);
     return { success: false, error: error.message };
   }
 }
@@ -246,8 +300,10 @@ async function initializeVault(userPublicKey) {
 
 module.exports = {
   initializeSolana,
-  deposit,
-  withdraw,
+  buildDepositTransaction,
+  processDepositTransaction,
+  buildWithdrawTransaction,
+  processWithdrawTransaction,
   getVaultBalance,
   initializeVault,
   getUserVaultAddress

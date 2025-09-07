@@ -36,6 +36,10 @@ function initializeChatSocket(io) {
           timestamp: Date.now()
         };
         
+        // Persist message to Redis
+        const { redis } = require('../server/db');
+        await redis.addChatMessage(message);
+        
         // Broadcast to all clients (excluding sender to avoid duplicates)
         socket.broadcast.emit('chat:message', message);
         

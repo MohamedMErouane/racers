@@ -9,7 +9,7 @@ https://supabase.com/dashboard
 
 ### **2. Navigate to Your Project**
 - Login to your account
-- Click on project: `qikxavxbpbdzqttvrtdj`
+- Click on project: `<YOUR_SUPABASE_PROJECT_ID>`
 
 ### **3. Open SQL Editor**
 - Click "SQL Editor" in left sidebar
@@ -57,11 +57,11 @@ PRIVY_APP_SECRET=<YOUR_PRIVY_APP_SECRET>
 ```
 
 ```
-REDIS_URL=rediss://default:Ae8CAAIncDFiYmIwYjc1NTVmMDA0MWEyYTgxZDE1NjU4NTVjMzI4M3AxNjExODY@great-glider-61186.upstash.io:6379
+REDIS_URL=<YOUR_REDIS_URL>
 ```
 
 ```
-SUPABASE_URL=https://qikxavxbpbdzqttvrtdj.supabase.co
+SUPABASE_URL=<YOUR_SUPABASE_URL>
 ```
 
 ```
@@ -69,23 +69,23 @@ SUPABASE_SERVICE_KEY=<YOUR_SUPABASE_SERVICE_KEY>
 ```
 
 ```
-COINBASE_API_KEY_ID=6b8f09c6-372a-45f7-b3d5-0144eeddc7a0
+COINBASE_API_KEY_ID=<YOUR_COINBASE_API_KEY_ID>
 ```
 
 ```
-COINBASE_SECRET=i6uFr+K7wXsqdkQVIX3LytnSRYEyLMKX7xecWyZscuG2HBjfjU9IKmwVD9Xd74XjeHBIhO+a7a+Vn7g7TvrITw==
+COINBASE_SECRET=<YOUR_COINBASE_SECRET>
 ```
 
 ```
-PHANTOM_PRIVATE_KEY=4mktNT1moTwY3V2pw7iM8GxTuiWgLQDUDyXLknPctXzDQhYeijBuNG946DWrueBdeZqJtfUfXntie8pvvGweGeV5
+PHANTOM_PRIVATE_KEY=<YOUR_PHANTOM_PRIVATE_KEY>
 ```
 
 ```
-PHANTOM_PUBLIC_KEY=8LwhbiNnV3VDudffDDn2ia2yt2EAtcL7j93A2RLKu3Fd
+PHANTOM_PUBLIC_KEY=<YOUR_PHANTOM_PUBLIC_KEY>
 ```
 
 ```
-SENTRY_DSN=https://1340a806425f98bd5eddab27e3c9e6a2@o4509968691560448.ingest.us.sentry.io/4509968703553536
+SENTRY_DSN=<YOUR_SENTRY_DSN>
 ```
 
 ```
@@ -185,7 +185,7 @@ curl https://your-railway-url.railway.app/health
 
 ### **3. Health Check Monitoring**
 - Set up uptime monitoring for: `https://your-railway-url.railway.app/health`
-- Use your uptime API key: `m801310240-02a9097ddf9eb0e5d1b68fdf`
+- Use your uptime API key: `<YOUR_UPTIME_API_KEY>`
 
 ---
 
