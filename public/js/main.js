@@ -125,7 +125,7 @@ class RacersApp {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${window.userWallet}`
+          'Authorization': `Bearer ${window.privyToken || window.userWallet}`
         },
         body: JSON.stringify({
           ...betData,

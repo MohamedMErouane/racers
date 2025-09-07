@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { redis, pg } = require('./db');
+const { pg } = require('./db');
 
 // Load racer stats from JSON file
 function loadRacerStats() {
@@ -132,7 +132,7 @@ function updateRace() {
   
   if (timeRemaining <= 0) {
     // Race finished
-    stopRace();
+    stopRace().catch(console.error);
     return;
   }
   
@@ -183,7 +183,7 @@ function updateRace() {
 }
 
 // Stop the race
-function stopRace(winner) {
+async function stopRace(winner) {
   if (raceInterval) {
     clearInterval(raceInterval);
     raceInterval = null;
@@ -212,9 +212,13 @@ function stopRace(winner) {
   }
   
   // Log race results to Postgres
-  const raceId = `race_${raceState.startTime}`;
-  pg.logRaceResult(raceId, raceState.seed, winner ? winner.id : 0);
-  console.log(`Race Results - Seed: ${raceState.seed}, Winner: ${winner ? winner.name : 'Unknown'}`);
+  try {
+    const raceId = `race_${raceState.startTime}`;
+    await pg.logRaceResult(raceId, raceState.seed, winner ? winner.id : 0);
+    console.log(`Race Results - Seed: ${raceState.seed}, Winner: ${winner ? winner.name : 'Unknown'}`);
+  } catch (error) {
+    console.error('Error logging race results:', error);
+  }
   
   // Start new race after 2 seconds
   setTimeout(() => {

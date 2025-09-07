@@ -31,6 +31,11 @@ const betSchema = z.object({
   userId: z.string().min(1)
 });
 
+const vaultSchema = z.object({
+  amount: z.number().positive(),
+  userPublicKey: z.string().min(1)
+});
+
 // Middleware to require Privy authentication
 async function requirePrivy(req, res, next) {
   try {
@@ -133,7 +138,7 @@ router.get('/chat', async (req, res) => {
   }
 });
 
-router.post('/chat', chatRateLimit, validateBody(chatMessageSchema), async (req, res) => {
+router.post('/chat', chatRateLimit, requirePrivy, validateBody(chatMessageSchema), async (req, res) => {
   try {
     const { redis } = require('../server/db');
     
@@ -188,14 +193,10 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
 });
 
 // Solana vault endpoints
-router.post('/vault/deposit', requirePrivy, async (req, res) => {
+router.post('/vault/deposit', requirePrivy, validateBody(vaultSchema), async (req, res) => {
   try {
     const solana = require('../server/solana');
     const { amount, userPublicKey } = req.body;
-    
-    if (!amount || !userPublicKey) {
-      return res.status(400).json({ error: 'Amount and user public key are required' });
-    }
     
     const result = await solana.deposit(userPublicKey, amount);
     res.json(result);
@@ -205,14 +206,10 @@ router.post('/vault/deposit', requirePrivy, async (req, res) => {
   }
 });
 
-router.post('/vault/withdraw', requirePrivy, async (req, res) => {
+router.post('/vault/withdraw', requirePrivy, validateBody(vaultSchema), async (req, res) => {
   try {
     const solana = require('../server/solana');
     const { amount, userPublicKey } = req.body;
-    
-    if (!amount || !userPublicKey) {
-      return res.status(400).json({ error: 'Amount and user public key are required' });
-    }
     
     const result = await solana.withdraw(userPublicKey, amount);
     res.json(result);

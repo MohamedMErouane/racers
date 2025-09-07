@@ -17,15 +17,7 @@ const { initializeSupabase } = require('./services/supabase');
 const { initializeSentry } = require('./services/sentry');
 const { initializePrivy } = require('./services/privy');
 
-// Import route handlers
-const authRoutes = require('./routes/auth');
-const raceRoutes = require('./routes/race');
-const betRoutes = require('./routes/bets');
-const chatRoutes = require('./routes/chat');
-const statsRoutes = require('./routes/stats');
-
 // Import socket handlers
-const { initializeSocketHandlers } = require('./socket/raceSocket');
 const { initializeChatSocket } = require('./socket/chatSocket');
 
 // Import game engine
@@ -52,7 +44,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       connectSrc: ["'self'", "https://api.privy.io", "https://auth.privy.io", "wss:", "https:"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://auth.privy.io", "https://cdn.socket.io", "https://cdnjs.cloudflare.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
@@ -100,11 +92,6 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/race', raceRoutes);
-app.use('/api/bets', betRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/stats', statsRoutes);
 app.use('/api', apiRoutes);
 
 // Initialize Socket.IO
@@ -143,7 +130,6 @@ async function initializeServices() {
     console.log('✅ Database tables initialized');
     
     // Initialize Socket handlers
-    initializeSocketHandlers(io);
     initializeChatSocket(io);
     
     // Handle race state requests
@@ -160,6 +146,10 @@ async function initializeServices() {
     app.set('gameEngine', gameEngine);
     app.set('io', io);
     console.log('✅ Game engine initialized');
+    
+    // Start the race engine
+    gameEngine.startRace(io);
+    console.log('✅ Race engine started');
     
     console.log('🎉 All services initialized successfully!');
   } catch (error) {

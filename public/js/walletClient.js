@@ -53,6 +53,9 @@ export class WalletClient {
       const wallet = user.wallet;
       
       if (wallet) {
+        // Get access token for backend authentication
+        const accessToken = await this.privy.getAccessToken();
+        
         this.user = {
           id: user.id,
           email: user.email?.address,
@@ -62,6 +65,12 @@ export class WalletClient {
         
         this.isAuthenticated = true;
         window.userWallet = wallet.address;
+        window.privyToken = accessToken;
+        
+        // Dispatch wallet connected event
+        window.dispatchEvent(new CustomEvent('wallet:connected', {
+          detail: { token: accessToken, wallet: wallet.address }
+        }));
         
         this.updateWalletUI();
         console.log('✅ User authenticated:', this.user);

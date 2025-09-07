@@ -60,7 +60,7 @@ export class ChatClient {
 
   // Render chat messages
   renderChatMessages() {
-    const chatMessages = document.getElementById('chat-messages');
+    const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
     
     chatMessages.innerHTML = '';
@@ -91,7 +91,7 @@ export class ChatClient {
 
   // Scroll to bottom
   scrollToBottom() {
-    const chatMessages = document.getElementById('chat-messages');
+    const chatMessages = document.getElementById('chatMessages');
     if (chatMessages) {
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -113,7 +113,7 @@ export class ChatClient {
 
   // Setup chat event listeners
   setupEventListeners() {
-    const chatInput = document.getElementById('chat-input');
+    const chatInput = document.getElementById('chatInput');
     if (chatInput) {
       chatInput.addEventListener('keypress', (e) => this.handleChatInput(e));
     }
