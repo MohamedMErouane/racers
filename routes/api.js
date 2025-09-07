@@ -20,8 +20,7 @@ const betRateLimit = rateLimit({
 
 // Validation schemas
 const chatMessageSchema = z.object({
-  message: z.string().min(1).max(500),
-  username: z.string().min(1).max(50)
+  message: z.string().min(1).max(500)
 });
 
 const betSchema = z.object({
@@ -46,10 +45,19 @@ async function requirePrivy(req, res, next) {
     // Verify the Privy JWT token
     const payload = await verifyPrivyToken(token);
 
+    // Generate username from email or use address as fallback
+    let username = 'Anonymous';
+    if (payload.email) {
+      username = payload.email.split('@')[0]; // Use email prefix as username
+    } else if (payload.address) {
+      username = `User_${payload.address.slice(0, 8)}`; // Use first 8 chars of address
+    }
+
     // Attach user info to request
     req.user = {
       id: payload.userId || payload.sub,
       address: payload.address,
+      username: username,
       verified: true
     };
 
@@ -164,20 +172,15 @@ router.post('/chat', chatRateLimit, requirePrivy, validateBody(chatMessageSchema
   try {
     const { redis } = require('../server/db');
     
-    // Sanitize the message and username
+    // Sanitize the message
     const sanitizedMessage = sanitizeHtml(req.body.message, {
-      allowedTags: [],
-      allowedAttributes: {}
-    });
-    
-    const sanitizedUsername = sanitizeHtml(req.body.username, {
       allowedTags: [],
       allowedAttributes: {}
     });
     
     const message = {
       message: sanitizedMessage,
-      username: sanitizedUsername,
+      username: req.user.username, // Use authenticated user's username
       userId: req.user.address, // Use authenticated user's address
       timestamp: Date.now()
     };
@@ -250,9 +253,18 @@ router.post('/vault/deposit/process', requirePrivy, async (req, res) => {
     const result = await solana.processDepositTransaction(signedTransaction);
     
     if (result.success) {
-      // Update user balance
+      // Verify the claimed amount matches the transaction amount
+      if (Math.abs(result.verifiedAmount - amount) > 0.000001) { // Allow for small floating point differences
+        return res.status(400).json({ 
+          error: 'Amount mismatch', 
+          claimed: amount, 
+          verified: result.verifiedAmount 
+        });
+      }
+      
+      // Update user balance using verified amount
       const currentBalance = await pg.getUserBalance(userAddress);
-      const newBalance = currentBalance + amount;
+      const newBalance = currentBalance + result.verifiedAmount;
       await pg.updateUserBalance(userAddress, newBalance);
       
       result.newBalance = newBalance;
@@ -293,13 +305,22 @@ router.post('/vault/withdraw/process', requirePrivy, async (req, res) => {
     const result = await solana.processWithdrawTransaction(signedTransaction);
     
     if (result.success) {
-      // Update user balance
+      // Verify the claimed amount matches the transaction amount
+      if (Math.abs(result.verifiedAmount - amount) > 0.000001) { // Allow for small floating point differences
+        return res.status(400).json({ 
+          error: 'Amount mismatch', 
+          claimed: amount, 
+          verified: result.verifiedAmount 
+        });
+      }
+      
+      // Update user balance using verified amount
       const currentBalance = await pg.getUserBalance(userAddress);
-      const newBalance = Math.max(0, currentBalance - amount); // Prevent negative balance
+      const newBalance = Math.max(0, currentBalance - result.verifiedAmount); // Prevent negative balance
       await pg.updateUserBalance(userAddress, newBalance);
       
-      // Log to bet history
-      await pg.logBet(userAddress, 'withdraw', 0, amount, 'withdraw');
+      // Log to bet history using verified amount
+      await pg.logBet(userAddress, 'withdraw', 0, result.verifiedAmount, 'withdraw');
       
       result.newBalance = newBalance;
     }

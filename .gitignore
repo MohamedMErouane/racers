@@ -15,6 +15,13 @@ dist/
 build/
 *.log
 
+# Generated config files
+public/js/config.js
+
+# Solana program build artifacts
+solana-program/target/
+solana-program/.anchor/
+
 # IDE files
 .vscode/
 .idea/

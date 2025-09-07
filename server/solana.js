@@ -154,12 +154,27 @@ async function processDepositTransaction(signedTransaction) {
     // Deserialize the signed transaction
     const tx = Transaction.from(Buffer.from(signedTransaction, 'base64'));
     
+    // Extract the actual amount from the transaction
+    let verifiedAmount = 0;
+    if (tx.instructions.length > 0) {
+      const instruction = tx.instructions[0];
+      // For system program transfers, the amount is in the instruction data
+      if (instruction.programId.equals(SystemProgram.programId)) {
+        // System program transfer instruction data format: [0, 4, amount (8 bytes)]
+        const data = instruction.data;
+        if (data.length >= 12) {
+          // Extract the 8-byte amount (little-endian)
+          verifiedAmount = data.readBigUInt64LE(4) / BigInt(1e9); // Convert lamports to SOL
+        }
+      }
+    }
+    
     // Send and confirm the transaction
     const signature = await connection.sendRawTransaction(tx.serialize());
     await connection.confirmTransaction(signature);
 
-    console.log(`✅ Deposit transaction confirmed: ${signature}`);
-    return { success: true, signature };
+    console.log(`✅ Deposit transaction confirmed: ${signature}, amount: ${verifiedAmount} SOL`);
+    return { success: true, signature, verifiedAmount: Number(verifiedAmount) };
 
   } catch (error) {
     console.error('❌ Deposit transaction failed:', error);
@@ -222,12 +237,27 @@ async function processWithdrawTransaction(signedTransaction) {
     // Deserialize the signed transaction
     const tx = Transaction.from(Buffer.from(signedTransaction, 'base64'));
     
+    // Extract the actual amount from the transaction
+    let verifiedAmount = 0;
+    if (tx.instructions.length > 0) {
+      const instruction = tx.instructions[0];
+      // For system program transfers, the amount is in the instruction data
+      if (instruction.programId.equals(SystemProgram.programId)) {
+        // System program transfer instruction data format: [0, 4, amount (8 bytes)]
+        const data = instruction.data;
+        if (data.length >= 12) {
+          // Extract the 8-byte amount (little-endian)
+          verifiedAmount = data.readBigUInt64LE(4) / BigInt(1e9); // Convert lamports to SOL
+        }
+      }
+    }
+    
     // Send and confirm the transaction
     const signature = await connection.sendRawTransaction(tx.serialize());
     await connection.confirmTransaction(signature);
 
-    console.log(`✅ Withdraw transaction confirmed: ${signature}`);
-    return { success: true, signature };
+    console.log(`✅ Withdraw transaction confirmed: ${signature}, amount: ${verifiedAmount} SOL`);
+    return { success: true, signature, verifiedAmount: Number(verifiedAmount) };
 
   } catch (error) {
     console.error('❌ Withdraw transaction failed:', error);

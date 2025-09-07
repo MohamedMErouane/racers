@@ -18,7 +18,7 @@ export class ChatClient {
   }
 
   // Send chat message
-  async sendMessage(message, userId, username) {
+  async sendMessage(message) {
     try {
       // Get token from wallet client
       const token = window.racersApp?.walletClient?.getAccessToken();
@@ -34,8 +34,7 @@ export class ChatClient {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          message,
-          username
+          message
         })
       });
 
@@ -47,7 +46,6 @@ export class ChatClient {
         if (window.racersApp && window.racersApp.socket) {
           window.racersApp.socket.emit('chat:message', {
             message: result.message.message,
-            username: result.message.username,
             token: token
           });
         }
@@ -132,7 +130,7 @@ export class ChatClient {
       const message = input.value.trim();
       
       if (message && window.userWallet) {
-        this.sendMessage(message, window.userWallet, 'User');
+        this.sendMessage(message);
         input.value = '';
       }
     }

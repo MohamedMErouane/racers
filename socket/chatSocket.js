@@ -8,7 +8,6 @@ const messageTimestamps = new Map();
 // Validation schema for chat messages
 const chatMessageSchema = z.object({
   message: z.string().min(1).max(500),
-  username: z.string().min(1).max(50),
   token: z.string().min(1)
 });
 
@@ -46,13 +45,16 @@ function initializeChatSocket(io) {
         // Verify Privy JWT token
         const payload = await verifyPrivyToken(validationResult.data.token);
         
+        // Generate username from email or use address as fallback
+        let username = 'Anonymous';
+        if (payload.email) {
+          username = payload.email.split('@')[0]; // Use email prefix as username
+        } else if (payload.address) {
+          username = `User_${payload.address.slice(0, 8)}`; // Use first 8 chars of address
+        }
+        
         // Sanitize message content
         const sanitizedMessage = sanitizeHtml(validationResult.data.message, {
-          allowedTags: [],
-          allowedAttributes: {}
-        });
-        
-        const sanitizedUsername = sanitizeHtml(validationResult.data.username || 'Anonymous', {
           allowedTags: [],
           allowedAttributes: {}
         });
@@ -60,7 +62,7 @@ function initializeChatSocket(io) {
         // Create sanitized message object
         const message = {
           message: sanitizedMessage,
-          username: sanitizedUsername,
+          username: username,
           userId: payload.address,
           timestamp: Date.now()
         };

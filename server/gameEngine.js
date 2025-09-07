@@ -3,16 +3,24 @@ const fs = require('fs');
 const path = require('path');
 const { pg } = require('./db');
 
-// Load racer stats from JSON file
+// Cache racer stats at module level
+let cachedRacerStats = null;
+
+// Load racer stats from JSON file (cached)
 function loadRacerStats() {
+  if (cachedRacerStats) {
+    return cachedRacerStats;
+  }
+  
   try {
     const racersPath = path.join(__dirname, '../public/js/animeRacers.json');
     const racersData = fs.readFileSync(racersPath, 'utf8');
-    return JSON.parse(racersData);
+    cachedRacerStats = JSON.parse(racersData);
+    return cachedRacerStats;
   } catch (error) {
     console.error('Error loading racer stats:', error);
     // Fallback racer data
-    return [
+    cachedRacerStats = [
       { id: 1, name: "Sakura", speed: 4.5, acceleration: 0.15 },
       { id: 2, name: "Yuki", speed: 4.2, acceleration: 0.18 },
       { id: 3, name: "Akane", speed: 4.8, acceleration: 0.12 },
@@ -22,7 +30,14 @@ function loadRacerStats() {
       { id: 7, name: "Hana", speed: 4.1, acceleration: 0.17 },
       { id: 8, name: "Kira", speed: 4.4, acceleration: 0.15 }
     ];
+    return cachedRacerStats;
   }
+}
+
+// Helper to refresh the cache (for development)
+function refreshRacerStatsCache() {
+  cachedRacerStats = null;
+  return loadRacerStats();
 }
 
 // Race state structure
@@ -278,5 +293,6 @@ function getState() {
 module.exports = {
   startRace,
   stopRace,
-  getState
+  getState,
+  refreshRacerStatsCache
 };
