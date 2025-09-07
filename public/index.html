@@ -27,7 +27,7 @@
         </div>
         <div class="wallet-controls">
             <button class="wallet-btn" id="walletBtn">Connect</button>
-            <div class="wallet-actions" id="walletActions" style="display: none;">
+            <div class="wallet-actions" id="walletActions">
                 <button class="deposit-btn" id="depositBtn">Deposit</button>
                 <button class="withdraw-btn" id="withdrawBtn">Withdraw</button>
             </div>
@@ -50,7 +50,7 @@
             </div>
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input-container">
-                <input type="text" id="chatInput" placeholder="Connect wallet to chat..." disabled style="width: 100%; padding: 10px 12px; background: rgba(30, 30, 40, 0.9); border: 1px solid rgba(147, 51, 234, 0.5); border-radius: 8px; color: white; font-size: 14px; outline: none; transition: all 0.2s ease;">
+                <input type="text" id="chatInput" class="chat-input" placeholder="Connect wallet to chat..." disabled>
             </div>
             <div class="chat-rules" id="chatRules">
                 <div class="solana-price">
@@ -65,9 +65,9 @@
             </div>
             
             <!-- Name Selection UI -->
-            <div class="name-selection" id="nameSelection" style="display: none;">
+            <div class="name-selection" id="nameSelection">
                 <div class="name-input-container">
-                    <input type="text" id="nameInput" placeholder="Enter your username..." maxlength="20" style="width: 100%; padding: 10px 12px; background: rgba(30, 30, 40, 0.9); border: 1px solid rgba(147, 51, 234, 0.5); border-radius: 8px; color: white; font-size: 14px; outline: none; transition: all 0.2s ease;">
+                    <input type="text" id="nameInput" class="name-input" placeholder="Enter your username..." maxlength="20">
                 </div>
                 <button class="confirm-name-btn" id="confirmNameBtn">Confirm Name</button>
             </div>
@@ -76,9 +76,9 @@
         <!-- Game Panel -->
         <div class="game-panel">
             <div class="race-info">
-                <div>
-                    <h2 style="font-size: 24px; margin-bottom: 5px;">Race #<span id="raceNumber">1</span></h2>
-                    <span style="color: #9ca3af;">Next race in: <span id="nextRaceTime">60s</span></span>
+                <div class="race-header">
+                    <h2>Race #<span id="raceNumber">1</span></h2>
+                    <span>Next race in: <span id="nextRaceTime">60s</span></span>
                 </div>
                 <div class="race-stats">
                     <div class="stat-item">

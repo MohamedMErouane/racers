@@ -102,28 +102,56 @@ function startRace(socketIo) {
     });
   }
   
-  // Start countdown
-  countdownTimeout = setTimeout(() => {
-    // Set timing when racing actually begins
-    raceState.startTime = Date.now();
-    raceState.endTime = raceState.startTime + 12000; // 12 seconds from now
-    raceState.status = 'racing';
+  // Start countdown with periodic updates
+  let countdownSeconds = 10;
+  
+  // Emit initial countdown
+  if (io) {
+    io.emit('race:countdown', {
+      countdown: countdownSeconds,
+      status: 'countdown'
+    });
+  }
+  
+  const countdownInterval = setInterval(() => {
+    countdownSeconds--;
     
-    console.log(`🏁 Race started! Duration: 12 seconds`);
-    
-    // Emit race start with actual timing
-    if (io) {
-      io.emit('race:start', {
-        seed: raceState.seed,
-        racers: raceState.racers,
-        startTime: raceState.startTime,
-        endTime: raceState.endTime,
-        status: 'racing'
-      });
+    if (countdownSeconds > 0) {
+      // Emit countdown update
+      if (io) {
+        io.emit('race:countdown', {
+          countdown: countdownSeconds,
+          status: 'countdown'
+        });
+      }
+    } else {
+      // Countdown finished, start race
+      clearInterval(countdownInterval);
+      
+      // Set timing when racing actually begins
+      raceState.startTime = Date.now();
+      raceState.endTime = raceState.startTime + 12000; // 12 seconds from now
+      raceState.status = 'racing';
+      
+      console.log(`🏁 Race started! Duration: 12 seconds`);
+      
+      // Emit race start with actual timing
+      if (io) {
+        io.emit('race:start', {
+          seed: raceState.seed,
+          racers: raceState.racers,
+          startTime: raceState.startTime,
+          endTime: raceState.endTime,
+          status: 'racing'
+        });
+      }
+      
+      startRaceLoop();
     }
-    
-    startRaceLoop();
-  }, 10000); // 10 second countdown
+  }, 1000); // 1 second intervals
+  
+  // Store interval ID for cleanup
+  countdownTimeout = countdownInterval;
 }
 
 // Start the race loop at 60Hz

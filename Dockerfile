@@ -12,6 +12,9 @@ RUN npm ci --omit=dev
 # Copy application code
 COPY . .
 
+# Run build to inject environment variables
+RUN npm run build
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S racers -u 1001
@@ -28,4 +31,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 # Start the application
-CMD ["node", "server.js"]
+CMD ["npm", "start"]

@@ -22,6 +22,10 @@ export class RaceClient {
       this.handleRaceStart(data);
     });
 
+    this.socket.on('race:countdown', (data) => {
+      this.handleCountdown(data);
+    });
+
     this.socket.on('race:end', (data) => {
       this.handleRaceEnd(data);
     });
@@ -51,11 +55,21 @@ export class RaceClient {
 
   // Handle race start
   handleRaceStart(data) {
-    this.isRacing = true;
-    this.countdown = 0;
-    this.updateRaceUI();
-    this.startRaceVisualization();
-    console.log('🏁 Race started:', data);
+    if (data.status === 'countdown') {
+      // Show countdown UI without starting animations
+      this.isRacing = false;
+      this.countdown = data.countdown || 10;
+      this.updateRaceUI();
+      this.showCountdownUI();
+      console.log('⏰ Race countdown started:', data);
+    } else if (data.status === 'racing') {
+      // Begin race visualization
+      this.isRacing = true;
+      this.countdown = 0;
+      this.updateRaceUI();
+      this.startRaceVisualization();
+      console.log('🏁 Race started:', data);
+    }
   }
 
   // Handle race end
@@ -91,6 +105,26 @@ export class RaceClient {
     if (nextRaceElement) {
       nextRaceElement.textContent = `${countdown}s`;
     }
+  }
+
+  // Show countdown UI
+  showCountdownUI() {
+    // Update countdown display
+    this.updateCountdown(this.countdown);
+    
+    // Show countdown message
+    const countdownElement = document.getElementById('countdownMessage');
+    if (countdownElement) {
+      countdownElement.textContent = `Race starting in ${this.countdown} seconds...`;
+      countdownElement.style.display = 'block';
+    }
+  }
+
+  // Handle countdown updates
+  handleCountdown(data) {
+    this.countdown = data.countdown;
+    this.updateCountdown(this.countdown);
+    console.log('⏰ Countdown update:', this.countdown);
   }
 
   // Update race visualization

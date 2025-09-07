@@ -164,15 +164,20 @@ router.post('/chat', chatRateLimit, requirePrivy, validateBody(chatMessageSchema
   try {
     const { redis } = require('../server/db');
     
-    // Sanitize the message
+    // Sanitize the message and username
     const sanitizedMessage = sanitizeHtml(req.body.message, {
+      allowedTags: [],
+      allowedAttributes: {}
+    });
+    
+    const sanitizedUsername = sanitizeHtml(req.body.username, {
       allowedTags: [],
       allowedAttributes: {}
     });
     
     const message = {
       message: sanitizedMessage,
-      username: req.body.username,
+      username: sanitizedUsername,
       userId: req.user.address, // Use authenticated user's address
       timestamp: Date.now()
     };

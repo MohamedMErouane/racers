@@ -69,7 +69,7 @@ Run the SQL schema in your PostgreSQL database:
 ### 4. Start Development
 
 ```bash
-npm run dev
+npm run dev:build
 ```
 
 The server will start on `http://localhost:3000`
