@@ -28,7 +28,7 @@ class RacersApp {
       
       // Initialize clients
       this.raceClient = new RaceClient(this.socket);
-      this.chatClient = new ChatClient();
+      this.chatClient = new ChatClient(this.socket, () => this.walletClient?.getAccessToken());
       this.walletClient = new WalletClient();
       
       // Setup event handlers

@@ -72,7 +72,7 @@ Run the SQL schema in your PostgreSQL database:
 npm run dev:build
 ```
 
-The server will start on `http://localhost:3000`
+The server will start on `http://localhost:3001`
 
 ## 🐳 Docker Deployment
 
@@ -169,7 +169,7 @@ npm run test:watch
 Set these in your deployment platform:
 
 ```bash
-PORT=3000
+PORT=3001
 NODE_ENV=production
 PRIVY_APP_ID=your_privy_app_id
 PRIVY_APP_SECRET=your_privy_app_secret

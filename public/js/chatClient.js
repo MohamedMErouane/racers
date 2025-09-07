@@ -1,6 +1,8 @@
 // Chat client module
 export class ChatClient {
-  constructor() {
+  constructor(socket, getToken) {
+    this.socket = socket;
+    this.getToken = getToken;
     this.messages = [];
     this.isTyping = false;
   }
@@ -20,8 +22,8 @@ export class ChatClient {
   // Send chat message
   async sendMessage(message) {
     try {
-      // Get token from wallet client
-      const token = window.racersApp?.walletClient?.getAccessToken();
+      // Get token from provided function
+      const token = this.getToken();
       if (!token) {
         console.error('No authentication token available');
         return false;
@@ -137,8 +139,8 @@ export class ChatClient {
 
   // Setup socket event listeners
   setupSocketListeners() {
-    if (window.racersApp && window.racersApp.socket) {
-      window.racersApp.socket.on('chat:message', (message) => {
+    if (this.socket) {
+      this.socket.on('chat:message', (message) => {
         this.addMessage(message);
       });
     }

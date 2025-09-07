@@ -37,12 +37,41 @@ const server = http.createServer(app);
 // Initialize Sentry first
 initializeSentry(app);
 
+// Parse Solana RPC URL for CSP
+function getSolanaRpcOrigin() {
+  const rpcUrl = process.env.SOLANA_RPC_URL;
+  if (!rpcUrl) return null;
+  
+  try {
+    const url = new URL(rpcUrl);
+    return `${url.protocol}//${url.host}`;
+  } catch (error) {
+    console.warn('Invalid SOLANA_RPC_URL format:', rpcUrl);
+    return null;
+  }
+}
+
 // Security middleware
+const connectSrc = [
+  "'self'", 
+  "https://api.privy.io", 
+  "https://auth.privy.io", 
+  "wss:", 
+  "https://api.mainnet-beta.solana.com", 
+  "https://api.devnet.solana.com"
+];
+
+// Add custom Solana RPC URL to CSP if configured
+const solanaRpcOrigin = getSolanaRpcOrigin();
+if (solanaRpcOrigin) {
+  connectSrc.push(solanaRpcOrigin);
+}
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'", "https://api.privy.io", "https://auth.privy.io", "wss:", "https://api.mainnet-beta.solana.com", "https://api.devnet.solana.com"],
+      connectSrc: connectSrc,
       scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://auth.privy.io", "https://cdn.socket.io", "https://cdnjs.cloudflare.com"],
       styleSrc: ["'self'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],

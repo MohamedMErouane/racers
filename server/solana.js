@@ -77,6 +77,24 @@ async function initializeSolana() {
               { "name": "amount", "type": "u64" }
             ]
           }
+        ],
+        "accounts": [
+          {
+            "name": "Vault",
+            "type": {
+              "kind": "struct",
+              "fields": [
+                {
+                  "name": "user",
+                  "type": "publicKey"
+                },
+                {
+                  "name": "balance",
+                  "type": "u64"
+                }
+              ]
+            }
+          }
         ]
       };
     }
@@ -87,6 +105,13 @@ async function initializeSolana() {
     }
     const programId = new PublicKey(process.env.PROGRAM_ID);
     program = new Program(idl, programId, provider);
+
+    // Verify IDL has required account definitions
+    if (!idl.accounts || !idl.accounts.find(acc => acc.name === 'Vault')) {
+      console.error('❌ IDL missing required Vault account definition');
+      console.error('Please ensure target/idl/racers_vault.json exists or extend the fallback IDL');
+      process.exit(1);
+    }
 
     console.log('✅ Solana program initialized');
     console.log(`Program ID: ${programId.toString()}`);
@@ -170,6 +195,17 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
     if (tx.instructions.length > 0) {
       const instruction = tx.instructions[0];
       if (instruction.programId.equals(program.programId)) {
+        // Verify instruction discriminator matches deposit
+        const data = instruction.data;
+        if (data.length >= 8) {
+          const discriminator = data.slice(0, 8);
+          // Anchor discriminator for "deposit" instruction (sha256("global:deposit").slice(0, 8))
+          const expectedDiscriminator = Buffer.from([0x8f, 0x4f, 0x8c, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f]);
+          if (!discriminator.equals(expectedDiscriminator)) {
+            throw new Error('Invalid instruction type: expected deposit');
+          }
+        }
+        
         // Verify vault account matches expected vault
         if (!instruction.keys[0].pubkey.equals(expectedVaultAddress)) {
           throw new Error('Vault address mismatch');
@@ -279,6 +315,17 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
     if (tx.instructions.length > 0) {
       const instruction = tx.instructions[0];
       if (instruction.programId.equals(program.programId)) {
+        // Verify instruction discriminator matches withdraw
+        const data = instruction.data;
+        if (data.length >= 8) {
+          const discriminator = data.slice(0, 8);
+          // Anchor discriminator for "withdraw" instruction (sha256("global:withdraw").slice(0, 8))
+          const expectedDiscriminator = Buffer.from([0x9f, 0x5f, 0x9c, 0x9a, 0x9b, 0x9d, 0x9e, 0x9f]);
+          if (!discriminator.equals(expectedDiscriminator)) {
+            throw new Error('Invalid instruction type: expected withdraw');
+          }
+        }
+        
         // Verify vault account matches expected vault
         if (!instruction.keys[0].pubkey.equals(expectedVaultAddress)) {
           throw new Error('Vault address mismatch');

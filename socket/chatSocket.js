@@ -80,8 +80,8 @@ function initializeChatSocket(io) {
         const { redis: redisOps } = require('../server/db');
         await redisOps.addChatMessage(message);
         
-        // Broadcast to all clients (excluding sender to avoid duplicates)
-        socket.broadcast.emit('chat:message', message);
+        // Broadcast to all clients (including sender)
+        io.emit('chat:message', message);
         
         console.log('📨 Chat message broadcasted:', message.username, message.message);
       } catch (error) {
