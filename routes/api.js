@@ -224,7 +224,8 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
     const userAddress = req.user.address;
     
     // Check user's current balance
-    const currentBalance = await pg.getUserBalance(userAddress);
+    const currentBalanceStr = await pg.getUserBalance(userAddress);
+    const currentBalance = parseFloat(currentBalanceStr);
     
     // Reject bet if it exceeds user's balance
     if (amount > currentBalance) {
@@ -301,27 +302,17 @@ router.post('/vault/deposit/process', requirePrivy, validateBody(vaultProcessSch
       
       // Verify the claimed amount matches the transaction amount
       if (claimedLamports !== verifiedLamports) {
-        const verifiedAmountDecimal = Number(verifiedLamports) / 1e9;
         return res.status(400).json({ 
           error: 'Amount mismatch', 
           claimed: amount, 
-          verified: verifiedAmountDecimal 
+          verified: result.verifiedAmount 
         });
       }
       
-      // Update user balance using verified amount (convert to decimal for database)
-      const currentBalance = await pg.getUserBalance(userAddress);
-      
-      // Convert BigInt lamports to decimal SOL safely
-      let verifiedAmountDecimal;
-      if (verifiedLamports > BigInt(Number.MAX_SAFE_INTEGER)) {
-        // For very large amounts, use string conversion to avoid precision loss
-        verifiedAmountDecimal = parseFloat(verifiedLamports.toString()) / 1e9;
-      } else {
-        verifiedAmountDecimal = Number(verifiedLamports) / 1e9;
-      }
-      
-      const newBalance = currentBalance + verifiedAmountDecimal;
+      // Update user balance using verified amount from result
+      const currentBalanceStr = await pg.getUserBalance(userAddress);
+      const currentBalance = parseFloat(currentBalanceStr);
+      const newBalance = currentBalance + result.verifiedAmount;
       await pg.updateUserBalance(userAddress, newBalance);
       
       result.newBalance = newBalance;
@@ -342,7 +333,8 @@ router.post('/vault/withdraw/build', requirePrivy, validateBody(vaultSchema), as
     const userPublicKey = req.user.address; // Use authenticated user's address
     
     // Check user's off-chain balance before allowing withdraw
-    const currentBalance = await pg.getUserBalance(userPublicKey);
+    const currentBalanceStr = await pg.getUserBalance(userPublicKey);
+    const currentBalance = parseFloat(currentBalanceStr);
     
     // Reject withdraw if it exceeds user's off-chain balance
     if (amount > currentBalance) {
@@ -381,31 +373,21 @@ router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultProcessSc
       
       // Verify the claimed amount matches the transaction amount
       if (claimedLamports !== verifiedLamports) {
-        const verifiedAmountDecimal = Number(verifiedLamports) / 1e9;
         return res.status(400).json({ 
           error: 'Amount mismatch', 
           claimed: amount, 
-          verified: verifiedAmountDecimal 
+          verified: result.verifiedAmount 
         });
       }
       
-      // Update user balance using verified amount (convert to decimal for database)
-      const currentBalance = await pg.getUserBalance(userAddress);
-      
-      // Convert BigInt lamports to decimal SOL safely
-      let verifiedAmountDecimal;
-      if (verifiedLamports > BigInt(Number.MAX_SAFE_INTEGER)) {
-        // For very large amounts, use string conversion to avoid precision loss
-        verifiedAmountDecimal = parseFloat(verifiedLamports.toString()) / 1e9;
-      } else {
-        verifiedAmountDecimal = Number(verifiedLamports) / 1e9;
-      }
-      
-      const newBalance = Math.max(0, currentBalance - verifiedAmountDecimal); // Prevent negative balance
+      // Update user balance using verified amount from result
+      const currentBalanceStr = await pg.getUserBalance(userAddress);
+      const currentBalance = parseFloat(currentBalanceStr);
+      const newBalance = Math.max(0, currentBalance - result.verifiedAmount); // Prevent negative balance
       await pg.updateUserBalance(userAddress, newBalance);
       
       // Log to bet history using verified amount
-      await pg.logBet(userAddress, 'withdraw', 0, verifiedAmountDecimal, 'withdraw');
+      await pg.logBet(userAddress, 'withdraw', 0, result.verifiedAmount, 'withdraw');
       
       result.newBalance = newBalance;
     }

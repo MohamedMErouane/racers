@@ -42,7 +42,6 @@ export class WalletClient {
     } catch (error) {
       console.error('❌ Privy wallet initialization failed:', error);
       alert('Wallet connection failed; running in guest mode.');
-      window.userWallet = null;
       return false;
     }
   }
@@ -66,7 +65,6 @@ export class WalletClient {
         
         this.isAuthenticated = true;
         this.accessToken = accessToken;
-        window.userWallet = wallet.address;
         
         // Dispatch wallet connected event
         window.dispatchEvent(new CustomEvent('wallet:connected', {
@@ -94,7 +92,6 @@ export class WalletClient {
     this.user = null;
     this.isAuthenticated = false;
     this.accessToken = null;
-    window.userWallet = null;
     
     // Disable chat input after logout
     const chatInput = document.getElementById('chatInput');
@@ -113,6 +110,11 @@ export class WalletClient {
   // Get access token
   getAccessToken() {
     return this.accessToken;
+  }
+
+  // Get wallet address
+  getWalletAddress() {
+    return this.user?.wallet || null;
   }
 
   // Connect wallet

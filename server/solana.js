@@ -269,10 +269,15 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
     const signature = await connection.sendRawTransaction(tx.serialize());
     await connection.confirmTransaction(signature);
 
-    // Convert to decimal SOL for logging only
+    // Convert to decimal SOL for logging and return
     const verifiedAmountDecimal = Number(verifiedAmountLamports) / 1e9;
     console.log(`✅ Deposit transaction confirmed: ${signature}, amount: ${verifiedAmountDecimal} SOL`);
-    return { success: true, signature, verifiedAmountLamports: verifiedAmountLamports.toString() };
+    return { 
+      success: true, 
+      signature, 
+      verifiedAmountLamports: verifiedAmountLamports.toString(),
+      verifiedAmount: verifiedAmountDecimal
+    };
 
   } catch (error) {
     console.error('❌ Deposit transaction failed:', error);
@@ -403,10 +408,15 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
     const signature = await connection.sendRawTransaction(tx.serialize());
     await connection.confirmTransaction(signature);
 
-    // Convert to decimal SOL for logging only
+    // Convert to decimal SOL for logging and return
     const verifiedAmountDecimal = Number(verifiedAmountLamports) / 1e9;
     console.log(`✅ Withdraw transaction confirmed: ${signature}, amount: ${verifiedAmountDecimal} SOL`);
-    return { success: true, signature, verifiedAmountLamports: verifiedAmountLamports.toString() };
+    return { 
+      success: true, 
+      signature, 
+      verifiedAmountLamports: verifiedAmountLamports.toString(),
+      verifiedAmount: verifiedAmountDecimal
+    };
 
   } catch (error) {
     console.error('❌ Withdraw transaction failed:', error);

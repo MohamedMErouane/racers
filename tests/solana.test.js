@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Import Solana module
+const solana = require('../server/solana');
+
 // Mock Solana dependencies
 const mockConnection = {
   sendRawTransaction: vi.fn().mockResolvedValue('mock-signature'),
@@ -80,6 +83,33 @@ vi.mock('@coral-xyz/anchor', () => ({
     }
   }
 }));
+
+// Helper function to create mock transactions
+function createMockTransaction(type, amount) {
+  const discriminator = type === 'deposit' 
+    ? Buffer.from([0x8f, 0x4f, 0x8c, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f])
+    : Buffer.from([0x9f, 0x5f, 0x9c, 0x9a, 0x9b, 0x9d, 0x9e, 0x9f]);
+  
+  const amountBuffer = Buffer.alloc(8);
+  if (typeof amount === 'string') {
+    const bigIntAmount = BigInt(amount);
+    amountBuffer.writeBigUInt64LE(bigIntAmount);
+  } else {
+    amountBuffer.writeBigUInt64LE(BigInt(Math.round(amount * 1e9)));
+  }
+  
+  return {
+    instructions: [{
+      programId: { equals: vi.fn(() => true) },
+      keys: [
+        { pubkey: { equals: vi.fn(() => true) }, isSigner: false },
+        { pubkey: { equals: vi.fn(() => true) }, isSigner: true }
+      ],
+      data: Buffer.concat([discriminator, amountBuffer])
+    }],
+    signatures: [{ publicKey: 'mock-user' }]
+  };
+}
 
 // Import the function we want to test
 const { computeDiscriminator } = require('../server/solana');
@@ -230,7 +260,7 @@ describe('Solana Integration', () => {
       balance: { toString: () => largeBalance }
     });
     
-    const { getVaultBalance } = require('../server/solana');
+    const { getVaultBalance } = solana;
     const result = await getVaultBalance('mock-user-address');
     
     // Should return string for large values
@@ -245,7 +275,7 @@ describe('Solana Integration', () => {
       balance: { toString: () => safeBalance }
     });
     
-    const { getVaultBalance } = require('../server/solana');
+    const { getVaultBalance } = solana;
     const result = await getVaultBalance('mock-user-address');
     
     // Should return number for safe values
@@ -279,7 +309,7 @@ describe('Solana Integration', () => {
       new Error('Account does not exist')
     );
     
-    const { buildDepositTransaction } = require('../server/solana');
+    const { buildDepositTransaction } = solana;
     
     await expect(buildDepositTransaction('mock-user-address', 1.0))
       .rejects
@@ -292,7 +322,7 @@ describe('Solana Integration', () => {
       new Error('Invalid account discriminator')
     );
     
-    const { buildDepositTransaction } = require('../server/solana');
+    const { buildDepositTransaction } = solana;
     
     await expect(buildDepositTransaction('mock-user-address', 1.0))
       .rejects
@@ -304,7 +334,7 @@ describe('Solana Integration', () => {
     const networkError = new Error('Network connection failed');
     mockProgram.account.vault.fetch.mockRejectedValueOnce(networkError);
     
-    const { buildDepositTransaction } = require('../server/solana');
+    const { buildDepositTransaction } = solana;
     
     await expect(buildDepositTransaction('mock-user-address', 1.0))
       .rejects
@@ -316,7 +346,7 @@ describe('Solana Integration', () => {
     const rpcError = new Error('RPC connection failed');
     mockProgram.account.vault.fetch.mockRejectedValueOnce(rpcError);
     
-    const { getVaultBalance } = require('../server/solana');
+    const { getVaultBalance } = solana;
     
     await expect(getVaultBalance('mock-user-address'))
       .rejects
@@ -325,17 +355,17 @@ describe('Solana Integration', () => {
 
   it('should throw error instead of returning 0 when program is not initialized for getVaultBalance', async () => {
     // Mock uninitialized program
-    const originalProgram = require('../server/solana').program;
-    require('../server/solana').program = null;
+    const originalProgram = solana.program;
+    solana.program = null;
     
-    const { getVaultBalance } = require('../server/solana');
+    const { getVaultBalance } = solana;
     
     await expect(getVaultBalance('mock-user-address'))
       .rejects
       .toThrow('Solana program not initialized');
     
     // Restore original program
-    require('../server/solana').program = originalProgram;
+    solana.program = originalProgram;
   });
 
   it('should reject deposit transactions with multiple instructions', async () => {
@@ -350,7 +380,7 @@ describe('Solana Integration', () => {
     
     vi.mocked(require('@solana/web3.js').Transaction.from).mockReturnValue(mockTx);
     
-    const { processDepositTransaction } = require('../server/solana');
+    const { processDepositTransaction } = solana;
     
     await expect(processDepositTransaction('mock-signed-tx', 'mock-user-address'))
       .rejects
@@ -369,7 +399,7 @@ describe('Solana Integration', () => {
     
     vi.mocked(require('@solana/web3.js').Transaction.from).mockReturnValue(mockTx);
     
-    const { processWithdrawTransaction } = require('../server/solana');
+    const { processWithdrawTransaction } = solana;
     
     await expect(processWithdrawTransaction('mock-signed-tx', 'mock-user-address'))
       .rejects
@@ -385,7 +415,7 @@ describe('Solana Integration', () => {
     
     vi.mocked(require('@solana/web3.js').Transaction.from).mockReturnValue(mockTx);
     
-    const { processDepositTransaction } = require('../server/solana');
+    const { processDepositTransaction } = solana;
     
     await expect(processDepositTransaction('mock-signed-tx', 'mock-user-address'))
       .rejects

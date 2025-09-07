@@ -155,8 +155,8 @@ const pgOps = {
       const query = 'SELECT balance FROM user_balances WHERE user_id = $1';
       const result = await pg.query(query, [userId]);
       const balance = result.rows[0]?.balance;
-      // Convert string to number, defaulting to 0 if parsing fails
-      return balance ? parseFloat(balance) || 0 : 0;
+      // Return balance as string to preserve precision, defaulting to '0' if not found
+      return balance ? balance.toString() : '0';
     } catch (error) {
       console.error('Error getting user balance:', error);
       throw error; // Rethrow to let callers handle the error
