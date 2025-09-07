@@ -195,6 +195,18 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
     const expectedUserKey = new PublicKey(expectedUserAddress);
     const expectedVaultAddress = getUserVaultAddress(expectedUserKey);
     
+    // Verify that the expected user's public key is present in the signatures
+    const expectedUserKeyString = expectedUserKey.toString();
+    const hasExpectedSigner = tx.signatures.some(sig => {
+      // Check if this signature corresponds to the expected user
+      // In Solana, signatures are indexed by the order of signers in the transaction
+      return sig.publicKey && sig.publicKey.toString() === expectedUserKeyString;
+    });
+    
+    if (!hasExpectedSigner) {
+      throw new Error('Transaction not signed by expected user');
+    }
+    
     // Verify the instruction accounts match expected vault and user
     if (tx.instructions.length > 0) {
       const instruction = tx.instructions[0];
@@ -238,10 +250,10 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
     const signature = await connection.sendRawTransaction(tx.serialize());
     await connection.confirmTransaction(signature);
 
-    // Convert to decimal SOL for logging and API response
-    const verifiedAmount = Number(verifiedAmountLamports) / 1e9;
-    console.log(`✅ Deposit transaction confirmed: ${signature}, amount: ${verifiedAmount} SOL`);
-    return { success: true, signature, verifiedAmount: verifiedAmount };
+    // Convert to decimal SOL for logging only
+    const verifiedAmountDecimal = Number(verifiedAmountLamports) / 1e9;
+    console.log(`✅ Deposit transaction confirmed: ${signature}, amount: ${verifiedAmountDecimal} SOL`);
+    return { success: true, signature, verifiedAmountLamports: verifiedAmountLamports.toString() };
 
   } catch (error) {
     console.error('❌ Deposit transaction failed:', error);
@@ -314,6 +326,18 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
     const expectedUserKey = new PublicKey(expectedUserAddress);
     const expectedVaultAddress = getUserVaultAddress(expectedUserKey);
     
+    // Verify that the expected user's public key is present in the signatures
+    const expectedUserKeyString = expectedUserKey.toString();
+    const hasExpectedSigner = tx.signatures.some(sig => {
+      // Check if this signature corresponds to the expected user
+      // In Solana, signatures are indexed by the order of signers in the transaction
+      return sig.publicKey && sig.publicKey.toString() === expectedUserKeyString;
+    });
+    
+    if (!hasExpectedSigner) {
+      throw new Error('Transaction not signed by expected user');
+    }
+    
     // Verify the instruction accounts match expected vault and user
     if (tx.instructions.length > 0) {
       const instruction = tx.instructions[0];
@@ -357,10 +381,10 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
     const signature = await connection.sendRawTransaction(tx.serialize());
     await connection.confirmTransaction(signature);
 
-    // Convert to decimal SOL for logging and API response
-    const verifiedAmount = Number(verifiedAmountLamports) / 1e9;
-    console.log(`✅ Withdraw transaction confirmed: ${signature}, amount: ${verifiedAmount} SOL`);
-    return { success: true, signature, verifiedAmount: verifiedAmount };
+    // Convert to decimal SOL for logging only
+    const verifiedAmountDecimal = Number(verifiedAmountLamports) / 1e9;
+    console.log(`✅ Withdraw transaction confirmed: ${signature}, amount: ${verifiedAmountDecimal} SOL`);
+    return { success: true, signature, verifiedAmountLamports: verifiedAmountLamports.toString() };
 
   } catch (error) {
     console.error('❌ Withdraw transaction failed:', error);

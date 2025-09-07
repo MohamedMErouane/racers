@@ -246,7 +246,7 @@ router.post('/vault/deposit/build', requirePrivy, validateBody(vaultSchema), asy
   }
 });
 
-router.post('/vault/deposit/process', requirePrivy, async (req, res) => {
+router.post('/vault/deposit/process', requirePrivy, validateBody(vaultSchema), async (req, res) => {
   try {
     const solana = require('../server/solana');
     const { pg } = require('../server/db');
@@ -262,20 +262,22 @@ router.post('/vault/deposit/process', requirePrivy, async (req, res) => {
     if (result.success) {
       // Convert both amounts to BigInt lamports for precise comparison
       const claimedLamports = BigInt(Math.round(amount * 1e9));
-      const verifiedLamports = BigInt(Math.round(result.verifiedAmount * 1e9));
+      const verifiedLamports = BigInt(result.verifiedAmountLamports);
       
       // Verify the claimed amount matches the transaction amount
       if (claimedLamports !== verifiedLamports) {
+        const verifiedAmountDecimal = Number(verifiedLamports) / 1e9;
         return res.status(400).json({ 
           error: 'Amount mismatch', 
           claimed: amount, 
-          verified: result.verifiedAmount 
+          verified: verifiedAmountDecimal 
         });
       }
       
-      // Update user balance using verified amount
+      // Update user balance using verified amount (convert to decimal for database)
       const currentBalance = await pg.getUserBalance(userAddress);
-      const newBalance = currentBalance + result.verifiedAmount;
+      const verifiedAmountDecimal = Number(verifiedLamports) / 1e9;
+      const newBalance = currentBalance + verifiedAmountDecimal;
       await pg.updateUserBalance(userAddress, newBalance);
       
       result.newBalance = newBalance;
@@ -302,7 +304,7 @@ router.post('/vault/withdraw/build', requirePrivy, validateBody(vaultSchema), as
   }
 });
 
-router.post('/vault/withdraw/process', requirePrivy, async (req, res) => {
+router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultSchema), async (req, res) => {
   try {
     const solana = require('../server/solana');
     const { pg } = require('../server/db');
@@ -318,24 +320,26 @@ router.post('/vault/withdraw/process', requirePrivy, async (req, res) => {
     if (result.success) {
       // Convert both amounts to BigInt lamports for precise comparison
       const claimedLamports = BigInt(Math.round(amount * 1e9));
-      const verifiedLamports = BigInt(Math.round(result.verifiedAmount * 1e9));
+      const verifiedLamports = BigInt(result.verifiedAmountLamports);
       
       // Verify the claimed amount matches the transaction amount
       if (claimedLamports !== verifiedLamports) {
+        const verifiedAmountDecimal = Number(verifiedLamports) / 1e9;
         return res.status(400).json({ 
           error: 'Amount mismatch', 
           claimed: amount, 
-          verified: result.verifiedAmount 
+          verified: verifiedAmountDecimal 
         });
       }
       
-      // Update user balance using verified amount
+      // Update user balance using verified amount (convert to decimal for database)
       const currentBalance = await pg.getUserBalance(userAddress);
-      const newBalance = Math.max(0, currentBalance - result.verifiedAmount); // Prevent negative balance
+      const verifiedAmountDecimal = Number(verifiedLamports) / 1e9;
+      const newBalance = Math.max(0, currentBalance - verifiedAmountDecimal); // Prevent negative balance
       await pg.updateUserBalance(userAddress, newBalance);
       
       // Log to bet history using verified amount
-      await pg.logBet(userAddress, 'withdraw', 0, result.verifiedAmount, 'withdraw');
+      await pg.logBet(userAddress, 'withdraw', 0, verifiedAmountDecimal, 'withdraw');
       
       result.newBalance = newBalance;
     }

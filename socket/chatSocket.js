@@ -44,6 +44,8 @@ function initializeChatSocket(io) {
             
             // Add current timestamp to Redis list
             await redis.lpush(rateLimitKey, now.toString());
+            // Trim list to keep at most 10 timestamps to prevent memory growth
+            await redis.ltrim(rateLimitKey, 0, 9);
             await redis.expire(rateLimitKey, 60); // Expire after 1 minute
           }
         } catch (error) {

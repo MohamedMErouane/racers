@@ -56,6 +56,7 @@ const connectSrc = [
   "'self'", 
   "https://api.privy.io", 
   "https://auth.privy.io", 
+  "ws:", 
   "wss:", 
   "https://api.mainnet-beta.solana.com", 
   "https://api.devnet.solana.com"
