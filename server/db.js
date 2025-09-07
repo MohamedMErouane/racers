@@ -1,8 +1,8 @@
-const Redis = require('ioredis');
 const { Pool } = require('pg');
+const { getRedis } = require('../services/redis');
 
-// Redis client
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+// Use shared Redis instance
+const redis = getRedis();
 
 // Postgres client
 const pg = new Pool({

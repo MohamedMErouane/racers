@@ -44,9 +44,13 @@ export class ChatClient {
         const result = await response.json();
         this.addMessage(result.message);
         
-        // Emit socket event for real-time updates
+        // Emit socket event for real-time updates (with token for authentication)
         if (window.racersApp && window.racersApp.socket) {
-          window.racersApp.socket.emit('chat:message', result.message);
+          window.racersApp.socket.emit('chat:message', {
+            message: result.message.message,
+            username: result.message.username,
+            token: token
+          });
         }
         
         return true;

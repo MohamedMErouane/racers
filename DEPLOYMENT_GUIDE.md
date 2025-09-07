@@ -77,6 +77,13 @@
 
 ## 🌐 **STEP 3: DEPLOY FRONTEND**
 
+### **Build Process:**
+1. **Run the build script to inject environment variables:**
+   ```bash
+   npm run build
+   ```
+   This replaces `<YOUR_PRIVY_APP_ID>` with your actual Privy App ID
+
 ### **Vercel Deployment:**
 
 1. **Install Vercel CLI:**

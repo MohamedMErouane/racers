@@ -10,10 +10,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "build": "echo 'No build step required'",
+    "build": "node build.js",
     "docker:build": "docker build -t racers-fun .",
     "docker:run": "docker run -p 3000:3000 racers-fun",
-    "deploy": "vercel --prod"
+    "deploy": "npm run build && vercel --prod"
   },
   "dependencies": {
     "express": "^4.18.2",

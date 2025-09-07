@@ -1,24 +1,48 @@
+const { verifyPrivyToken } = require('../lib/privy');
+const sanitizeHtml = require('sanitize-html');
+
 function initializeChatSocket(io) {
   io.on('connection', (socket) => {
     console.log('✅ Chat socket connected:', socket.id);
     
     // Listen for chat messages
-    socket.on('chat:message', async (message) => {
+    socket.on('chat:message', async (data) => {
       try {
-        // Validate message structure
-        if (!message || typeof message.message !== 'string' || !message.userId || !message.username) {
+        // Validate data structure
+        if (!data || !data.message || !data.token) {
           socket.emit('error', { message: 'Invalid message format' });
           return;
         }
         
-        // Broadcast to all clients
-        io.emit('chat:message', message);
+        // Verify Privy JWT token
+        const payload = await verifyPrivyToken(data.token);
         
-        // Persist message via API (optional - could be done by the sender)
+        // Sanitize message content
+        const sanitizedMessage = sanitizeHtml(data.message, {
+          allowedTags: [],
+          allowedAttributes: {}
+        });
+        
+        const sanitizedUsername = sanitizeHtml(data.username || 'Anonymous', {
+          allowedTags: [],
+          allowedAttributes: {}
+        });
+        
+        // Create sanitized message object
+        const message = {
+          message: sanitizedMessage,
+          username: sanitizedUsername,
+          userId: payload.address,
+          timestamp: Date.now()
+        };
+        
+        // Broadcast to all clients (excluding sender to avoid duplicates)
+        socket.broadcast.emit('chat:message', message);
+        
         console.log('📨 Chat message broadcasted:', message.username, message.message);
       } catch (error) {
         console.error('Error handling chat message:', error);
-        socket.emit('error', { message: 'Failed to process message' });
+        socket.emit('error', { message: 'Authentication failed or invalid message' });
       }
     });
     

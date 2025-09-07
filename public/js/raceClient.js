@@ -25,6 +25,11 @@ export class RaceClient {
     this.socket.on('race:end', (data) => {
       this.handleRaceEnd(data);
     });
+
+    // Request current race state after connection is established
+    this.socket.on('connect', () => {
+      this.requestRaceState();
+    });
   }
 
   // Update race state

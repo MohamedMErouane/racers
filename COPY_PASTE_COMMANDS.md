@@ -118,7 +118,7 @@ window.CONFIG = {
   API_URL: 'https://YOUR-RAILWAY-URL.railway.app/api',
   RACE_DURATION: 12000,
   COUNTDOWN_DURATION: 10000,
-  TICK_RATE: 100
+  TICK_RATE: 16
 };
 ```
 

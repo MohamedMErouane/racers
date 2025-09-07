@@ -28,5 +28,6 @@ async function initializeRedis() {
 
 module.exports = {
   initializeRedis,
-  getRedis: () => redis
+  getRedis: () => redis,
+  redis // Export the redis instance directly
 };
