@@ -65,6 +65,18 @@ CREATE TABLE IF NOT EXISTS race_results (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create vault_transactions table for deposits and withdrawals
+CREATE TABLE IF NOT EXISTS vault_transactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id TEXT NOT NULL,
+    transaction_type TEXT NOT NULL CHECK (transaction_type IN ('deposit', 'withdraw')),
+    amount DECIMAL(20, 9) NOT NULL,
+    transaction_hash TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'completed',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_races_status ON races(status);
 CREATE INDEX IF NOT EXISTS idx_races_round_id ON races(round_id);
@@ -73,6 +85,9 @@ CREATE INDEX IF NOT EXISTS idx_bets_user_id ON bets(user_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_race_id ON chat_messages(race_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at);
 CREATE INDEX IF NOT EXISTS idx_race_results_race_id ON race_results(race_id);
+CREATE INDEX IF NOT EXISTS idx_vault_transactions_user_id ON vault_transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_vault_transactions_type ON vault_transactions(transaction_type);
+CREATE INDEX IF NOT EXISTS idx_vault_transactions_created_at ON vault_transactions(created_at);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -91,6 +106,9 @@ CREATE TRIGGER update_bets_updated_at BEFORE UPDATE ON bets
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_vault_transactions_updated_at BEFORE UPDATE ON vault_transactions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert some sample data for testing

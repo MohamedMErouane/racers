@@ -16,7 +16,7 @@ const { initializeRedis } = require('./services/redis');
 const { initializeSentry } = require('./services/sentry');
 
 // Import socket handlers
-const { initializeChatSocket } = require('./socket/chatSocket');
+// Chat is handled via HTTP POST, no socket handler needed
 
 // Import game engine
 const gameEngine = require('./server/gameEngine');
@@ -183,7 +183,7 @@ async function initializeServices() {
     console.log('✅ Database tables initialized');
     
     // Initialize Socket handlers
-    initializeChatSocket(io);
+    // Chat is handled via HTTP POST, no socket handler needed
     
     // Handle race state requests
     io.on('connection', (socket) => {

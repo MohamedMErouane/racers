@@ -269,14 +269,20 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
     const signature = await connection.sendRawTransaction(tx.serialize());
     await connection.confirmTransaction(signature);
 
-    // Convert to decimal SOL for logging and return
-    const verifiedAmountDecimal = Number(verifiedAmountLamports) / 1e9;
-    console.log(`✅ Deposit transaction confirmed: ${signature}, amount: ${verifiedAmountDecimal} SOL`);
+    // Convert to decimal SOL only if safe, otherwise return null
+    let verifiedAmount = null;
+    if (verifiedAmountLamports <= BigInt(Number.MAX_SAFE_INTEGER)) {
+      verifiedAmount = Number(verifiedAmountLamports) / 1e9;
+      console.log(`✅ Deposit transaction confirmed: ${signature}, amount: ${verifiedAmount} SOL`);
+    } else {
+      console.log(`✅ Deposit transaction confirmed: ${signature}, amount: ${verifiedAmountLamports} lamports (large amount)`);
+    }
+    
     return { 
       success: true, 
       signature, 
-      verifiedAmountLamports: verifiedAmountLamports.toString(),
-      verifiedAmount: verifiedAmountDecimal
+      verifiedAmountLamports: verifiedAmountLamports, // Keep as BigInt
+      verifiedAmount: verifiedAmount
     };
 
   } catch (error) {
@@ -408,14 +414,20 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
     const signature = await connection.sendRawTransaction(tx.serialize());
     await connection.confirmTransaction(signature);
 
-    // Convert to decimal SOL for logging and return
-    const verifiedAmountDecimal = Number(verifiedAmountLamports) / 1e9;
-    console.log(`✅ Withdraw transaction confirmed: ${signature}, amount: ${verifiedAmountDecimal} SOL`);
+    // Convert to decimal SOL only if safe, otherwise return null
+    let verifiedAmount = null;
+    if (verifiedAmountLamports <= BigInt(Number.MAX_SAFE_INTEGER)) {
+      verifiedAmount = Number(verifiedAmountLamports) / 1e9;
+      console.log(`✅ Withdraw transaction confirmed: ${signature}, amount: ${verifiedAmount} SOL`);
+    } else {
+      console.log(`✅ Withdraw transaction confirmed: ${signature}, amount: ${verifiedAmountLamports} lamports (large amount)`);
+    }
+    
     return { 
       success: true, 
       signature, 
-      verifiedAmountLamports: verifiedAmountLamports.toString(),
-      verifiedAmount: verifiedAmountDecimal
+      verifiedAmountLamports: verifiedAmountLamports, // Keep as BigInt
+      verifiedAmount: verifiedAmount
     };
 
   } catch (error) {

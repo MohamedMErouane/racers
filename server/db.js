@@ -191,6 +191,20 @@ const pgOps = {
       console.error('Error logging bet:', error);
       throw error; // Rethrow to let callers handle the error
     }
+  },
+
+  // Vault transaction history
+  async logVaultTransaction(userId, transactionType, amount, transactionHash, status = 'completed') {
+    try {
+      const query = `
+        INSERT INTO vault_transactions (user_id, transaction_type, amount, transaction_hash, status, created_at)
+        VALUES ($1, $2, $3, $4, $5, NOW())
+      `;
+      await pg.query(query, [userId, transactionType, amount, transactionHash, status]);
+    } catch (error) {
+      console.error('Error logging vault transaction:', error);
+      throw error; // Rethrow to let callers handle the error
+    }
   }
 };
 
@@ -228,6 +242,20 @@ async function initializeTables() {
         amount DECIMAL(20, 9) NOT NULL,
         result VARCHAR(50) NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create vault_transactions table
+    await pg.query(`
+      CREATE TABLE IF NOT EXISTS vault_transactions (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(255) NOT NULL,
+        transaction_type VARCHAR(20) NOT NULL CHECK (transaction_type IN ('deposit', 'withdraw')),
+        amount DECIMAL(20, 9) NOT NULL,
+        transaction_hash VARCHAR(255) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'completed',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
 

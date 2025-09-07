@@ -5,6 +5,30 @@ const sanitizeHtml = require('sanitize-html');
 const { verifyPrivyToken, getBearerToken } = require('../lib/privy');
 const router = express.Router();
 
+// Helper functions for precise balance arithmetic
+function solToLamports(sol) {
+  return BigInt(Math.round(sol * 1e9));
+}
+
+function lamportsToSol(lamports) {
+  if (typeof lamports === 'string') {
+    return BigInt(lamports) / BigInt(1e9);
+  }
+  return lamports / BigInt(1e9);
+}
+
+function stringToLamports(str) {
+  // Convert string balance to lamports (assuming it's in SOL)
+  const sol = parseFloat(str);
+  return BigInt(Math.round(sol * 1e9));
+}
+
+function lamportsToString(lamports) {
+  // Convert lamports back to string balance (in SOL)
+  const sol = Number(lamports) / 1e9;
+  return sol.toString();
+}
+
 // Rate limiting for chat and bets
 const chatRateLimit = rateLimit({
   windowMs: 5000, // 5 seconds
@@ -225,13 +249,14 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
     
     // Check user's current balance
     const currentBalanceStr = await pg.getUserBalance(userAddress);
-    const currentBalance = parseFloat(currentBalanceStr);
+    const currentBalanceLamports = stringToLamports(currentBalanceStr);
+    const betAmountLamports = solToLamports(amount);
     
     // Reject bet if it exceeds user's balance
-    if (amount > currentBalance) {
+    if (betAmountLamports > currentBalanceLamports) {
       return res.status(400).json({ 
         error: 'Insufficient balance', 
-        currentBalance, 
+        currentBalance: lamportsToString(currentBalanceLamports), 
         requestedAmount: amount 
       });
     }
@@ -244,8 +269,9 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
     };
     
     // Deduct the bet amount from user's balance
-    const newBalance = currentBalance - amount;
-    await pg.updateUserBalance(userAddress, newBalance);
+    const newBalanceLamports = currentBalanceLamports - betAmountLamports;
+    const newBalanceStr = lamportsToString(newBalanceLamports);
+    await pg.updateUserBalance(userAddress, newBalanceStr);
     
     // Log the bet to database with current race ID
     const gameEngine = require('../server/gameEngine');
@@ -259,7 +285,7 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
     res.json({ 
       success: true, 
       bet, 
-      newBalance 
+      newBalance: lamportsToString(newBalanceLamports)
     });
   } catch (error) {
     console.error('Error adding bet:', error);
@@ -298,7 +324,7 @@ router.post('/vault/deposit/process', requirePrivy, validateBody(vaultProcessSch
     if (result.success) {
       // Convert both amounts to BigInt lamports for precise comparison
       const claimedLamports = BigInt(Math.round(amount * 1e9));
-      const verifiedLamports = BigInt(result.verifiedAmountLamports);
+      const verifiedLamports = result.verifiedAmountLamports; // Already BigInt
       
       // Verify the claimed amount matches the transaction amount
       if (claimedLamports !== verifiedLamports) {
@@ -311,11 +337,16 @@ router.post('/vault/deposit/process', requirePrivy, validateBody(vaultProcessSch
       
       // Update user balance using verified amount from result
       const currentBalanceStr = await pg.getUserBalance(userAddress);
-      const currentBalance = parseFloat(currentBalanceStr);
-      const newBalance = currentBalance + result.verifiedAmount;
-      await pg.updateUserBalance(userAddress, newBalance);
+      const currentBalanceLamports = stringToLamports(currentBalanceStr);
+      const verifiedAmountLamports = result.verifiedAmountLamports;
+      const newBalanceLamports = currentBalanceLamports + verifiedAmountLamports;
+      const newBalanceStr = lamportsToString(newBalanceLamports);
+      await pg.updateUserBalance(userAddress, newBalanceStr);
       
-      result.newBalance = newBalance;
+      // Log vault transaction
+      await pg.logVaultTransaction(userAddress, 'deposit', result.verifiedAmount || 0, result.signature);
+      
+      result.newBalance = lamportsToString(newBalanceLamports);
     }
     
     res.json(result);
@@ -334,13 +365,14 @@ router.post('/vault/withdraw/build', requirePrivy, validateBody(vaultSchema), as
     
     // Check user's off-chain balance before allowing withdraw
     const currentBalanceStr = await pg.getUserBalance(userPublicKey);
-    const currentBalance = parseFloat(currentBalanceStr);
+    const currentBalanceLamports = stringToLamports(currentBalanceStr);
+    const withdrawAmountLamports = solToLamports(amount);
     
     // Reject withdraw if it exceeds user's off-chain balance
-    if (amount > currentBalance) {
+    if (withdrawAmountLamports > currentBalanceLamports) {
       return res.status(400).json({ 
         error: 'Insufficient balance', 
-        currentBalance, 
+        currentBalance: lamportsToString(currentBalanceLamports), 
         requestedAmount: amount 
       });
     }
@@ -369,7 +401,7 @@ router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultProcessSc
     if (result.success) {
       // Convert both amounts to BigInt lamports for precise comparison
       const claimedLamports = BigInt(Math.round(amount * 1e9));
-      const verifiedLamports = BigInt(result.verifiedAmountLamports);
+      const verifiedLamports = result.verifiedAmountLamports; // Already BigInt
       
       // Verify the claimed amount matches the transaction amount
       if (claimedLamports !== verifiedLamports) {
@@ -382,14 +414,16 @@ router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultProcessSc
       
       // Update user balance using verified amount from result
       const currentBalanceStr = await pg.getUserBalance(userAddress);
-      const currentBalance = parseFloat(currentBalanceStr);
-      const newBalance = Math.max(0, currentBalance - result.verifiedAmount); // Prevent negative balance
-      await pg.updateUserBalance(userAddress, newBalance);
+      const currentBalanceLamports = stringToLamports(currentBalanceStr);
+      const verifiedAmountLamports = result.verifiedAmountLamports;
+      const newBalanceLamports = currentBalanceLamports - verifiedAmountLamports;
+      const newBalanceStr = lamportsToString(newBalanceLamports);
+      await pg.updateUserBalance(userAddress, newBalanceStr);
       
-      // Log to bet history using verified amount
-      await pg.logBet(userAddress, 'withdraw', 0, result.verifiedAmount, 'withdraw');
+      // Log vault transaction
+      await pg.logVaultTransaction(userAddress, 'withdraw', result.verifiedAmount || 0, result.signature);
       
-      result.newBalance = newBalance;
+      result.newBalance = lamportsToString(newBalanceLamports);
     }
     
     res.json(result);
@@ -414,7 +448,8 @@ router.get('/vault/balance/:userPublicKey', requirePrivy, async (req, res) => {
     const response = { balance };
     if (typeof balance === 'string') {
       response.balanceString = balance;
-      response.balance = parseFloat(balance) / 1e9; // Convert to SOL for display
+      // Convert string balance to SOL for display (assuming it's already in SOL)
+      response.balance = parseFloat(balance);
     }
     res.json(response);
   } catch (error) {
