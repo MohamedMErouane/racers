@@ -14,7 +14,7 @@ export class WalletClient {
       }
       
       this.privy = new Privy({
-        appId: 'cmermm5bm003bjo0bgsoffojs',
+        appId: '<YOUR_PRIVY_APP_ID>',
         config: {
           loginMethods: ['email', 'wallet'],
           appearance: {

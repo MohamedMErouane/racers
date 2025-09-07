@@ -2,6 +2,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { z } = require('zod');
 const sanitizeHtml = require('sanitize-html');
+const { verifyPrivyToken, getBearerToken } = require('../lib/privy');
 const router = express.Router();
 
 // Rate limiting for chat and bets
@@ -31,14 +32,30 @@ const betSchema = z.object({
 });
 
 // Middleware to require Privy authentication
-function requirePrivy(req, res, next) {
-  // In a real implementation, you would verify the Privy JWT token here
-  // For now, we'll just check if there's an authorization header
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Authentication required' });
+async function requirePrivy(req, res, next) {
+  try {
+    // Get token from Bearer header or cookie
+    const token = getBearerToken(req);
+    
+    if (!token) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    // Verify the Privy JWT token
+    const payload = await verifyPrivyToken(token);
+    
+    // Attach user info to request
+    req.user = {
+      id: payload.userId || payload.sub,
+      address: payload.address,
+      verified: true
+    };
+    
+    next();
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
-  next();
 }
 
 // Validation middleware

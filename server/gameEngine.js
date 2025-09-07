@@ -75,25 +75,42 @@ function startRace(socketIo) {
   raceState.seed = crypto.randomBytes(32).toString('hex');
   raceState.tick = 0;
   raceState.status = 'countdown';
-  raceState.startTime = Date.now();
-  raceState.endTime = Date.now() + 12000; // 12 seconds
+  raceState.startTime = null; // Will be set when racing begins
+  raceState.endTime = null;   // Will be set when racing begins
   raceState.racers = initializeRacers();
   raceState.winner = null;
   
-  console.log(`🏁 Race started with seed: ${raceState.seed}`);
+  console.log(`🏁 Race countdown started with seed: ${raceState.seed}`);
   
-  // Emit race start
+  // Emit race start (countdown phase)
   if (io) {
     io.emit('race:start', {
       seed: raceState.seed,
       racers: raceState.racers,
-      startTime: raceState.startTime
+      status: 'countdown'
     });
   }
   
   // Start countdown
   setTimeout(() => {
+    // Set timing when racing actually begins
+    raceState.startTime = Date.now();
+    raceState.endTime = raceState.startTime + 12000; // 12 seconds from now
     raceState.status = 'racing';
+    
+    console.log(`🏁 Race started! Duration: 12 seconds`);
+    
+    // Emit race start with actual timing
+    if (io) {
+      io.emit('race:start', {
+        seed: raceState.seed,
+        racers: raceState.racers,
+        startTime: raceState.startTime,
+        endTime: raceState.endTime,
+        status: 'racing'
+      });
+    }
+    
     startRaceLoop();
   }, 10000); // 10 second countdown
 }

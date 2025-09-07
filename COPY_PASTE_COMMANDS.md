@@ -49,11 +49,11 @@ railway deploy
 In Railway dashboard, go to your project → Variables tab → Add these one by one:
 
 ```
-PRIVY_APP_ID=cmermm5bm003bjo0bgsoffojs
+PRIVY_APP_ID=<YOUR_PRIVY_APP_ID>
 ```
 
 ```
-PRIVY_APP_SECRET=KM9Y2BNjviK7dhdYHTswsYRWBxkDAZZGD7RsRBHBYTLYEKxUGYrfS5Tz33iAKMkZSPumsCrb5dFwhLJdGHetfK4
+PRIVY_APP_SECRET=<YOUR_PRIVY_APP_SECRET>
 ```
 
 ```
@@ -65,7 +65,7 @@ SUPABASE_URL=https://qikxavxbpbdzqttvrtdj.supabase.co
 ```
 
 ```
-SUPABASE_SERVICE_KEY=sb_secret_2FKUmvDvS8Lqgrikdc3RPQ_SKnuKPW0
+SUPABASE_SERVICE_KEY=<YOUR_SUPABASE_SERVICE_KEY>
 ```
 
 ```
@@ -139,7 +139,7 @@ vercel --prod
 ### **1. Update Privy Dashboard**
 - Go to: `https://dashboard.privy.io/`
 - Login to your account
-- Click on your app: `cmermm5bm003bjo0bgsoffojs`
+- Click on your app: `<YOUR_PRIVY_APP_ID>`
 - Go to "Settings" → "Domains"
 - Add your Vercel URL: `https://racers-vercel-live.vercel.app`
 

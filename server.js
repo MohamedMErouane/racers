@@ -9,13 +9,12 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 // Load environment variables
-require('dotenv').config({ path: path.join(__dirname, 'env') });
+require('dotenv').config();
 
 // Import custom modules
 const { initializeRedis } = require('./services/redis');
 const { initializeSupabase } = require('./services/supabase');
 const { initializeSentry } = require('./services/sentry');
-const { initializeSolana } = require('./services/solana');
 const { initializePrivy } = require('./services/privy');
 
 // Import route handlers

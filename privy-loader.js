@@ -1,1 +1,0 @@
-import Privy from 'https://cdn.jsdelivr.net/npm/@privy-io/js-sdk-core/+esm'; window.Privy = Privy;

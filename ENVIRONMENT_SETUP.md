@@ -39,11 +39,11 @@ railway deploy
 In Railway dashboard, go to your project → Variables tab → Add these:
 
 ```
-PRIVY_APP_ID=cmermm5bm003bjo0bgsoffojs
-PRIVY_APP_SECRET=KM9Y2BNjviK7dhdYHTswsYRWBxkDAZZGD7RsRBHBYTLYEKxUGYrfS5Tz33iAKMkZSPumsCrb5dFwhLJdGHetfK4
+PRIVY_APP_ID=<YOUR_PRIVY_APP_ID>
+PRIVY_APP_SECRET=<YOUR_PRIVY_APP_SECRET>
 REDIS_URL=rediss://default:Ae8CAAIncDFiYmIwYjc1NTVmMDA0MWEyYTgxZDE1NjU4NTVjMzI4M3AxNjExODY@great-glider-61186.upstash.io:6379
 SUPABASE_URL=https://qikxavxbpbdzqttvrtdj.supabase.co
-SUPABASE_SERVICE_KEY=sb_secret_2FKUmvDvS8Lqgrikdc3RPQ_SKnuKPW0
+SUPABASE_SERVICE_KEY=<YOUR_SUPABASE_SERVICE_KEY>
 COINBASE_API_KEY_ID=6b8f09c6-372a-45f7-b3d5-0144eeddc7a0
 COINBASE_SECRET=i6uFr+K7wXsqdkQVIX3LytnSRYEyLMKX7xecWyZscuG2HBjfjU9IKmwVD9Xd74XjeHBIhO+a7a+Vn7g7TvrITw==
 PHANTOM_PRIVATE_KEY=4mktNT1moTwY3V2pw7iM8GxTuiWgLQDUDyXLknPctXzDQhYeijBuNG946DWrueBdeZqJtfUfXntie8pvvGweGeV5
@@ -93,7 +93,7 @@ vercel --prod
 
 ### **Step 1: Update Privy**
 - Go to: `https://dashboard.privy.io/`
-- Login → Click app: `cmermm5bm003bjo0bgsoffojs`
+- Login → Click app: `<YOUR_PRIVY_APP_ID>`
 - Settings → Domains → Add your Vercel URL
 
 ### **Step 2: Update Railway CORS**

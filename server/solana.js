@@ -1,5 +1,6 @@
 const { Connection, PublicKey, Keypair, Transaction, SystemProgram } = require('@solana/web3.js');
-const { Program, AnchorProvider, Wallet } = require('@coral-xyz/anchor');
+const anchor = require('@coral-xyz/anchor');
+const { Program, AnchorProvider, Wallet, BN } = anchor;
 const fs = require('fs');
 const path = require('path');
 
@@ -117,7 +118,7 @@ async function deposit(userPublicKey, amount) {
     // Create deposit transaction
     const tx = new Transaction().add(
       await program.methods
-        .deposit(new anchor.BN(amount * 1e9)) // Convert SOL to lamports
+        .deposit(new BN(amount * 1e9)) // Convert SOL to lamports
         .accounts({
           vault: vaultAddress,
           user: userKey,
@@ -158,7 +159,7 @@ async function withdraw(userPublicKey, amount) {
     // Create withdraw transaction
     const tx = new Transaction().add(
       await program.methods
-        .withdraw(new anchor.BN(amount * 1e9)) // Convert SOL to lamports
+        .withdraw(new BN(amount * 1e9)) // Convert SOL to lamports
         .accounts({
           vault: vaultAddress,
           user: userKey,
