@@ -235,7 +235,7 @@ function updateRace() {
   
   // Check if all racers have finished (early completion)
   if (raceState.racers.every(r => r.finished)) {
-    stopRace(raceState.racers[0]);
+    stopRace(raceState.racers[0]).catch(console.error);
     return;
   }
   

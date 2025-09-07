@@ -93,10 +93,18 @@ export class UI {
     
     modal.innerHTML = `
       <div class="modal-content">
-        <span class="modal-close" onclick="window.ui.hideModal('${id}')">&times;</span>
+        <span class="modal-close">&times;</span>
         ${content}
       </div>
     `;
+    
+    // Add event listener to close button
+    const closeButton = modal.querySelector('.modal-close');
+    if (closeButton) {
+      closeButton.addEventListener('click', () => {
+        this.hideModal(id);
+      });
+    }
     
     // Close on backdrop click
     modal.addEventListener('click', (e) => {

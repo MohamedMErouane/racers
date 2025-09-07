@@ -77,8 +77,8 @@ function initializeChatSocket(io) {
         };
         
         // Persist message to Redis
-        const { redis } = require('../server/db');
-        await redis.addChatMessage(message);
+        const { redis: redisOps } = require('../server/db');
+        await redisOps.addChatMessage(message);
         
         // Broadcast to all clients (excluding sender to avoid duplicates)
         socket.broadcast.emit('chat:message', message);

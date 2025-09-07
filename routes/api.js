@@ -260,8 +260,12 @@ router.post('/vault/deposit/process', requirePrivy, async (req, res) => {
     const result = await solana.processDepositTransaction(signedTransaction, userAddress);
     
     if (result.success) {
+      // Convert both amounts to integer lamports for precise comparison
+      const claimedLamports = Math.round(amount * 1e9);
+      const verifiedLamports = Math.round(result.verifiedAmount * 1e9);
+      
       // Verify the claimed amount matches the transaction amount
-      if (Math.abs(result.verifiedAmount - amount) > 0.000001) { // Allow for small floating point differences
+      if (claimedLamports !== verifiedLamports) {
         return res.status(400).json({ 
           error: 'Amount mismatch', 
           claimed: amount, 
@@ -312,8 +316,12 @@ router.post('/vault/withdraw/process', requirePrivy, async (req, res) => {
     const result = await solana.processWithdrawTransaction(signedTransaction, userAddress);
     
     if (result.success) {
+      // Convert both amounts to integer lamports for precise comparison
+      const claimedLamports = Math.round(amount * 1e9);
+      const verifiedLamports = Math.round(result.verifiedAmount * 1e9);
+      
       // Verify the claimed amount matches the transaction amount
-      if (Math.abs(result.verifiedAmount - amount) > 0.000001) { // Allow for small floating point differences
+      if (claimedLamports !== verifiedLamports) {
         return res.status(400).json({ 
           error: 'Amount mismatch', 
           claimed: amount, 

@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "prestart": "npm run build",
+    "predev": "node build.js",
     "start": "node server.js",
     "dev": "nodemon server.js",
     "dev:build": "node build.js && nodemon server.js",

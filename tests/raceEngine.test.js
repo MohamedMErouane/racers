@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { startRace, stopRace, getState } from '../server/gameEngine.js';
+const { startRace, stopRace, getState } = require('../server/gameEngine');
 
 // Mock dependencies
 vi.mock('../server/db.js', () => ({
