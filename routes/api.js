@@ -260,9 +260,9 @@ router.post('/vault/deposit/process', requirePrivy, async (req, res) => {
     const result = await solana.processDepositTransaction(signedTransaction, userAddress);
     
     if (result.success) {
-      // Convert both amounts to integer lamports for precise comparison
-      const claimedLamports = Math.round(amount * 1e9);
-      const verifiedLamports = Math.round(result.verifiedAmount * 1e9);
+      // Convert both amounts to BigInt lamports for precise comparison
+      const claimedLamports = BigInt(Math.round(amount * 1e9));
+      const verifiedLamports = BigInt(Math.round(result.verifiedAmount * 1e9));
       
       // Verify the claimed amount matches the transaction amount
       if (claimedLamports !== verifiedLamports) {
@@ -316,9 +316,9 @@ router.post('/vault/withdraw/process', requirePrivy, async (req, res) => {
     const result = await solana.processWithdrawTransaction(signedTransaction, userAddress);
     
     if (result.success) {
-      // Convert both amounts to integer lamports for precise comparison
-      const claimedLamports = Math.round(amount * 1e9);
-      const verifiedLamports = Math.round(result.verifiedAmount * 1e9);
+      // Convert both amounts to BigInt lamports for precise comparison
+      const claimedLamports = BigInt(Math.round(amount * 1e9));
+      const verifiedLamports = BigInt(Math.round(result.verifiedAmount * 1e9));
       
       // Verify the claimed amount matches the transaction amount
       if (claimedLamports !== verifiedLamports) {

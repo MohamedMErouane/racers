@@ -3,6 +3,11 @@ const fs = require('fs');
 const path = require('path');
 const { pg } = require('./db');
 
+// Race timing configuration from environment variables
+const RACE_COUNTDOWN_MS = parseInt(process.env.RACE_COUNTDOWN_MS) || 10000; // 10 seconds default
+const RACE_DURATION_MS = parseInt(process.env.RACE_DURATION_MS) || 12000; // 12 seconds default
+const RACE_SETTLE_MS = parseInt(process.env.RACE_SETTLE_MS) || 2000; // 2 seconds default
+
 // Cache racer stats at module level
 let cachedRacerStats = null;
 
@@ -123,7 +128,7 @@ function startRace(socketIo) {
   }
   
   // Start countdown with periodic updates
-  let countdownSeconds = 10;
+  let countdownSeconds = Math.floor(RACE_COUNTDOWN_MS / 1000);
   
   // Emit initial countdown
   if (io) {
@@ -152,10 +157,10 @@ function startRace(socketIo) {
       
       // Set timing when racing actually begins
       raceState.startTime = Date.now();
-      raceState.endTime = raceState.startTime + 12000; // 12 seconds from now
+      raceState.endTime = raceState.startTime + RACE_DURATION_MS;
       raceState.status = 'racing';
       
-      console.log(`🏁 Race started! Duration: 12 seconds`);
+      console.log(`🏁 Race started! Duration: ${RACE_DURATION_MS}ms`);
       
       // Emit race start with actual timing
       if (io) {
@@ -200,7 +205,7 @@ function updateRace() {
   
   // Update racer positions with deterministic physics
   const trackLength = 1000;
-  const progress = timeElapsed / 12000; // 12 second race
+  const progress = timeElapsed / RACE_DURATION_MS;
   
   raceState.racers.forEach((racer) => {
     if (!racer.finished) {
@@ -297,11 +302,11 @@ async function stopRace(winner, options = {}) {
     console.error('Error logging race results:', error);
   }
   
-  // Start new race after 2 seconds only if restart is true
+  // Start new race after settle delay only if restart is true
   if (restart) {
     setTimeout(() => {
       startRace(io);
-    }, 2000);
+    }, RACE_SETTLE_MS);
   }
 }
 

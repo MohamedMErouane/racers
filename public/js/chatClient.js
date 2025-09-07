@@ -122,9 +122,18 @@ export class ChatClient {
       const input = event.target;
       const message = input.value.trim();
       
-      if (message && window.userWallet) {
-        this.sendMessage(message);
-        input.value = '';
+      if (message) {
+        // Check if we have a valid token
+        const token = this.getToken();
+        if (token) {
+          this.sendMessage(message);
+          input.value = '';
+        } else {
+          // Show notification to connect wallet
+          if (window.ui) {
+            window.ui.showNotification('Please connect your wallet to chat', 'error');
+          }
+        }
       }
     }
   }

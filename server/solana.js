@@ -9,6 +9,10 @@ let program = null;
 let provider = null;
 let wallet = null;
 
+// Cache instruction discriminators at module scope
+const DEPOSIT_DISCRIMINATOR = anchor.utils.idl.instructionDiscriminator('deposit');
+const WITHDRAW_DISCRIMINATOR = anchor.utils.idl.instructionDiscriminator('withdraw');
+
 // Initialize Solana connection and program
 async function initializeSolana() {
   try {
@@ -199,9 +203,7 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
         const data = instruction.data;
         if (data.length >= 8) {
           const discriminator = data.slice(0, 8);
-          // Anchor discriminator for "deposit" instruction (sha256("global:deposit").slice(0, 8))
-          const expectedDiscriminator = Buffer.from([0x8f, 0x4f, 0x8c, 0x8a, 0x8b, 0x8d, 0x8e, 0x8f]);
-          if (!discriminator.equals(expectedDiscriminator)) {
+          if (!discriminator.equals(DEPOSIT_DISCRIMINATOR)) {
             throw new Error('Invalid instruction type: expected deposit');
           }
         }
@@ -218,7 +220,7 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
     }
     
     // Extract the actual amount from the transaction
-    let verifiedAmount = 0;
+    let verifiedAmountLamports = BigInt(0);
     if (tx.instructions.length > 0) {
       const instruction = tx.instructions[0];
       // For custom racers_vault program, decode the instruction data
@@ -227,8 +229,7 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
         const data = instruction.data;
         if (data.length >= 16) {
           // Extract the 8-byte amount (little-endian) after the 8-byte discriminator
-          // Convert lamports to decimal SOL value
-          verifiedAmount = Number(data.readBigUInt64LE(8)) / 1e9;
+          verifiedAmountLamports = data.readBigUInt64LE(8);
         }
       }
     }
@@ -237,8 +238,10 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
     const signature = await connection.sendRawTransaction(tx.serialize());
     await connection.confirmTransaction(signature);
 
+    // Convert to decimal SOL for logging and API response
+    const verifiedAmount = Number(verifiedAmountLamports) / 1e9;
     console.log(`✅ Deposit transaction confirmed: ${signature}, amount: ${verifiedAmount} SOL`);
-    return { success: true, signature, verifiedAmount: Number(verifiedAmount) };
+    return { success: true, signature, verifiedAmount: verifiedAmount };
 
   } catch (error) {
     console.error('❌ Deposit transaction failed:', error);
@@ -319,9 +322,7 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
         const data = instruction.data;
         if (data.length >= 8) {
           const discriminator = data.slice(0, 8);
-          // Anchor discriminator for "withdraw" instruction (sha256("global:withdraw").slice(0, 8))
-          const expectedDiscriminator = Buffer.from([0x9f, 0x5f, 0x9c, 0x9a, 0x9b, 0x9d, 0x9e, 0x9f]);
-          if (!discriminator.equals(expectedDiscriminator)) {
+          if (!discriminator.equals(WITHDRAW_DISCRIMINATOR)) {
             throw new Error('Invalid instruction type: expected withdraw');
           }
         }
@@ -338,7 +339,7 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
     }
     
     // Extract the actual amount from the transaction
-    let verifiedAmount = 0;
+    let verifiedAmountLamports = BigInt(0);
     if (tx.instructions.length > 0) {
       const instruction = tx.instructions[0];
       // For custom racers_vault program, decode the instruction data
@@ -347,8 +348,7 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
         const data = instruction.data;
         if (data.length >= 16) {
           // Extract the 8-byte amount (little-endian) after the 8-byte discriminator
-          // Convert lamports to decimal SOL value
-          verifiedAmount = Number(data.readBigUInt64LE(8)) / 1e9;
+          verifiedAmountLamports = data.readBigUInt64LE(8);
         }
       }
     }
@@ -357,8 +357,10 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
     const signature = await connection.sendRawTransaction(tx.serialize());
     await connection.confirmTransaction(signature);
 
+    // Convert to decimal SOL for logging and API response
+    const verifiedAmount = Number(verifiedAmountLamports) / 1e9;
     console.log(`✅ Withdraw transaction confirmed: ${signature}, amount: ${verifiedAmount} SOL`);
-    return { success: true, signature, verifiedAmount: Number(verifiedAmount) };
+    return { success: true, signature, verifiedAmount: verifiedAmount };
 
   } catch (error) {
     console.error('❌ Withdraw transaction failed:', error);

@@ -69,10 +69,15 @@ Run the SQL schema in your PostgreSQL database:
 ### 4. Start Development
 
 ```bash
+# Set required environment variables first
+export PRIVY_APP_ID=your_privy_app_id_here
+
 npm run dev:build
 ```
 
 The server will start on `http://localhost:3001`
+
+**Note:** `PRIVY_APP_ID` is required for the build process. The build will fail if this environment variable is not set.
 
 ## 🐳 Docker Deployment
 
@@ -180,6 +185,11 @@ SOLANA_RPC_URL=your_solana_rpc_url
 PROGRAM_ID=your_program_id
 PHANTOM_PRIVATE_KEY=your_phantom_private_key
 CORS_ORIGIN=your_frontend_url
+
+# Race Timing Configuration (optional)
+RACE_COUNTDOWN_MS=10000  # Countdown duration in milliseconds (default: 10000)
+RACE_DURATION_MS=12000   # Race duration in milliseconds (default: 12000)
+RACE_SETTLE_MS=2000      # Time between races in milliseconds (default: 2000)
 ```
 
 ## 🔒 Security
