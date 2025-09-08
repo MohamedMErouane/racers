@@ -162,4 +162,67 @@ describe('Race Engine', () => {
     expect(state.status).toBe('racing'); // Should restore status
     expect(redis.getRaceState).toHaveBeenCalled();
   });
+
+  it('should publish race updates to correct Redis channel', async () => {
+    const { redis } = require('../server/db');
+    
+    // Start a race
+    await startRace(mockIo);
+    const state = getState();
+    
+    // Verify that setRaceState and publishRaceUpdate are called with correct roundId
+    expect(redis.setRaceState).toHaveBeenCalledWith(state.roundId, expect.any(Object));
+    expect(redis.publishRaceUpdate).toHaveBeenCalledWith(state.roundId, expect.any(Object));
+  });
+
+  it('should support pattern subscriptions for cross-instance updates', async () => {
+    const { redis } = require('../server/db');
+    
+    // Mock the subscribeToRace function to verify pattern subscription
+    const mockSubscriber = {
+      on: vi.fn(),
+      psubscribe: vi.fn().mockResolvedValue(),
+      subscribe: vi.fn().mockResolvedValue()
+    };
+    vi.mocked(redis.subscribeToRace).mockResolvedValue(mockSubscriber);
+    
+    // Test pattern subscription
+    await redis.subscribeToRace('*', vi.fn());
+    
+    // Verify pattern subscription was used
+    expect(mockSubscriber.psubscribe).toHaveBeenCalledWith('race:*');
+  });
+
+  it('should recover from crash mid-race using latest round ID', async () => {
+    const { pg, redis } = require('../server/db');
+    
+    // Mock database returning latest round ID (simulating crash during race 5)
+    vi.mocked(pg.getLatestRoundId).mockResolvedValueOnce(5);
+    
+    // Mock Redis returning stored race state for the latest round
+    const storedState = {
+      roundId: 5,
+      status: 'racing',
+      racers: [
+        { id: 1, name: 'Test Racer', x: 500, finished: false }
+      ],
+      seed: 'crash-test-seed',
+      tick: 100,
+      startTime: Date.now() - 5000,
+      endTime: Date.now() + 5000
+    };
+    vi.mocked(redis.getRaceState).mockResolvedValueOnce(storedState);
+    
+    // Start a race - should restore the crashed race state
+    await startRace(mockIo);
+    const state = getState();
+    
+    // Verify recovery
+    expect(state.roundId).toBe(5); // Should restore the crashed race round ID
+    expect(state.status).toBe('racing'); // Should restore racing status
+    expect(state.seed).toBe('crash-test-seed'); // Should restore the seed
+    expect(state.racers).toHaveLength(1); // Should restore racer state
+    expect(pg.getLatestRoundId).toHaveBeenCalled(); // Should check latest round ID
+    expect(redis.getRaceState).toHaveBeenCalledWith(5); // Should check correct round ID
+  });
 });

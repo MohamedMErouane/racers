@@ -91,8 +91,8 @@ function initializeRacers() {
 // Restore race state from Redis on startup
 async function restoreRaceState() {
   try {
-    // Try to get the latest race state from Redis
-    const latestRoundId = raceState.roundId;
+    // Get the most recent round ID from database to check for in-progress races
+    const latestRoundId = await pg.getLatestRoundId();
     const storedState = await redis.getRaceState(latestRoundId);
     
     if (storedState && (storedState.status === 'racing' || storedState.status === 'countdown')) {

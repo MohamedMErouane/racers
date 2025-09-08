@@ -97,7 +97,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       connectSrc: connectSrc,
-      scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://auth.privy.io", "https://cdn.socket.io", "https://cdnjs.cloudflare.com"],
+      scriptSrc: ["'self'", "https://auth.privy.io"],
       styleSrc: ["'self'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
@@ -205,11 +205,14 @@ async function initializeServices() {
     // Subscribe to race updates for horizontal scaling
     try {
       const { redis } = require('./server/db');
-      await redis.subscribeToRace('current', (update) => {
+      await redis.subscribeToRace('*', (update, channel) => {
         // Broadcast race updates to all connected clients
-        io.emit('race:update', update);
+        // Only emit if this is a race update (not other race events)
+        if (update.racers && update.tick !== undefined) {
+          io.emit('race:update', update);
+        }
       });
-      console.log('✅ Race pub/sub subscription initialized');
+      console.log('✅ Race pub/sub subscription initialized (pattern: race:*)');
     } catch (error) {
       console.error('❌ Failed to initialize race pub/sub:', error);
     }

@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
 const { getRedis } = require('../services/redis');
+const logger = require('../services/logger');
 
 // Postgres client
 const pg = new Pool({
@@ -18,7 +19,7 @@ const redisOps = {
       const messages = await redis.lrange('chat', -limit, -1);
       return messages.map(msg => JSON.parse(msg));
     } catch (error) {
-      console.error('Error getting chat messages:', error);
+      logger.error('Error getting chat messages:', error);
       throw error; // Rethrow to let callers handle the error
     }
   },
@@ -33,7 +34,7 @@ const redisOps = {
       // Keep only last 1000 messages
       await redis.ltrim('chat', -1000, -1);
     } catch (error) {
-      console.error('Error adding chat message:', error);
+      logger.error('Error adding chat message:', error);
       throw error; // Rethrow to let callers handle the error
     }
   },
@@ -48,7 +49,7 @@ const redisOps = {
       const bets = await redis.lrange('bets', -limit, -1);
       return bets.map(bet => JSON.parse(bet));
     } catch (error) {
-      console.error('Error getting bets:', error);
+      logger.error('Error getting bets:', error);
       throw error; // Rethrow to let callers handle the error
     }
   },
@@ -63,7 +64,7 @@ const redisOps = {
       // Keep only last 1000 bets
       await redis.ltrim('bets', -1000, -1);
     } catch (error) {
-      console.error('Error adding bet:', error);
+      logger.error('Error adding bet:', error);
       throw error; // Rethrow to let callers handle the error
     }
   },
@@ -77,7 +78,7 @@ const redisOps = {
       }
       await redis.setex(`race:${raceId}`, 3600, JSON.stringify(state)); // 1 hour TTL
     } catch (error) {
-      console.error('Error setting race state:', error);
+      logger.error('Error setting race state:', error);
       throw error; // Rethrow to let callers handle the error
     }
   },
@@ -91,7 +92,7 @@ const redisOps = {
       const state = await redis.get(`race:${raceId}`);
       return state ? JSON.parse(state) : null;
     } catch (error) {
-      console.error('Error getting race state:', error);
+      logger.error('Error getting race state:', error);
       throw error; // Rethrow to let callers handle the error
     }
   },
@@ -105,7 +106,7 @@ const redisOps = {
       }
       await redis.publish(`race:${raceId}`, JSON.stringify(update));
     } catch (error) {
-      console.error('Error publishing race update:', error);
+      logger.error('Error publishing race update:', error);
       throw error; // Rethrow to let callers handle the error
     }
   },
@@ -117,13 +118,22 @@ const redisOps = {
         throw new Error('Redis client not initialized');
       }
       const subscriber = redis.duplicate();
-      await subscriber.subscribe(`race:${raceId}`);
-      subscriber.on('message', (channel, message) => {
-        callback(JSON.parse(message));
-      });
+      
+      // Support pattern subscriptions for 'race:*' or specific race IDs
+      if (raceId === '*' || raceId.includes('*')) {
+        await subscriber.psubscribe(`race:${raceId}`);
+        subscriber.on('pmessage', (pattern, channel, message) => {
+          callback(JSON.parse(message), channel);
+        });
+      } else {
+        await subscriber.subscribe(`race:${raceId}`);
+        subscriber.on('message', (channel, message) => {
+          callback(JSON.parse(message), channel);
+        });
+      }
       return subscriber;
     } catch (error) {
-      console.error('Error subscribing to race:', error);
+      logger.error('Error subscribing to race:', error);
       return null;
     }
   }
@@ -145,7 +155,7 @@ const pgOps = {
       `;
       await pg.query(query, [raceId, seed, winner, roundId]);
     } catch (error) {
-      console.error('Error logging race result:', error);
+      logger.error('Error logging race result:', error);
     }
   },
 
@@ -156,7 +166,7 @@ const pgOps = {
       const result = await pg.query(query);
       return result.rows[0]?.max_round_id || 0;
     } catch (error) {
-      console.error('Error getting latest round ID:', error);
+      logger.error('Error getting latest round ID:', error);
       return 0; // Fallback to 0 if query fails
     }
   },
@@ -170,7 +180,7 @@ const pgOps = {
       // Return balance as string to preserve precision, defaulting to '0' if not found
       return balance ? balance.toString() : '0';
     } catch (error) {
-      console.error('Error getting user balance:', error);
+      logger.error('Error getting user balance:', error);
       throw error; // Rethrow to let callers handle the error
     }
   },
@@ -186,7 +196,7 @@ const pgOps = {
       `;
       await pg.query(query, [userId, newBalance]);
     } catch (error) {
-      console.error('Error updating user balance:', error);
+      logger.error('Error updating user balance:', error);
       throw error; // Rethrow to let callers handle the error
     }
   },
@@ -200,7 +210,7 @@ const pgOps = {
       `;
       await pg.query(query, [userId, raceId, racerId, amount, result]);
     } catch (error) {
-      console.error('Error logging bet:', error);
+      logger.error('Error logging bet:', error);
       throw error; // Rethrow to let callers handle the error
     }
   },
@@ -214,7 +224,7 @@ const pgOps = {
       `;
       await pg.query(query, [userId, transactionType, amount, transactionHash, status]);
     } catch (error) {
-      console.error('Error logging vault transaction:', error);
+      logger.error('Error logging vault transaction:', error);
       throw error; // Rethrow to let callers handle the error
     }
   }
@@ -271,9 +281,9 @@ async function initializeTables() {
       )
     `);
 
-    console.log('✅ Database tables initialized');
+    logger.info('✅ Database tables initialized');
   } catch (error) {
-    console.error('Error initializing database tables:', error);
+    logger.error('Error initializing database tables:', error);
   }
 }
 
