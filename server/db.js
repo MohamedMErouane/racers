@@ -149,6 +149,18 @@ const pgOps = {
     }
   },
 
+  // Get latest round ID to ensure monotonic numbering
+  async getLatestRoundId() {
+    try {
+      const query = 'SELECT MAX(round_id) as max_round_id FROM race_results';
+      const result = await pg.query(query);
+      return result.rows[0]?.max_round_id || 0;
+    } catch (error) {
+      console.error('Error getting latest round ID:', error);
+      return 0; // Fallback to 0 if query fails
+    }
+  },
+
   // User balance operations
   async getUserBalance(userId) {
     try {

@@ -199,8 +199,20 @@ async function initializeServices() {
     console.log('✅ Game engine initialized');
     
     // Start the race engine
-    gameEngine.startRace(io);
+    await gameEngine.startRace(io);
     console.log('✅ Race engine started');
+    
+    // Subscribe to race updates for horizontal scaling
+    try {
+      const { redis } = require('./server/db');
+      await redis.subscribeToRace('current', (update) => {
+        // Broadcast race updates to all connected clients
+        io.emit('race:update', update);
+      });
+      console.log('✅ Race pub/sub subscription initialized');
+    } catch (error) {
+      console.error('❌ Failed to initialize race pub/sub:', error);
+    }
     
     // Check admin configuration
     const adminAddresses = process.env.ADMIN_ADDRESSES;

@@ -30,6 +30,10 @@ export class RaceClient {
       this.handleRaceEnd(data);
     });
 
+    this.socket.on('bet:placed', (data) => {
+      this.handleBetPlaced(data);
+    });
+
     // Request current race state after connection is established
     this.socket.on('connect', () => {
       this.requestRaceState();
@@ -388,6 +392,42 @@ export class RaceClient {
       setTimeout(() => {
         modal.style.display = 'none';
       }, 300); // Match CSS transition duration
+    }
+  }
+
+  // Handle bet placed event for live updates
+  handleBetPlaced(data) {
+    // Update pot statistics in real-time
+    this.updatePotStatistics(data);
+    
+    // Show notification for new bet
+    if (window.ui) {
+      window.ui.showNotification(
+        `New bet placed: ${data.bet.amount} SOL on Racer ${data.bet.racerId}`,
+        'info',
+        3000
+      );
+    }
+  }
+
+  // Update pot statistics display
+  updatePotStatistics(data) {
+    // Update total pot display
+    const totalPotElement = document.querySelector('.pot-stats .stat-value');
+    if (totalPotElement && data.totalPot) {
+      totalPotElement.textContent = `${data.totalPot.toFixed(4)} SOL`;
+    }
+    
+    // Update total bets count
+    const totalBetsElement = document.querySelector('.pot-stats .stat-item:nth-child(2) .stat-value');
+    if (totalBetsElement && data.totalBets) {
+      totalBetsElement.textContent = data.totalBets.toString();
+    }
+    
+    // Update race-specific pot info if available
+    const racePotElement = document.getElementById('racePot');
+    if (racePotElement && data.totalPot) {
+      racePotElement.textContent = `${data.totalPot.toFixed(4)} SOL`;
     }
   }
 

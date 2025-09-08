@@ -3,6 +3,7 @@ const rateLimit = require('express-rate-limit');
 const { z } = require('zod');
 const sanitizeHtml = require('sanitize-html');
 const { verifyPrivyToken, getBearerToken } = require('../lib/privy');
+const solana = require('../server/solana');
 const router = express.Router();
 
 // Helper functions for precise balance arithmetic
@@ -347,6 +348,17 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
     // Add bet to Redis for real-time updates
     await redis.addBet(bet);
     
+    // Emit bet placed event to all connected clients for live updates
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('bet:placed', {
+        bet,
+        raceId,
+        totalPot: currentRaceState.totalPot || 0,
+        totalBets: currentRaceState.totalBets || 0
+      });
+    }
+    
     res.json({ 
       success: true, 
       bet, 
@@ -361,7 +373,6 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
 // Solana vault endpoints
 router.post('/vault/deposit/build', requirePrivy, validateBody(vaultSchema), async (req, res) => {
   try {
-    const solana = require('../server/solana');
     const { amount } = req.body;
     const userPublicKey = req.user.address; // Use authenticated user's address
     
@@ -375,7 +386,6 @@ router.post('/vault/deposit/build', requirePrivy, validateBody(vaultSchema), asy
 
 router.post('/vault/deposit/process', requirePrivy, validateBody(vaultProcessSchema), async (req, res) => {
   try {
-    const solana = require('../server/solana');
     const { pg } = require('../server/db');
     const { signedTransaction, amount } = req.body;
     const userAddress = req.user.address;
@@ -424,7 +434,6 @@ router.post('/vault/deposit/process', requirePrivy, validateBody(vaultProcessSch
 
 router.post('/vault/withdraw/build', requirePrivy, validateBody(vaultSchema), async (req, res) => {
   try {
-    const solana = require('../server/solana');
     const { pg } = require('../server/db');
     const { amount } = req.body;
     const userPublicKey = req.user.address; // Use authenticated user's address
@@ -453,7 +462,6 @@ router.post('/vault/withdraw/build', requirePrivy, validateBody(vaultSchema), as
 
 router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultProcessSchema), async (req, res) => {
   try {
-    const solana = require('../server/solana');
     const { pg } = require('../server/db');
     const { signedTransaction, amount } = req.body;
     const userAddress = req.user.address;
@@ -512,7 +520,6 @@ router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultProcessSc
 
 router.get('/vault/balance/:userPublicKey', requirePrivy, async (req, res) => {
   try {
-    const solana = require('../server/solana');
     const { userPublicKey } = req.params;
     
     // Verify the user can only access their own balance
@@ -535,7 +542,6 @@ router.get('/vault/balance/:userPublicKey', requirePrivy, async (req, res) => {
 
 router.post('/vault/initialize/build', requirePrivy, async (req, res) => {
   try {
-    const solana = require('../server/solana');
     const userPublicKey = req.user.address; // Use authenticated user's address
     
     const result = await solana.buildInitializeVaultTransaction(userPublicKey);
@@ -548,7 +554,6 @@ router.post('/vault/initialize/build', requirePrivy, async (req, res) => {
 
 router.post('/vault/initialize/process', requirePrivy, async (req, res) => {
   try {
-    const solana = require('../server/solana');
     const { signedTransaction } = req.body;
     const userAddress = req.user.address;
     

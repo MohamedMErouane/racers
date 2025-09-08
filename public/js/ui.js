@@ -62,8 +62,8 @@ export class UI {
   }
 
   // Show modal
-  showModal(id, content) {
-    const modal = this.createModal(id, content);
+  showModal(id, contentElement) {
+    const modal = this.createModal(id, contentElement);
     document.body.appendChild(modal);
     this.modals.set(id, modal);
     
@@ -86,25 +86,29 @@ export class UI {
   }
 
   // Create modal
-  createModal(id, content) {
+  createModal(id, contentElement) {
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.id = `modal-${id}`;
     
-    modal.innerHTML = `
-      <div class="modal-content">
-        <span class="modal-close">&times;</span>
-        ${content}
-      </div>
-    `;
+    // Create modal content container
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
     
-    // Add event listener to close button
-    const closeButton = modal.querySelector('.modal-close');
-    if (closeButton) {
-      closeButton.addEventListener('click', () => {
-        this.hideModal(id);
-      });
+    // Create close button
+    const closeButton = document.createElement('span');
+    closeButton.className = 'modal-close';
+    closeButton.textContent = '×';
+    closeButton.addEventListener('click', () => {
+      this.hideModal(id);
+    });
+    
+    // Assemble modal structure
+    modalContent.appendChild(closeButton);
+    if (contentElement) {
+      modalContent.appendChild(contentElement);
     }
+    modal.appendChild(modalContent);
     
     // Close on backdrop click
     modal.addEventListener('click', (e) => {
@@ -142,39 +146,104 @@ export class UI {
 
   // Show winner modal
   showWinnerModal(winner) {
-    const content = `
-      <h2>🏆 Race Winner!</h2>
-      <div class="winner-info">
-        <div class="winner-name">${winner.name}</div>
-        <div class="winner-time">${winner.finishTime ? new Date(winner.finishTime).toLocaleTimeString() : 'N/A'}</div>
-      </div>
-    `;
+    // Create modal content using safe DOM API
+    const content = document.createElement('div');
+    
+    // Create title
+    const title = document.createElement('h2');
+    title.textContent = '🏆 Race Winner!';
+    
+    // Create winner info container
+    const winnerInfo = document.createElement('div');
+    winnerInfo.className = 'winner-info';
+    
+    // Create winner name
+    const winnerName = document.createElement('div');
+    winnerName.className = 'winner-name';
+    winnerName.textContent = winner.name;
+    
+    // Create winner time
+    const winnerTime = document.createElement('div');
+    winnerTime.className = 'winner-time';
+    winnerTime.textContent = winner.finishTime ? new Date(winner.finishTime).toLocaleTimeString() : 'N/A';
+    
+    // Assemble content
+    winnerInfo.appendChild(winnerName);
+    winnerInfo.appendChild(winnerTime);
+    content.appendChild(title);
+    content.appendChild(winnerInfo);
     
     this.showModal('winner', content);
   }
 
   // Show bet modal
   showBetModal(racers) {
-    const racerOptions = racers.map(racer => 
-      `<option value="${racer.id}">${racer.name}</option>`
-    ).join('');
+    // Create modal content using safe DOM API
+    const content = document.createElement('div');
     
-    const content = `
-      <h2>💰 Place Bet</h2>
-      <form id="betForm">
-        <div class="form-group">
-          <label for="racerSelect">Select Racer:</label>
-          <select id="racerSelect" required>
-            ${racerOptions}
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="betAmount">Amount (SOL):</label>
-          <input type="number" id="betAmount" min="0.01" max="100" step="0.01" required>
-        </div>
-        <button type="submit">Place Bet</button>
-      </form>
-    `;
+    // Create title
+    const title = document.createElement('h2');
+    title.textContent = '💰 Place Bet';
+    
+    // Create form
+    const form = document.createElement('form');
+    form.id = 'betForm';
+    
+    // Create racer selection group
+    const racerGroup = document.createElement('div');
+    racerGroup.className = 'form-group';
+    
+    const racerLabel = document.createElement('label');
+    racerLabel.setAttribute('for', 'racerSelect');
+    racerLabel.textContent = 'Select Racer:';
+    
+    const racerSelect = document.createElement('select');
+    racerSelect.id = 'racerSelect';
+    racerSelect.required = true;
+    
+    // Add racer options safely
+    racers.forEach(racer => {
+      const option = document.createElement('option');
+      option.value = racer.id;
+      option.textContent = racer.name;
+      racerSelect.appendChild(option);
+    });
+    
+    racerGroup.appendChild(racerLabel);
+    racerGroup.appendChild(racerSelect);
+    
+    // Create amount group
+    const amountGroup = document.createElement('div');
+    amountGroup.className = 'form-group';
+    
+    const amountLabel = document.createElement('label');
+    amountLabel.setAttribute('for', 'betAmount');
+    amountLabel.textContent = 'Amount (SOL):';
+    
+    const amountInput = document.createElement('input');
+    amountInput.type = 'number';
+    amountInput.id = 'betAmount';
+    amountInput.min = '0.01';
+    amountInput.max = '100';
+    amountInput.step = '0.01';
+    amountInput.required = true;
+    
+    amountGroup.appendChild(amountLabel);
+    amountGroup.appendChild(amountInput);
+    
+    // Create submit button
+    const submitButton = document.createElement('button');
+    submitButton.type = 'submit';
+    submitButton.textContent = 'Place Bet';
+    
+    // Assemble form
+    form.appendChild(racerGroup);
+    form.appendChild(amountGroup);
+    form.appendChild(submitButton);
+    
+    // Assemble content
+    content.appendChild(title);
+    content.appendChild(form);
     
     this.showModal('bet', content);
     

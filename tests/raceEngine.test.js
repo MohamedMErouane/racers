@@ -4,7 +4,13 @@ const { startRace, stopRace, getState } = require('../server/gameEngine');
 // Mock dependencies
 vi.mock('../server/db.js', () => ({
   pg: {
-    logRaceResult: vi.fn()
+    logRaceResult: vi.fn(),
+    getLatestRoundId: vi.fn().mockResolvedValue(0)
+  },
+  redis: {
+    setRaceState: vi.fn(),
+    publishRaceUpdate: vi.fn(),
+    getRaceState: vi.fn().mockResolvedValue(null)
   }
 }));
 
@@ -104,5 +110,56 @@ describe('Race Engine', () => {
     // Test edge case that previously caused collision
     const result4 = deterministicRandom(seed, 2, 1); // Same as result2
     expect(result2).toBe(result4);
+  });
+
+  it('should maintain monotonic round numbering after restarts', async () => {
+    const { pg } = require('../server/db');
+    
+    // Mock database returning latest round ID
+    vi.mocked(pg.getLatestRoundId).mockResolvedValueOnce(5);
+    
+    // Start a race - should increment from latest round ID
+    await startRace(mockIo);
+    const state = getState();
+    
+    expect(state.roundId).toBe(6); // Should be latest + 1
+    expect(pg.getLatestRoundId).toHaveBeenCalled();
+  });
+
+  it('should handle database errors gracefully for round ID', async () => {
+    const { pg } = require('../server/db');
+    
+    // Mock database error
+    vi.mocked(pg.getLatestRoundId).mockRejectedValueOnce(new Error('Database error'));
+    
+    // Start a race - should fallback to incrementing from 0
+    await startRace(mockIo);
+    const state = getState();
+    
+    expect(state.roundId).toBe(1); // Should fallback to 1
+  });
+
+  it('should restore race state from Redis on startup', async () => {
+    const { redis } = require('../server/db');
+    
+    // Mock Redis returning stored race state
+    const storedState = {
+      roundId: 10,
+      status: 'racing',
+      racers: [],
+      seed: 'test-seed',
+      tick: 100,
+      startTime: Date.now() - 5000,
+      endTime: Date.now() + 5000
+    };
+    vi.mocked(redis.getRaceState).mockResolvedValueOnce(storedState);
+    
+    // Start a race - should restore state instead of creating new
+    await startRace(mockIo);
+    const state = getState();
+    
+    expect(state.roundId).toBe(10); // Should restore stored round ID
+    expect(state.status).toBe('racing'); // Should restore status
+    expect(redis.getRaceState).toHaveBeenCalled();
   });
 });

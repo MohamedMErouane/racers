@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { pg } = require('./db');
+const { pg, redis } = require('./db');
 const logger = require('../services/logger');
 
 // Race timing configuration from environment variables
@@ -88,8 +88,55 @@ function initializeRacers() {
   }));
 }
 
+// Restore race state from Redis on startup
+async function restoreRaceState() {
+  try {
+    // Try to get the latest race state from Redis
+    const latestRoundId = raceState.roundId;
+    const storedState = await redis.getRaceState(latestRoundId);
+    
+    if (storedState && (storedState.status === 'racing' || storedState.status === 'countdown')) {
+      logger.info(`Restoring race state for round ${storedState.roundId} with status: ${storedState.status}`);
+      
+      // Restore the race state
+      Object.assign(raceState, storedState);
+      
+      // If race was in progress, restart the appropriate intervals
+      if (storedState.status === 'racing') {
+        startRaceLoop();
+      } else if (storedState.status === 'countdown') {
+        // Restart countdown from where it left off
+        const timeElapsed = Date.now() - (storedState.startTime || Date.now());
+        const remainingCountdown = Math.max(0, RACE_COUNTDOWN_MS - timeElapsed);
+        
+        if (remainingCountdown > 0) {
+          setTimeout(() => {
+            // Start racing after remaining countdown
+            raceState.startTime = Date.now();
+            raceState.endTime = raceState.startTime + RACE_DURATION_MS;
+            raceState.status = 'racing';
+            startRaceLoop();
+          }, remainingCountdown);
+        } else {
+          // Countdown already finished, start racing immediately
+          raceState.startTime = Date.now();
+          raceState.endTime = raceState.startTime + RACE_DURATION_MS;
+          raceState.status = 'racing';
+          startRaceLoop();
+        }
+      }
+      
+      return true; // State was restored
+    }
+  } catch (error) {
+    logger.error('Error restoring race state:', error);
+  }
+  
+  return false; // No state to restore
+}
+
 // Start a new race
-function startRace(socketIo) {
+async function startRace(socketIo) {
   // Guard against double-starting
   if (raceState.status === 'countdown' || raceState.status === 'racing') {
     logger.warn('Race already in progress, ignoring start request');
@@ -106,8 +153,15 @@ function startRace(socketIo) {
   
   io = socketIo;
   
-  // Increment round ID for new race
-  raceState.roundId++;
+  // Try to restore state first
+  const stateRestored = await restoreRaceState();
+  if (stateRestored) {
+    return; // Race state was restored, don't start a new one
+  }
+  
+  // Get latest round ID from database and increment it
+  const latestRoundId = await pg.getLatestRoundId();
+  raceState.roundId = latestRoundId + 1;
   
   // Generate deterministic seed
   raceState.seed = crypto.randomBytes(32).toString('hex');
@@ -255,6 +309,23 @@ function updateRace() {
       tick: raceState.tick,
       roundId: raceState.roundId
     });
+  }
+  
+  // Store race state in Redis for horizontal scaling and crash recovery
+  try {
+    await redis.setRaceState(raceState.roundId, raceState);
+    
+    // Publish race update for other instances
+    await redis.publishRaceUpdate(raceState.roundId, {
+      racers: raceState.racers,
+      timeElapsed,
+      timeRemaining,
+      tick: raceState.tick,
+      roundId: raceState.roundId,
+      status: raceState.status
+    });
+  } catch (error) {
+    logger.error('Error storing/publishing race state:', error);
   }
 }
 
