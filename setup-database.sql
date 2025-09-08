@@ -1,5 +1,5 @@
 -- Racers.fun Database Schema Setup
--- Run this in your Supabase SQL Editor
+-- Run this in your PostgreSQL database
 
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

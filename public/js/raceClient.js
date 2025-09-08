@@ -172,6 +172,21 @@ export class RaceClient {
     }
   }
 
+  // Helper function to get CSS class for racer color
+  getRacerColorClass(color) {
+    const colorMap = {
+      '#ff4757': 'racer-red',
+      '#3742fa': 'racer-blue', 
+      '#2ed573': 'racer-green',
+      '#ffa502': 'racer-yellow',
+      '#a55eea': 'racer-purple',
+      '#ff6b9d': 'racer-pink',
+      '#ff6348': 'racer-orange',
+      '#17a2b8': 'racer-cyan'
+    };
+    return colorMap[color] || 'racer-red'; // Default to red if color not found
+  }
+
   // Show winner modal
   showWinnerModal(data) {
     console.log('🏆 Race ended:', data);
@@ -179,9 +194,10 @@ export class RaceClient {
     // Populate winner display
     const winnerDisplay = document.getElementById('winnerDisplay');
     if (winnerDisplay && data.winner) {
+      const colorClass = this.getRacerColorClass(data.winner.color);
       winnerDisplay.innerHTML = `
         <div class="winner-racer">
-          <div class="racer-icon" style="background-color: ${data.winner.color}">${data.winner.name}</div>
+          <div class="racer-icon ${colorClass}">${data.winner.name}</div>
           <div class="winner-name">${data.winner.name}</div>
           <div class="winner-time">${data.winner.finalPosition?.toFixed(2) || '0.00'}s</div>
         </div>
@@ -219,15 +235,18 @@ export class RaceClient {
         .sort((a, b) => b.bets - a.bets)
         .slice(0, 5);
       
-      topWinners.innerHTML = winners.map(racer => `
-        <div class="winner-item">
-          <div class="winner-info">
-            <div class="racer-icon-small" style="background-color: ${racer.color}">${racer.name}</div>
-            <span class="winner-name">${racer.name}</span>
+      topWinners.innerHTML = winners.map(racer => {
+        const colorClass = this.getRacerColorClass(racer.color);
+        return `
+          <div class="winner-item">
+            <div class="winner-info">
+              <div class="racer-icon-small ${colorClass}">${racer.name}</div>
+              <span class="winner-name">${racer.name}</span>
+            </div>
+            <div class="winner-amount">${racer.bets.toFixed(4)} SOL</div>
           </div>
-          <div class="winner-amount">${racer.bets.toFixed(4)} SOL</div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
     
     // Populate user results (placeholder - would need user bet data)

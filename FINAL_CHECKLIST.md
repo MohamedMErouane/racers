@@ -5,9 +5,9 @@
 ### **✅ Backend Infrastructure**
 - [x] Complete Node.js server with Express + Socket.IO
 - [x] Redis integration for real-time pub/sub
-- [x] Supabase database schema and operations
+- [x] PostgreSQL database schema and operations
 - [x] Privy authentication integration
-- [x] Solana blockchain integration with Coinbase API
+- [x] Solana blockchain integration for vault operations
 - [x] Game engine with 12-second race loops
 - [x] Monitoring and logging with Sentry + Winston
 - [x] Docker configuration for containerization
@@ -70,7 +70,7 @@
 ## **📋 EXACT FILES YOU NEED:**
 
 ### **For Database Setup:**
-- `setup-database.sql` - Run this in Supabase
+- `setup-database.sql` - Run this in PostgreSQL
 
 ### **For Backend Deployment:**
 - `backend/` folder - Deploy this to Railway
@@ -108,8 +108,8 @@
 
 ### **Technical Stack:**
 - ✅ **Backend**: Node.js + Express + Socket.IO
-- ✅ **Database**: Supabase (PostgreSQL) + Redis
-- ✅ **Blockchain**: Solana + Coinbase API
+- ✅ **Database**: PostgreSQL + Redis
+- ✅ **Blockchain**: Solana for vault operations
 - ✅ **Auth**: Privy Web3 authentication
 - ✅ **Frontend**: HTML5 + Canvas + WebSockets
 - ✅ **Deployment**: Railway + Vercel

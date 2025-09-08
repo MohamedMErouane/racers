@@ -8,7 +8,7 @@
 2. **Database Schema** - PostgreSQL tables for races, bets, users, chat
 3. **Real-time Features** - WebSocket connections for live updates
 4. **Authentication** - Privy integration ready
-5. **Blockchain Integration** - Solana program and Coinbase API
+5. **Blockchain Integration** - Solana program for vault operations
 6. **Frontend Integration** - Refactored for server-state architecture
 7. **Monitoring** - Sentry, logging, health checks
 8. **DevOps** - Docker, CI/CD, deployment configs
@@ -17,9 +17,9 @@
 
 ## 🗄️ **STEP 1: SETUP DATABASE**
 
-### **Supabase Setup:**
-1. Go to your Supabase project: `https://<YOUR_SUPABASE_PROJECT_ID>.supabase.co`
-2. Open the SQL Editor
+### **PostgreSQL Setup:**
+1. Set up your PostgreSQL database (Railway, Neon, or self-hosted)
+2. Connect to your database using your preferred client
 3. Copy and paste the contents of `setup-database.sql`
 4. Run the SQL script to create all tables and indexes
 
@@ -174,7 +174,7 @@ curl https://your-railway-url.railway.app/health
 ### **Common Issues:**
 
 1. **Database Connection Errors:**
-   - Verify Supabase credentials
+   - Verify PostgreSQL connection string
    - Check if tables exist
    - Run the setup-database.sql script
 
@@ -190,7 +190,7 @@ curl https://your-railway-url.railway.app/health
 
 4. **Solana Integration Issues:**
    - Check wallet balance
-   - Verify Coinbase API credentials
+   - Verify Solana RPC connection
    - Check transaction logs
 
 ---

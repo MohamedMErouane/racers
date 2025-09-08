@@ -1,24 +1,16 @@
 # 📋 COPY & PASTE COMMANDS - READY TO EXECUTE
 
-## **🗄️ DATABASE SETUP (SUPABASE)**
+## **🗄️ DATABASE SETUP (POSTGRESQL)**
 
-### **1. Go to Supabase Dashboard**
-```
-https://supabase.com/dashboard
-```
+### **1. Set up PostgreSQL Database**
+- Use your preferred PostgreSQL provider (Railway, Neon, or self-hosted)
+- Create a new database
+- Note the connection string for `DATABASE_URL`
 
-### **2. Navigate to Your Project**
-- Login to your account
-- Click on project: `<YOUR_SUPABASE_PROJECT_ID>`
-
-### **3. Open SQL Editor**
-- Click "SQL Editor" in left sidebar
-- Click "New Query"
-
-### **4. Run Database Setup**
+### **2. Run Database Setup**
+- Connect to your PostgreSQL database
 - Copy the entire contents of `setup-database.sql` file
-- Paste into the SQL Editor
-- Click "Run" button
+- Execute the SQL script to create tables and indexes
 - Wait for "Success" message
 
 ---
@@ -35,9 +27,9 @@ npm install -g @railway/cli
 railway login
 ```
 
-### **3. Navigate to Backend Directory**
+### **3. Navigate to Project Directory**
 ```bash
-cd /Users/kevinkaushal/racers-vercel-live/backend
+cd racers-vercel-live
 ```
 
 ### **4. Deploy to Railway**
@@ -61,19 +53,7 @@ REDIS_URL=<YOUR_REDIS_URL>
 ```
 
 ```
-SUPABASE_URL=<YOUR_SUPABASE_URL>
-```
-
-```
-SUPABASE_SERVICE_KEY=<YOUR_SUPABASE_SERVICE_KEY>
-```
-
-```
-COINBASE_API_KEY_ID=<YOUR_COINBASE_API_KEY_ID>
-```
-
-```
-COINBASE_SECRET=<YOUR_COINBASE_SECRET>
+DATABASE_URL=<YOUR_POSTGRESQL_CONNECTION_STRING>
 ```
 
 ```
@@ -105,9 +85,9 @@ CORS_ORIGIN=https://racers-vercel-live.vercel.app
 npm install -g vercel
 ```
 
-### **2. Navigate to Root Directory**
+### **2. Navigate to Project Directory**
 ```bash
-cd /Users/kevinkaushal/racers-vercel-live
+cd racers-vercel-live
 ```
 
 ### **3. Update Frontend URLs**

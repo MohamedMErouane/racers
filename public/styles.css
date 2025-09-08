@@ -1023,6 +1023,25 @@ body.loaded .chat-collapse-btn {
     display: none;
 }
 
+/* Racer color classes for winner modal */
+.racer-icon.racer-red { background-color: #ff4757; }
+.racer-icon.racer-blue { background-color: #3742fa; }
+.racer-icon.racer-green { background-color: #2ed573; }
+.racer-icon.racer-yellow { background-color: #ffa502; }
+.racer-icon.racer-purple { background-color: #a55eea; }
+.racer-icon.racer-pink { background-color: #ff6b9d; }
+.racer-icon.racer-orange { background-color: #ff6348; }
+.racer-icon.racer-cyan { background-color: #17a2b8; }
+
+.racer-icon-small.racer-red { background-color: #ff4757; }
+.racer-icon-small.racer-blue { background-color: #3742fa; }
+.racer-icon-small.racer-green { background-color: #2ed573; }
+.racer-icon-small.racer-yellow { background-color: #ffa502; }
+.racer-icon-small.racer-purple { background-color: #a55eea; }
+.racer-icon-small.racer-pink { background-color: #ff6b9d; }
+.racer-icon-small.racer-orange { background-color: #ff6348; }
+.racer-icon-small.racer-cyan { background-color: #17a2b8; }
+
 @keyframes countdownPulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.1); }

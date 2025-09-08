@@ -21,6 +21,7 @@ public/js/config.js
 # Solana program build artifacts
 solana-program/target/
 solana-program/.anchor/
+solana-program/Cargo.lock
 
 # IDE files
 .vscode/

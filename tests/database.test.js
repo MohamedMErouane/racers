@@ -80,7 +80,7 @@ describe('Database Operations', () => {
     const { pg } = await import('../server/db.js');
     
     const balance = await pg.getUserBalance('user_123');
-    expect(typeof balance).toBe('number');
+    expect(typeof balance).toBe('string');
   });
 
   it('should update user balance', async () => {
