@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-const apiRoutes = require('../routes/api.js');
+import apiRoutes from '../routes/api.js';
+import { pg, redis } from '../server/db.js';
+import solana from '../server/solana.js';
+import gameEngine from '../server/gameEngine.js';
 
 // Mock dependencies
 vi.mock('../server/db.js', () => ({
@@ -105,7 +108,7 @@ describe('API Routes', () => {
     const mockReq = { user: mockUser };
     
     // Mock getUserBalance to return insufficient balance
-    const { pg } = require('../server/db');
+    // pg is already imported
     vi.mocked(pg.getUserBalance).mockResolvedValueOnce(5.0); // User has 5 SOL
     
     const response = await request(app)
@@ -125,11 +128,11 @@ describe('API Routes', () => {
     const mockReq = { user: mockUser };
     
     // Mock getUserBalance to return sufficient balance
-    const { pg } = require('../server/db');
+    // pg is already imported
     vi.mocked(pg.getUserBalance).mockResolvedValueOnce(15.0); // User has 15 SOL
     
     // Mock buildWithdrawTransaction to return success
-    const solana = require('../server/solana');
+    // solana is already imported
     vi.mocked(solana.buildWithdrawTransaction).mockResolvedValueOnce({
       success: true,
       transaction: 'mock-transaction'
@@ -147,7 +150,7 @@ describe('API Routes', () => {
 
   it('should log bets with real race ID instead of placeholder', async () => {
     // Mock game engine state
-    const gameEngine = require('../server/gameEngine');
+    // gameEngine is already imported
     const mockRaceState = {
       roundId: 123,
       startTime: 1234567890,
@@ -156,13 +159,13 @@ describe('API Routes', () => {
     vi.mocked(gameEngine.getState).mockReturnValue(mockRaceState);
     
     // Mock user with sufficient balance
-    const { pg } = require('../server/db');
+    // pg is already imported
     vi.mocked(pg.getUserBalance).mockResolvedValueOnce(10.0);
     vi.mocked(pg.updateUserBalance).mockResolvedValueOnce();
     vi.mocked(pg.logBet).mockResolvedValueOnce();
     
     // Mock Redis
-    const { redis } = require('../server/db');
+    // redis is already imported
     vi.mocked(redis.addBet).mockResolvedValueOnce();
     
     await request(app)
@@ -183,7 +186,7 @@ describe('API Routes', () => {
 
   it('should reject bets when race is not in countdown phase', async () => {
     // Mock game engine state with racing status
-    const gameEngine = require('../server/gameEngine');
+    // gameEngine is already imported
     const mockRaceState = {
       roundId: 123,
       startTime: 1234567890,
@@ -192,7 +195,7 @@ describe('API Routes', () => {
     vi.mocked(gameEngine.getState).mockReturnValue(mockRaceState);
     
     // Mock user with sufficient balance
-    const { pg } = require('../server/db');
+    // pg is already imported
     vi.mocked(pg.getUserBalance).mockResolvedValueOnce(10.0);
     
     const response = await request(app)
@@ -207,7 +210,7 @@ describe('API Routes', () => {
 
   it('should accept bets when race is in countdown phase', async () => {
     // Mock game engine state with countdown status
-    const gameEngine = require('../server/gameEngine');
+    // gameEngine is already imported
     const mockRaceState = {
       roundId: 123,
       startTime: 1234567890,
@@ -216,12 +219,12 @@ describe('API Routes', () => {
     vi.mocked(gameEngine.getState).mockReturnValue(mockRaceState);
     
     // Mock user with sufficient balance
-    const { pg } = require('../server/db');
+    // pg is already imported
     vi.mocked(pg.getUserBalance).mockResolvedValueOnce(10.0);
     vi.mocked(pg.updateUserBalance).mockResolvedValueOnce();
     vi.mocked(pg.logBet).mockResolvedValueOnce();
     
-    const { redis } = require('../server/db');
+    // redis is already imported
     vi.mocked(redis.addBet).mockResolvedValueOnce();
     
     const response = await request(app)

@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// Import Solana module using CommonJS
-const solana = require('../server/solana');
-const { Transaction } = require('@solana/web3.js');
+import solana from '../server/solana.js';
+import { Transaction } from '@solana/web3.js';
 
 // Mock Solana dependencies
 const mockConnection = {

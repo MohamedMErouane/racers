@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-const { startRace, stopRace, getState } = require('../server/gameEngine');
+import { startRace, stopRace, getState, deterministicRandom } from '../server/gameEngine.js';
+import { pg, redis } from '../server/db.js';
 
 // Mock dependencies
 vi.mock('../server/db.js', () => ({
@@ -83,7 +84,7 @@ describe('Race Engine', () => {
     expect(state.status).toBe('finished');
     
     // Verify that logRaceResult was called with a unique raceId
-    const { pg } = require('../server/db.js');
+    // pg is already imported
     expect(pg.logRaceResult).toHaveBeenCalledWith(
       expect.stringMatching(/^race_\d+_\d+$/), // Should match race_timestamp_roundId pattern
       expect.any(String), // seed
@@ -92,8 +93,8 @@ describe('Race Engine', () => {
     );
   });
 
-  it('should generate non-colliding randomness for different racer/tick combinations', () => {
-    const { deterministicRandom } = require('../server/gameEngine');
+  it('should generate non-colliding randomness for different racer/tick combinations', async () => {
+    // deterministicRandom is already imported
     const seed = 'test-seed-123';
     
     // Test that different combinations produce different results
@@ -113,7 +114,7 @@ describe('Race Engine', () => {
   });
 
   it('should maintain monotonic round numbering after restarts', async () => {
-    const { pg } = require('../server/db');
+    // pg is already imported
     
     // Mock database returning latest round ID
     vi.mocked(pg.getLatestRoundId).mockResolvedValueOnce(5);
@@ -127,7 +128,7 @@ describe('Race Engine', () => {
   });
 
   it('should handle database errors gracefully for round ID', async () => {
-    const { pg } = require('../server/db');
+    // pg is already imported
     
     // Mock database error
     vi.mocked(pg.getLatestRoundId).mockRejectedValueOnce(new Error('Database error'));
@@ -140,7 +141,7 @@ describe('Race Engine', () => {
   });
 
   it('should restore race state from Redis on startup', async () => {
-    const { redis } = require('../server/db');
+    // redis is already imported
     
     // Mock Redis returning stored race state
     const storedState = {
@@ -164,7 +165,7 @@ describe('Race Engine', () => {
   });
 
   it('should publish race updates to correct Redis channel', async () => {
-    const { redis } = require('../server/db');
+    // redis is already imported
     
     // Start a race
     await startRace(mockIo);
@@ -176,7 +177,7 @@ describe('Race Engine', () => {
   });
 
   it('should support pattern subscriptions for cross-instance updates', async () => {
-    const { redis } = require('../server/db');
+    // redis is already imported
     
     // Mock the subscribeToRace function to verify pattern subscription
     const mockSubscriber = {
@@ -194,7 +195,7 @@ describe('Race Engine', () => {
   });
 
   it('should recover from crash mid-race using latest round ID', async () => {
-    const { pg, redis } = require('../server/db');
+    // pg and redis are already imported
     
     // Mock database returning latest round ID (simulating crash during race 5)
     vi.mocked(pg.getLatestRoundId).mockResolvedValueOnce(5);
@@ -293,5 +294,49 @@ describe('Race Engine', () => {
     
     // Restore original function
     gameEngine.updateRace = originalUpdateRace;
+  });
+
+  it('should handle large lamport totals in settlement without precision loss', async () => {
+    // Mock dependencies
+    vi.mocked(pg.getLatestRoundId).mockResolvedValueOnce(0);
+    vi.mocked(pg.logRaceResult).mockResolvedValueOnce();
+    vi.mocked(pg.getRaceBets).mockResolvedValueOnce([
+      {
+        user_id: 'user1',
+        racer_id: 1,
+        amount: '9007199254740992.123456789' // Very large amount exceeding Number.MAX_SAFE_INTEGER
+      },
+      {
+        user_id: 'user2', 
+        racer_id: 2,
+        amount: '1000000000.987654321' // Another large amount
+      }
+    ]);
+    vi.mocked(pg.getUserBalance).mockResolvedValue('0');
+    vi.mocked(pg.updateUserBalance).mockResolvedValue();
+    vi.mocked(pg.updateBetResult).mockResolvedValue();
+    
+    // Start a race
+    await startRace(mockIo);
+    
+    // Simulate race completion with winner
+    const winner = { id: 1, name: 'Winner', x: 1000, finished: true };
+    const settlementResult = await settleRace('race_1', 1);
+    
+    // Verify settlement calculations are exact (no floating-point precision loss)
+    expect(settlementResult.totalPot).toBe('9007199255740993.111111110'); // Exact sum
+    expect(settlementResult.totalPayout).toBe('7746191359939254.075555555'); // 86% of total
+    expect(settlementResult.totalRakeback).toBe('900719925574099.311111111'); // 10% of total
+    expect(settlementResult.treasuryFee).toBe('360287970229639.724444444'); // 4% of total
+    
+    // Verify winner payout is calculated exactly
+    const winnerPayout = settlementResult.winners.find(w => w.userId === 'user1');
+    expect(winnerPayout.betAmount).toBe('9007199254740992.123456789');
+    expect(winnerPayout.payout).toBe('7746191359939254.075555555'); // Exact pro-rata calculation
+    
+    // Verify loser rakeback is calculated exactly
+    const loserPayout = settlementResult.losers.find(l => l.userId === 'user2');
+    expect(loserPayout.betAmount).toBe('1000000000.987654321');
+    expect(loserPayout.rakeback).toBe('900719925574099.311111111'); // Exact equal distribution
   });
 });

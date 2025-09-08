@@ -32,17 +32,19 @@ class RacersApp {
       
       // Initialize clients
       this.raceClient = new RaceClient(this.socket);
-      this.chatClient = new ChatClient(this.socket, () => this.walletClient?.getAccessToken());
       this.walletClient = new WalletClient();
+      this.chatClient = new ChatClient(this.socket, () => this.walletClient?.getAccessToken());
       
       // Setup event handlers
       this.setupEventHandlers();
       
-      // Initialize all clients
+      // Initialize wallet client first
+      await this.walletClient.initialize();
+      
+      // Initialize race client and chat client after wallet is ready
       await Promise.all([
         this.raceClient.setupEventHandlers(),
-        this.chatClient.initialize(),
-        this.walletClient.initialize()
+        this.chatClient.initialize()
       ]);
       
       this.isInitialized = true;
@@ -130,6 +132,11 @@ class RacersApp {
   // Handle wallet connected
   handleWalletConnected(walletData) {
     this.ui.showNotification('Wallet connected successfully!', 'success');
+    
+    // Refresh chat history now that user is authenticated
+    if (this.chatClient) {
+      this.chatClient.fetchChatHistory();
+    }
   }
 
   // Start the application

@@ -10,7 +10,23 @@ export class ChatClient {
   // Fetch chat history
   async fetchChatHistory() {
     try {
-      const response = await fetch('/api/chat');
+      const token = this.getToken ? await this.getToken() : null;
+      const headers = {};
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch('/api/chat', { headers });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.log('Chat history requires authentication - will retry after login');
+          return;
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const messages = await response.json();
       this.messages = messages;
       this.renderChatMessages();

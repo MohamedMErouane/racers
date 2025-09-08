@@ -534,19 +534,21 @@ async function settleRace(raceId, winnerId) {
     const rakebackPool = parseFloat(lamportsToString(rakebackPoolLamports));
     const winnerPool = parseFloat(lamportsToString(winnerPoolLamports));
     
-    // Calculate winnings for each winner (pro-rata)
-    const totalWinningAmount = winningBets.reduce((sum, bet) => sum + parseFloat(bet.amount), 0);
+    // Calculate winnings for each winner (pro-rata) using BigInt
+    const totalWinningAmountLamports = winningBets.reduce((sum, bet) => {
+      return sum + stringToLamports(bet.amount);
+    }, BigInt(0));
     const winnerPayouts = [];
     
     for (const bet of winningBets) {
-      const betAmount = parseFloat(bet.amount);
-      const payoutRatio = totalWinningAmount > 0 ? betAmount / totalWinningAmount : 0;
-      const payout = winnerPool * payoutRatio;
+      const betAmountLamports = stringToLamports(bet.amount);
+      const payoutLamports = totalWinningAmountLamports > 0 
+        ? (winnerPoolLamports * betAmountLamports) / totalWinningAmountLamports
+        : BigInt(0);
       
       // Get current balance and add winnings
       const currentBalanceStr = await pg.getUserBalance(bet.user_id);
       const currentBalanceLamports = stringToLamports(currentBalanceStr);
-      const payoutLamports = solToLamports(payout);
       const newBalanceLamports = currentBalanceLamports + payoutLamports;
       const newBalanceStr = lamportsToString(newBalanceLamports);
       
@@ -558,26 +560,27 @@ async function settleRace(raceId, winnerId) {
       
       winnerPayouts.push({
         userId: bet.user_id,
-        betAmount: betAmount,
-        payout: payout,
+        betAmount: lamportsToString(betAmountLamports),
+        payout: lamportsToString(payoutLamports),
         newBalance: newBalanceStr
       });
       
-      logger.info(`Winner payout: ${bet.user_id} bet ${betAmount} SOL, won ${payout.toFixed(4)} SOL`);
+      logger.info(`Winner payout: ${bet.user_id} bet ${lamportsToString(betAmountLamports)} SOL, won ${lamportsToString(payoutLamports)} SOL`);
     }
     
-    // Calculate rakeback for each loser (equal distribution)
-    const rakebackPerLoser = losingBets.length > 0 ? rakebackPool / losingBets.length : 0;
+    // Calculate rakeback for each loser (equal distribution) using BigInt
+    const rakebackPerLoserLamports = losingBets.length > 0 
+      ? rakebackPoolLamports / BigInt(losingBets.length)
+      : BigInt(0);
     const loserPayouts = [];
     
     for (const bet of losingBets) {
-      const betAmount = parseFloat(bet.amount);
+      const betAmountLamports = stringToLamports(bet.amount);
       
       // Get current balance and add rakeback
       const currentBalanceStr = await pg.getUserBalance(bet.user_id);
       const currentBalanceLamports = stringToLamports(currentBalanceStr);
-      const rakebackLamports = solToLamports(rakebackPerLoser);
-      const newBalanceLamports = currentBalanceLamports + rakebackLamports;
+      const newBalanceLamports = currentBalanceLamports + rakebackPerLoserLamports;
       const newBalanceStr = lamportsToString(newBalanceLamports);
       
       // Update user balance
@@ -588,24 +591,24 @@ async function settleRace(raceId, winnerId) {
       
       loserPayouts.push({
         userId: bet.user_id,
-        betAmount: betAmount,
-        rakeback: rakebackPerLoser,
+        betAmount: lamportsToString(betAmountLamports),
+        rakeback: lamportsToString(rakebackPerLoserLamports),
         newBalance: newBalanceStr
       });
       
-      logger.info(`Loser rakeback: ${bet.user_id} bet ${betAmount} SOL, received ${rakebackPerLoser.toFixed(4)} SOL rakeback`);
+      logger.info(`Loser rakeback: ${bet.user_id} bet ${lamportsToString(betAmountLamports)} SOL, received ${lamportsToString(rakebackPerLoserLamports)} SOL rakeback`);
     }
     
     const settlementResult = {
       winners: winnerPayouts,
       losers: loserPayouts,
-      totalPayout: winnerPool,
-      totalRakeback: rakebackPool,
-      treasuryFee: treasuryFee,
-      totalPot: totalPot
+      totalPayout: lamportsToString(winnerPoolLamports),
+      totalRakeback: lamportsToString(rakebackPoolLamports),
+      treasuryFee: lamportsToString(treasuryFeeLamports),
+      totalPot: lamportsToString(totalPotLamports)
     };
     
-    logger.info(`Race settlement completed: ${winnerPayouts.length} winners, ${loserPayouts.length} losers, total payout: ${winnerPool.toFixed(4)} SOL`);
+    logger.info(`Race settlement completed: ${winnerPayouts.length} winners, ${loserPayouts.length} losers, total payout: ${lamportsToString(winnerPoolLamports)} SOL`);
     
     // Mark race as settled
     raceState.settled = true;

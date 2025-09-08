@@ -86,9 +86,6 @@ function getWebSocketOrigins() {
 // Add WebSocket origins to connectSrc
 connectSrc.push(...getWebSocketOrigins());
 
-// Add generic WebSocket protocols as fallback for local development
-connectSrc.push("ws:", "wss:");
-
 // Add custom Solana RPC URL to CSP if configured
 const solanaRpcOrigin = getSolanaRpcOrigin();
 if (solanaRpcOrigin) {
