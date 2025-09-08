@@ -59,6 +59,9 @@ export class RaceClient {
 
   // Handle race start
   handleRaceStart(data) {
+    // Update current race state with new data
+    this.currentRace = data;
+    
     if (data.status === 'countdown') {
       // Show countdown UI without starting animations
       this.isRacing = false;
@@ -413,14 +416,18 @@ export class RaceClient {
   updatePotStatistics(data) {
     // Update total pot display using specific ID
     const totalPotElement = document.getElementById('modalTotalPot');
-    if (totalPotElement && data.totalPot) {
+    if (totalPotElement && typeof data.totalPot === 'number') {
       totalPotElement.textContent = `${data.totalPot.toFixed(4)} SOL`;
+    } else if (totalPotElement) {
+      totalPotElement.textContent = '0.0000 SOL';
     }
     
     // Update total bets count using specific ID
     const totalBetsElement = document.getElementById('modalTotalBets');
-    if (totalBetsElement && data.totalBets) {
+    if (totalBetsElement && typeof data.totalBets === 'number') {
       totalBetsElement.textContent = data.totalBets.toString();
+    } else if (totalBetsElement) {
+      totalBetsElement.textContent = '0';
     }
     
     // Update race ID if available

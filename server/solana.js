@@ -470,14 +470,9 @@ async function getVaultBalance(userPublicKey) {
     const balanceString = vaultInfo.balance.toString();
     const balanceBigInt = BigInt(balanceString);
     
-    // Check if the value is within safe integer range for display
-    if (balanceBigInt > BigInt(Number.MAX_SAFE_INTEGER)) {
-      logger.warn('Vault balance exceeds safe integer range, returning as string');
-      return balanceString; // Return as string for large values
-    }
-    
-    // Convert to decimal SOL for display only after ensuring safe range
-    return Number(balanceBigInt) / 1e9; // Convert lamports to SOL
+    // Always convert lamports to SOL string using BigInt arithmetic for precision
+    const { lamportsToString } = require('../utils/lamports');
+    return lamportsToString(balanceBigInt);
 
   } catch (error) {
     logger.error('Failed to get vault balance:', error);

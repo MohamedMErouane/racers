@@ -57,7 +57,7 @@ const raceState = {
   endTime: null,
   winner: null,
   roundId: 0,            // Incrementing race number
-  totalPot: 0,           // Total SOL in the pot
+  totalPotLamports: BigInt(0),  // Total lamports in the pot (BigInt for precision)
   totalBets: 0           // Total number of bets placed
 };
 
@@ -179,7 +179,7 @@ async function startRace(socketIo) {
   raceState.endTime = null;   // Will be set when racing begins
   raceState.racers = initializeRacers();
   raceState.winner = null;
-  raceState.totalPot = 0;     // Reset pot for new race
+  raceState.totalPotLamports = BigInt(0);  // Reset pot for new race
   raceState.totalBets = 0;    // Reset bet count for new race
   
   logger.info(`Race countdown started with seed: ${raceState.seed}`);
@@ -193,7 +193,7 @@ async function startRace(socketIo) {
       status: 'countdown',
       countdown: countdownSeconds,
       roundId: raceState.roundId,
-      totalPot: raceState.totalPot,
+      totalPot: parseFloat(lamportsToString(raceState.totalPotLamports)),
       totalBets: raceState.totalBets
     });
   }
@@ -242,7 +242,7 @@ async function startRace(socketIo) {
           endTime: raceState.endTime,
           status: 'racing',
           roundId: raceState.roundId,
-          totalPot: raceState.totalPot,
+          totalPot: parseFloat(lamportsToString(raceState.totalPotLamports)),
           totalBets: raceState.totalBets
         });
       }
@@ -377,7 +377,7 @@ async function stopRace(winner, options = {}) {
       results: raceState.racers,
       endTime: raceState.endTime,
       roundId: raceState.roundId,
-      totalPot: raceState.totalPot,
+      totalPot: parseFloat(lamportsToString(raceState.totalPotLamports)),
       totalBets: raceState.totalBets
     });
   }
@@ -421,16 +421,18 @@ function getState() {
 
 // Add bet to race totals
 function addBetToRace(amount) {
-  raceState.totalPot += amount;
+  const betLamports = solToLamports(amount);
+  raceState.totalPotLamports += betLamports;
   raceState.totalBets += 1;
   
-  logger.info(`Bet added: ${amount} SOL. Total pot: ${raceState.totalPot} SOL, Total bets: ${raceState.totalBets}`);
+  const totalPotSol = lamportsToString(raceState.totalPotLamports);
+  logger.info(`Bet added: ${amount} SOL. Total pot: ${totalPotSol} SOL, Total bets: ${raceState.totalBets}`);
 }
 
 // Get race totals
 function getRaceTotals() {
   return {
-    totalPot: raceState.totalPot,
+    totalPot: parseFloat(lamportsToString(raceState.totalPotLamports)),
     totalBets: raceState.totalBets
   };
 }
@@ -453,11 +455,16 @@ async function settleRace(raceId, winnerId) {
     
     logger.info(`Settling ${winningBets.length} winning bets and ${losingBets.length} losing bets`);
     
-    // Calculate total pot and fees
-    const totalPot = raceState.totalPot;
-    const treasuryFee = totalPot * 0.04; // 4% treasury fee
-    const rakebackPool = totalPot * 0.10; // 10% rakeback to losers
-    const winnerPool = totalPot * 0.86; // 86% to winners
+    // Calculate total pot and fees using lamports for precision
+    const totalPotLamports = raceState.totalPotLamports;
+    const totalPot = parseFloat(lamportsToString(totalPotLamports));
+    const treasuryFeeLamports = totalPotLamports * BigInt(4) / BigInt(100); // 4% treasury fee
+    const rakebackPoolLamports = totalPotLamports * BigInt(10) / BigInt(100); // 10% rakeback to losers
+    const winnerPoolLamports = totalPotLamports * BigInt(86) / BigInt(100); // 86% to winners
+    
+    const treasuryFee = parseFloat(lamportsToString(treasuryFeeLamports));
+    const rakebackPool = parseFloat(lamportsToString(rakebackPoolLamports));
+    const winnerPool = parseFloat(lamportsToString(winnerPoolLamports));
     
     // Calculate winnings for each winner (pro-rata)
     const totalWinningAmount = winningBets.reduce((sum, bet) => sum + parseFloat(bet.amount), 0);

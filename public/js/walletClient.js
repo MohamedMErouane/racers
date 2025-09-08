@@ -66,9 +66,9 @@ export class WalletClient {
         this.isAuthenticated = true;
         this.accessToken = accessToken;
         
-        // Dispatch wallet connected event
+        // Dispatch wallet connected event (without exposing token)
         window.dispatchEvent(new CustomEvent('wallet:connected', {
-          detail: { token: accessToken, wallet: wallet.address }
+          detail: { wallet: wallet.address }
         }));
         
         this.updateWalletUI();
