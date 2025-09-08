@@ -57,6 +57,9 @@ const raceState = {
   endTime: null,
   winner: null,
   roundId: 0,            // Incrementing race number
+  raceId: null,          // Consistent race ID for bets and results
+  countdownStartTime: null, // When countdown began (for crash recovery)
+  settled: false,        // Whether settlement has been completed
   totalPotLamports: BigInt(0),  // Total lamports in the pot (BigInt for precision)
   totalBets: 0           // Total number of bets placed
 };
@@ -112,12 +115,15 @@ async function restoreRaceState() {
         raceState.totalPotLamports = BigInt(storedState.totalPotLamports);
       }
       
+      // Ensure settled flag is properly set
+      raceState.settled = storedState.settled || false;
+      
       // If race was in progress, restart the appropriate intervals
       if (storedState.status === 'racing') {
         startRaceLoop();
       } else if (storedState.status === 'countdown') {
         // Restart countdown from where it left off
-        const timeElapsed = Date.now() - (storedState.startTime || Date.now());
+        const timeElapsed = Date.now() - (storedState.countdownStartTime || Date.now());
         const remainingCountdown = Math.max(0, RACE_COUNTDOWN_MS - timeElapsed);
         
         if (remainingCountdown > 0) {
@@ -135,6 +141,17 @@ async function restoreRaceState() {
           raceState.status = 'racing';
           startRaceLoop();
         }
+      } else if (storedState.status === 'finished' && !storedState.settled) {
+        // Race finished but not settled - complete settlement before starting new race
+        logger.info(`Found unfinished race ${storedState.raceId}, completing settlement...`);
+        try {
+          await settleRace(storedState.raceId, storedState.winner);
+          logger.info(`Settlement completed for race ${storedState.raceId}`);
+        } catch (error) {
+          logger.error(`Error settling race ${storedState.raceId}:`, error);
+        }
+        // After settlement, start a new race
+        setTimeout(() => startRace(io), 1000);
       }
       
       return true; // State was restored
@@ -174,14 +191,19 @@ async function startRace(socketIo) {
   const latestRoundId = await pg.getLatestRoundId();
   raceState.roundId = latestRoundId + 1;
   
+  // Generate consistent race ID for bets and results
+  raceState.raceId = `race_${raceState.roundId}`;
+  
   // Generate deterministic seed
   raceState.seed = crypto.randomBytes(32).toString('hex');
   raceState.tick = 0;
   raceState.status = 'countdown';
   raceState.startTime = null; // Will be set when racing begins
   raceState.endTime = null;   // Will be set when racing begins
+  raceState.countdownStartTime = Date.now(); // Track when countdown began
   raceState.racers = initializeRacers();
   raceState.winner = null;
+  raceState.settled = false;  // Reset settlement flag for new race
   raceState.totalPotLamports = BigInt(0);  // Reset pot for new race
   raceState.totalBets = 0;    // Reset bet count for new race
   
@@ -196,6 +218,7 @@ async function startRace(socketIo) {
       status: 'countdown',
       countdown: countdownSeconds,
       roundId: raceState.roundId,
+      raceId: raceState.raceId,
       totalPot: parseFloat(lamportsToString(raceState.totalPotLamports)),
       totalBets: raceState.totalBets
     });
@@ -233,6 +256,7 @@ async function startRace(socketIo) {
       raceState.startTime = Date.now();
       raceState.endTime = raceState.startTime + RACE_DURATION_MS;
       raceState.status = 'racing';
+      raceState.countdownStartTime = null; // Clear countdown start time
       
       logger.info(`Race started! Duration: ${RACE_DURATION_MS}ms`);
       
@@ -245,6 +269,7 @@ async function startRace(socketIo) {
           endTime: raceState.endTime,
           status: 'racing',
           roundId: raceState.roundId,
+          raceId: raceState.raceId,
           totalPot: parseFloat(lamportsToString(raceState.totalPotLamports)),
           totalBets: raceState.totalBets
         });
@@ -317,17 +342,6 @@ async function updateRace() {
     return;
   }
   
-  // Emit race update
-  if (io) {
-    io.emit('race:update', {
-      racers: raceState.racers,
-      timeElapsed,
-      timeRemaining,
-      tick: raceState.tick,
-      roundId: raceState.roundId
-    });
-  }
-  
   // Store race state in Redis for horizontal scaling and crash recovery
   try {
     // Convert BigInt to string for JSON serialization
@@ -393,8 +407,8 @@ async function stopRace(winner, options = {}) {
   
   // Log race results to Postgres
   try {
-    // Use startTime if available, otherwise fallback to current time or roundId
-    const raceId = raceState.startTime ? `race_${raceState.startTime}` : `race_${Date.now()}_${raceState.roundId}`;
+    // Use consistent race ID for results
+    const raceId = raceState.raceId;
     await pg.logRaceResult(raceId, raceState.seed, winner ? winner.id : 0, raceState.roundId);
     logger.info(`Race Results - Round: ${raceState.roundId}, Seed: ${raceState.seed}, Winner: ${winner ? winner.name : 'Unknown'}`);
     
@@ -464,8 +478,11 @@ async function settleRace(raceId, winnerId) {
     
     logger.info(`Settling ${winningBets.length} winning bets and ${losingBets.length} losing bets`);
     
-    // Calculate total pot and fees using lamports for precision
-    const totalPotLamports = raceState.totalPotLamports;
+    // Calculate total pot from database bets (recalculate for accuracy after restarts)
+    const totalPotLamports = bets.reduce((sum, bet) => {
+      const betLamports = stringToLamports(bet.amount);
+      return sum + betLamports;
+    }, BigInt(0));
     const totalPot = parseFloat(lamportsToString(totalPotLamports));
     const treasuryFeeLamports = totalPotLamports * BigInt(4) / BigInt(100); // 4% treasury fee
     const rakebackPoolLamports = totalPotLamports * BigInt(10) / BigInt(100); // 10% rakeback to losers
@@ -547,6 +564,9 @@ async function settleRace(raceId, winnerId) {
     };
     
     logger.info(`Race settlement completed: ${winnerPayouts.length} winners, ${loserPayouts.length} losers, total payout: ${winnerPool.toFixed(4)} SOL`);
+    
+    // Mark race as settled
+    raceState.settled = true;
     
     return settlementResult;
     
