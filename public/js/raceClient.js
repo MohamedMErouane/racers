@@ -194,14 +194,40 @@ export class RaceClient {
     // Populate winner display
     const winnerDisplay = document.getElementById('winnerDisplay');
     if (winnerDisplay && data.winner) {
+      // Clear existing content
+      winnerDisplay.innerHTML = '';
+      
+      // Create winner racer container
+      const winnerRacer = document.createElement('div');
+      winnerRacer.className = 'winner-racer';
+      
+      // Create racer icon
+      const racerIcon = document.createElement('div');
       const colorClass = this.getRacerColorClass(data.winner.color);
-      winnerDisplay.innerHTML = `
-        <div class="winner-racer">
-          <div class="racer-icon ${colorClass}">${data.winner.name}</div>
-          <div class="winner-name">${data.winner.name}</div>
-          <div class="winner-time">${data.winner.finalPosition?.toFixed(2) || '0.00'}s</div>
-        </div>
-      `;
+      racerIcon.className = `racer-icon ${colorClass}`;
+      racerIcon.textContent = data.winner.name;
+      
+      // Create winner name
+      const winnerName = document.createElement('div');
+      winnerName.className = 'winner-name';
+      winnerName.textContent = data.winner.name;
+      
+      // Create winner time
+      const winnerTime = document.createElement('div');
+      winnerTime.className = 'winner-time';
+      // Use finishTime if available, otherwise compute elapsed time
+      let timeText = '0.00s';
+      if (data.winner.finishTime && data.startTime) {
+        const elapsedMs = data.winner.finishTime - data.startTime;
+        timeText = (elapsedMs / 1000).toFixed(2) + 's';
+      }
+      winnerTime.textContent = timeText;
+      
+      // Assemble the winner display
+      winnerRacer.appendChild(racerIcon);
+      winnerRacer.appendChild(winnerName);
+      winnerRacer.appendChild(winnerTime);
+      winnerDisplay.appendChild(winnerRacer);
     }
     
     // Populate pot summary
@@ -209,22 +235,55 @@ export class RaceClient {
     if (potSummary) {
       const totalBets = data.results?.reduce((sum, racer) => sum + (racer.bets || 0), 0) || 0;
       const totalWinners = data.results?.filter(racer => racer.bets > 0).length || 0;
-      potSummary.innerHTML = `
-        <div class="pot-stats">
-          <div class="stat-item">
-            <span class="stat-label">Total Pot:</span>
-            <span class="stat-value">${totalBets.toFixed(4)} SOL</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Participants:</span>
-            <span class="stat-value">${totalWinners}</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Race ID:</span>
-            <span class="stat-value">#${data.roundId}</span>
-          </div>
-        </div>
-      `;
+      
+      // Clear existing content
+      potSummary.innerHTML = '';
+      
+      // Create pot stats container
+      const potStats = document.createElement('div');
+      potStats.className = 'pot-stats';
+      
+      // Create Total Pot stat
+      const totalPotItem = document.createElement('div');
+      totalPotItem.className = 'stat-item';
+      const totalPotLabel = document.createElement('span');
+      totalPotLabel.className = 'stat-label';
+      totalPotLabel.textContent = 'Total Pot:';
+      const totalPotValue = document.createElement('span');
+      totalPotValue.className = 'stat-value';
+      totalPotValue.textContent = `${totalBets.toFixed(4)} SOL`;
+      totalPotItem.appendChild(totalPotLabel);
+      totalPotItem.appendChild(totalPotValue);
+      
+      // Create Participants stat
+      const participantsItem = document.createElement('div');
+      participantsItem.className = 'stat-item';
+      const participantsLabel = document.createElement('span');
+      participantsLabel.className = 'stat-label';
+      participantsLabel.textContent = 'Participants:';
+      const participantsValue = document.createElement('span');
+      participantsValue.className = 'stat-value';
+      participantsValue.textContent = totalWinners.toString();
+      participantsItem.appendChild(participantsLabel);
+      participantsItem.appendChild(participantsValue);
+      
+      // Create Race ID stat
+      const raceIdItem = document.createElement('div');
+      raceIdItem.className = 'stat-item';
+      const raceIdLabel = document.createElement('span');
+      raceIdLabel.className = 'stat-label';
+      raceIdLabel.textContent = 'Race ID:';
+      const raceIdValue = document.createElement('span');
+      raceIdValue.className = 'stat-value';
+      raceIdValue.textContent = `#${data.roundId}`;
+      raceIdItem.appendChild(raceIdLabel);
+      raceIdItem.appendChild(raceIdValue);
+      
+      // Assemble pot stats
+      potStats.appendChild(totalPotItem);
+      potStats.appendChild(participantsItem);
+      potStats.appendChild(raceIdItem);
+      potSummary.appendChild(potStats);
     }
     
     // Populate top winners
@@ -235,35 +294,77 @@ export class RaceClient {
         .sort((a, b) => b.bets - a.bets)
         .slice(0, 5);
       
-      topWinners.innerHTML = winners.map(racer => {
+      // Clear existing content
+      topWinners.innerHTML = '';
+      
+      // Create winner items using DOM API
+      winners.forEach(racer => {
+        const winnerItem = document.createElement('div');
+        winnerItem.className = 'winner-item';
+        
+        const winnerInfo = document.createElement('div');
+        winnerInfo.className = 'winner-info';
+        
+        const racerIcon = document.createElement('div');
         const colorClass = this.getRacerColorClass(racer.color);
-        return `
-          <div class="winner-item">
-            <div class="winner-info">
-              <div class="racer-icon-small ${colorClass}">${racer.name}</div>
-              <span class="winner-name">${racer.name}</span>
-            </div>
-            <div class="winner-amount">${racer.bets.toFixed(4)} SOL</div>
-          </div>
-        `;
-      }).join('');
+        racerIcon.className = `racer-icon-small ${colorClass}`;
+        racerIcon.textContent = racer.name;
+        
+        const winnerName = document.createElement('span');
+        winnerName.className = 'winner-name';
+        winnerName.textContent = racer.name;
+        
+        const winnerAmount = document.createElement('div');
+        winnerAmount.className = 'winner-amount';
+        winnerAmount.textContent = `${racer.bets.toFixed(4)} SOL`;
+        
+        // Assemble winner item
+        winnerInfo.appendChild(racerIcon);
+        winnerInfo.appendChild(winnerName);
+        winnerItem.appendChild(winnerInfo);
+        winnerItem.appendChild(winnerAmount);
+        topWinners.appendChild(winnerItem);
+      });
     }
     
     // Populate user results (placeholder - would need user bet data)
     const yourResults = document.getElementById('yourResults');
     if (yourResults) {
-      yourResults.innerHTML = `
-        <div class="user-stats">
-          <div class="stat-item">
-            <span class="stat-label">Your Bets:</span>
-            <span class="stat-value">0.0000 SOL</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Result:</span>
-            <span class="stat-value">No bets placed</span>
-          </div>
-        </div>
-      `;
+      // Clear existing content
+      yourResults.innerHTML = '';
+      
+      // Create user stats container
+      const userStats = document.createElement('div');
+      userStats.className = 'user-stats';
+      
+      // Create Your Bets stat
+      const yourBetsItem = document.createElement('div');
+      yourBetsItem.className = 'stat-item';
+      const yourBetsLabel = document.createElement('span');
+      yourBetsLabel.className = 'stat-label';
+      yourBetsLabel.textContent = 'Your Bets:';
+      const yourBetsValue = document.createElement('span');
+      yourBetsValue.className = 'stat-value';
+      yourBetsValue.textContent = '0.0000 SOL';
+      yourBetsItem.appendChild(yourBetsLabel);
+      yourBetsItem.appendChild(yourBetsValue);
+      
+      // Create Result stat
+      const resultItem = document.createElement('div');
+      resultItem.className = 'stat-item';
+      const resultLabel = document.createElement('span');
+      resultLabel.className = 'stat-label';
+      resultLabel.textContent = 'Result:';
+      const resultValue = document.createElement('span');
+      resultValue.className = 'stat-value';
+      resultValue.textContent = 'No bets placed';
+      resultItem.appendChild(resultLabel);
+      resultItem.appendChild(resultValue);
+      
+      // Assemble user stats
+      userStats.appendChild(yourBetsItem);
+      userStats.appendChild(resultItem);
+      yourResults.appendChild(userStats);
     }
     
     // Show the modal

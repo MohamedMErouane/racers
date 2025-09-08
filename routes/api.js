@@ -121,7 +121,18 @@ async function requirePrivy(req, res, next) {
     // Generate username from email or use address as fallback
     let username = 'Anonymous';
     if (payload.email) {
-      username = payload.email.split('@')[0]; // Use email prefix as username
+      // Sanitize email prefix to create safe username
+      const emailPrefix = payload.email.split('@')[0];
+      // Remove disallowed characters and limit length
+      username = emailPrefix
+        .replace(/[^a-zA-Z0-9._-]/g, '') // Keep only alphanumeric, dots, underscores, hyphens
+        .substring(0, 20) // Limit to 20 characters
+        .toLowerCase(); // Convert to lowercase for consistency
+      
+      // Ensure username is not empty after sanitization
+      if (!username) {
+        username = 'Anonymous';
+      }
     } else if (payload.address) {
       username = `User_${payload.address.slice(0, 8)}`; // Use first 8 chars of address
     }

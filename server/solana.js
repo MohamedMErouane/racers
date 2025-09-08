@@ -3,6 +3,7 @@ const anchor = require('@coral-xyz/anchor');
 const { Program, AnchorProvider, Wallet, BN } = anchor;
 const fs = require('fs');
 const path = require('path');
+const logger = require('../services/logger');
 
 let connection = null;
 let program = null;
@@ -70,7 +71,7 @@ async function initializeSolana() {
     try {
       idl = JSON.parse(fs.readFileSync(idlPath, 'utf8'));
     } catch (error) {
-      console.warn('IDL file not found, using fallback IDL');
+      logger.warn('IDL file not found, using fallback IDL');
       // Fallback IDL for basic operations
       idl = {
         "version": "0.1.0",
@@ -138,18 +139,18 @@ async function initializeSolana() {
 
     // Verify IDL has required account definitions
     if (!idl.accounts || !idl.accounts.find(acc => acc.name === 'Vault')) {
-      console.error('❌ IDL missing required Vault account definition');
-      console.error('Please ensure target/idl/racers_vault.json exists or extend the fallback IDL');
+      logger.error('IDL missing required Vault account definition');
+      logger.error('Please ensure target/idl/racers_vault.json exists or extend the fallback IDL');
       process.exit(1);
     }
 
-    console.log('✅ Solana program initialized');
-    console.log(`Program ID: ${programId.toString()}`);
-    console.log(`Wallet: ${wallet.publicKey.toString()}`);
+    logger.info('Solana program initialized');
+    logger.info(`Program ID: ${programId.toString()}`);
+    logger.info(`Wallet: ${wallet.publicKey.toString()}`);
 
     return true;
   } catch (error) {
-    console.error('❌ Failed to initialize Solana:', error);
+    logger.error('Failed to initialize Solana:', error);
     throw error;
   }
 }
@@ -203,7 +204,7 @@ async function buildDepositTransaction(userPublicKey, amount) {
     // Serialize transaction for client signing
     const serializedTx = tx.serialize({ requireAllSignatures: false }).toString('base64');
 
-    console.log(`📝 Deposit transaction built for ${userPublicKey}: ${amount} SOL`);
+    logger.info(`Deposit transaction built for ${userPublicKey}: ${amount} SOL`);
     return { 
       success: true, 
       transaction: serializedTx,
@@ -211,7 +212,7 @@ async function buildDepositTransaction(userPublicKey, amount) {
     };
 
   } catch (error) {
-    console.error('❌ Failed to build deposit transaction:', error);
+    logger.error('Failed to build deposit transaction:', error);
     return { success: false, error: error.message };
   }
 }
@@ -299,9 +300,9 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
     let verifiedAmount = null;
     if (verifiedAmountLamports <= BigInt(Number.MAX_SAFE_INTEGER)) {
       verifiedAmount = Number(verifiedAmountLamports) / 1e9;
-      console.log(`✅ Deposit transaction confirmed: ${signature}, amount: ${verifiedAmount} SOL`);
+      logger.info(`Deposit transaction confirmed: ${signature}, amount: ${verifiedAmount} SOL`);
     } else {
-      console.log(`✅ Deposit transaction confirmed: ${signature}, amount: ${verifiedAmountLamports} lamports (large amount)`);
+      logger.info(`Deposit transaction confirmed: ${signature}, amount: ${verifiedAmountLamports} lamports (large amount)`);
     }
     
     return { 
@@ -312,7 +313,7 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
     };
 
   } catch (error) {
-    console.error('❌ Deposit transaction failed:', error);
+    logger.error('Deposit transaction failed:', error);
     return { success: false, error: error.message };
   }
 }
@@ -354,7 +355,7 @@ async function buildWithdrawTransaction(userPublicKey, amount) {
     // Serialize transaction for client signing
     const serializedTx = tx.serialize({ requireAllSignatures: false }).toString('base64');
 
-    console.log(`📝 Withdraw transaction built for ${userPublicKey}: ${amount} SOL`);
+    logger.info(`Withdraw transaction built for ${userPublicKey}: ${amount} SOL`);
     return { 
       success: true, 
       transaction: serializedTx,
@@ -362,7 +363,7 @@ async function buildWithdrawTransaction(userPublicKey, amount) {
     };
 
   } catch (error) {
-    console.error('❌ Failed to build withdraw transaction:', error);
+    logger.error('Failed to build withdraw transaction:', error);
     return { success: false, error: error.message };
   }
 }
@@ -450,9 +451,9 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
     let verifiedAmount = null;
     if (verifiedAmountLamports <= BigInt(Number.MAX_SAFE_INTEGER)) {
       verifiedAmount = Number(verifiedAmountLamports) / 1e9;
-      console.log(`✅ Withdraw transaction confirmed: ${signature}, amount: ${verifiedAmount} SOL`);
+      logger.info(`Withdraw transaction confirmed: ${signature}, amount: ${verifiedAmount} SOL`);
     } else {
-      console.log(`✅ Withdraw transaction confirmed: ${signature}, amount: ${verifiedAmountLamports} lamports (large amount)`);
+      logger.info(`Withdraw transaction confirmed: ${signature}, amount: ${verifiedAmountLamports} lamports (large amount)`);
     }
     
     return { 
@@ -463,7 +464,7 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
     };
 
   } catch (error) {
-    console.error('❌ Withdraw transaction failed:', error);
+    logger.error('Withdraw transaction failed:', error);
     return { success: false, error: error.message };
   }
 }
@@ -485,7 +486,7 @@ async function getVaultBalance(userPublicKey) {
     
     // Check if the value is within safe integer range for display
     if (balanceBigInt > BigInt(Number.MAX_SAFE_INTEGER)) {
-      console.warn('Vault balance exceeds safe integer range, returning as string');
+      logger.warn('Vault balance exceeds safe integer range, returning as string');
       return balanceString; // Return as string for large values
     }
     
@@ -493,7 +494,7 @@ async function getVaultBalance(userPublicKey) {
     return Number(balanceBigInt) / 1e9; // Convert lamports to SOL
 
   } catch (error) {
-    console.error('❌ Failed to get vault balance:', error);
+    logger.error('Failed to get vault balance:', error);
     throw error;
   }
 }
@@ -511,7 +512,7 @@ async function buildInitializeVaultTransaction(userPublicKey) {
     // Check if vault already exists
     try {
       await program.account.vault.fetch(vaultAddress);
-      console.log('Vault already exists for user:', userPublicKey);
+      logger.info('Vault already exists for user:', userPublicKey);
       return { success: true, vaultAddress: vaultAddress.toString(), alreadyExists: true };
     } catch (error) {
       // Vault doesn't exist, create it
@@ -537,7 +538,7 @@ async function buildInitializeVaultTransaction(userPublicKey) {
     // Serialize transaction for client signing
     const serializedTx = tx.serialize({ requireAllSignatures: false }).toString('base64');
 
-    console.log(`📝 Vault initialization transaction built for ${userPublicKey}`);
+    logger.info(`Vault initialization transaction built for ${userPublicKey}`);
     return { 
       success: true, 
       transaction: serializedTx,
@@ -545,7 +546,7 @@ async function buildInitializeVaultTransaction(userPublicKey) {
     };
 
   } catch (error) {
-    console.error('❌ Failed to build vault initialization transaction:', error);
+    logger.error('Failed to build vault initialization transaction:', error);
     return { success: false, error: error.message };
   }
 }
@@ -584,11 +585,11 @@ async function processInitializeVaultTransaction(signedTransaction, expectedUser
     const signature = await connection.sendRawTransaction(tx.serialize());
     await connection.confirmTransaction(signature);
 
-    console.log(`✅ Vault initialization confirmed: ${signature}`);
+    logger.info(`Vault initialization confirmed: ${signature}`);
     return { success: true, signature };
 
   } catch (error) {
-    console.error('❌ Vault initialization transaction failed:', error);
+    logger.error('Vault initialization transaction failed:', error);
     return { success: false, error: error.message };
   }
 }

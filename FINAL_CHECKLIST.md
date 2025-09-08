@@ -62,7 +62,7 @@
 
 ### **🧪 5. TESTING (1 minute)**
 - [ ] Test backend health: `curl https://your-railway-url.railway.app/health`
-- [ ] Test WebSocket: Open `test-websocket.html` and connect
+- [ ] Test WebSocket: Open frontend and check browser console for WebSocket connection
 - [ ] Test frontend: Open Vercel URL and try wallet connection
 
 ---
@@ -83,8 +83,8 @@
 - `vercel.json` - Already configured
 
 ### **For Testing:**
-- `test-websocket.html` - Test WebSocket connections
-- `test-frontend.html` - Test frontend integration
+- Use the main frontend application to test WebSocket connections
+- Check browser developer console for connection status and race updates
 
 ---
 

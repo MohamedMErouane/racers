@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { pg } = require('./db');
+const logger = require('../services/logger');
 
 // Race timing configuration from environment variables
 const RACE_COUNTDOWN_MS = parseInt(process.env.RACE_COUNTDOWN_MS) || 10000; // 10 seconds default
@@ -23,17 +24,17 @@ function loadRacerStats() {
     cachedRacerStats = JSON.parse(racersData);
     return cachedRacerStats;
   } catch (error) {
-    console.error('Error loading racer stats:', error);
+    logger.error('Error loading racer stats:', error);
     // Fallback racer data
     cachedRacerStats = [
-      { id: 1, name: "Sakura", speed: 4.5, acceleration: 0.15 },
-      { id: 2, name: "Yuki", speed: 4.2, acceleration: 0.18 },
-      { id: 3, name: "Akane", speed: 4.8, acceleration: 0.12 },
-      { id: 4, name: "Luna", speed: 4.3, acceleration: 0.16 },
-      { id: 5, name: "Miku", speed: 4.6, acceleration: 0.14 },
-      { id: 6, name: "Neko", speed: 4.7, acceleration: 0.13 },
-      { id: 7, name: "Hana", speed: 4.1, acceleration: 0.17 },
-      { id: 8, name: "Kira", speed: 4.4, acceleration: 0.15 }
+      { id: 1, name: "Sakura", color: "#ff69b4", avatar: "images/characters/sakura-face.png", speed: 4.5, acceleration: 0.15 },
+      { id: 2, name: "Yuki", color: "#00bfff", avatar: "images/characters/yuki-face.png", speed: 4.2, acceleration: 0.18 },
+      { id: 3, name: "Akane", color: "#ff4500", avatar: "images/characters/akane-face.png", speed: 4.8, acceleration: 0.12 },
+      { id: 4, name: "Luna", color: "#9370db", avatar: "images/characters/luna-face.png", speed: 4.3, acceleration: 0.16 },
+      { id: 5, name: "Miku", color: "#00ced1", avatar: "images/characters/miku-face.png", speed: 4.6, acceleration: 0.14 },
+      { id: 6, name: "Neko", color: "#ffd700", avatar: "images/characters/neko-face.png", speed: 4.7, acceleration: 0.13 },
+      { id: 7, name: "Hana", color: "#ff1493", avatar: "images/characters/hana-face.png", speed: 4.1, acceleration: 0.17 },
+      { id: 8, name: "Kira", color: "#ffa500", avatar: "images/characters/kira-face.png", speed: 4.4, acceleration: 0.15 }
     ];
     return cachedRacerStats;
   }
@@ -76,6 +77,8 @@ function initializeRacers() {
   return racerStats.map(racer => ({
     id: racer.id,
     name: racer.name,
+    color: racer.color,
+    avatar: racer.avatar,
     speed: racer.speed,
     acceleration: racer.acceleration,
     x: 0,
@@ -89,7 +92,7 @@ function initializeRacers() {
 function startRace(socketIo) {
   // Guard against double-starting
   if (raceState.status === 'countdown' || raceState.status === 'racing') {
-    console.log('⚠️ Race already in progress, ignoring start request');
+    logger.warn('Race already in progress, ignoring start request');
     return;
   }
   
@@ -115,7 +118,7 @@ function startRace(socketIo) {
   raceState.racers = initializeRacers();
   raceState.winner = null;
   
-  console.log(`🏁 Race countdown started with seed: ${raceState.seed}`);
+  logger.info(`Race countdown started with seed: ${raceState.seed}`);
   
   // Emit race start (countdown phase)
   if (io) {
@@ -162,7 +165,7 @@ function startRace(socketIo) {
       raceState.endTime = raceState.startTime + RACE_DURATION_MS;
       raceState.status = 'racing';
       
-      console.log(`🏁 Race started! Duration: ${RACE_DURATION_MS}ms`);
+      logger.info(`Race started! Duration: ${RACE_DURATION_MS}ms`);
       
       // Emit race start with actual timing
       if (io) {
@@ -198,7 +201,7 @@ function updateRace() {
   
   if (timeRemaining <= 0) {
     // Race finished
-    stopRace().catch(console.error);
+    stopRace().catch(error => logger.error('Error stopping race:', error));
     return;
   }
   
@@ -239,7 +242,7 @@ function updateRace() {
   
   // Check if all racers have finished (early completion)
   if (raceState.racers.every(r => r.finished)) {
-    stopRace(raceState.racers[0]).catch(console.error);
+    stopRace(raceState.racers[0]).catch(error => logger.error('Error stopping race early:', error));
     return;
   }
   
@@ -279,7 +282,7 @@ async function stopRace(winner, options = {}) {
   
   raceState.winner = winner;
   
-  console.log(`🏆 Race finished. Winner: ${winner ? winner.name : 'Unknown'}, Seed: ${raceState.seed}`);
+  logger.info(`Race finished. Winner: ${winner ? winner.name : 'Unknown'}, Seed: ${raceState.seed}`);
   
   // Emit race end
   if (io) {
@@ -297,9 +300,9 @@ async function stopRace(winner, options = {}) {
     // Use startTime if available, otherwise fallback to current time or roundId
     const raceId = raceState.startTime ? `race_${raceState.startTime}` : `race_${Date.now()}_${raceState.roundId}`;
     await pg.logRaceResult(raceId, raceState.seed, winner ? winner.id : 0, raceState.roundId);
-    console.log(`Race Results - Round: ${raceState.roundId}, Seed: ${raceState.seed}, Winner: ${winner ? winner.name : 'Unknown'}`);
+    logger.info(`Race Results - Round: ${raceState.roundId}, Seed: ${raceState.seed}, Winner: ${winner ? winner.name : 'Unknown'}`);
   } catch (error) {
-    console.error('Error logging race results:', error);
+    logger.error('Error logging race results:', error);
   }
   
   // Start new race after settle delay only if restart is true

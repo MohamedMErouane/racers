@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
-declare_id!("RacersFun1111111111111111111111111111111111");
+declare_id!("YOUR_DEPLOYED_PROGRAM_ID_HERE");
 
 #[program]
 pub mod racers_vault {

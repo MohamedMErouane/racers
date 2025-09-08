@@ -39,6 +39,27 @@ If you need to ensure reproducible builds across environments, the `Cargo.lock` 
 - **Withdraw Operations**: Allow users to withdraw SOL from their vaults
 - **Balance Tracking**: Maintain accurate on-chain balance records
 
+### ⚠️ IMPORTANT: Program ID Configuration
+
+**Before building or deploying, you MUST update the program ID in the source code:**
+
+1. **Update `src/lib.rs`**: Replace `YOUR_DEPLOYED_PROGRAM_ID_HERE` with your actual deployed program ID
+2. **Update `env.example`**: Set `PROGRAM_ID` to match your deployed program ID
+3. **Update backend environment**: Ensure your backend's `PROGRAM_ID` environment variable matches
+
+**Example:**
+```rust
+// In src/lib.rs
+declare_id!("YourActualProgramId123456789012345678901234567890");
+```
+
+```bash
+# In your environment
+PROGRAM_ID=YourActualProgramId123456789012345678901234567890
+```
+
+**⚠️ Failure to update the program ID will result in transaction mismatches and failed operations.**
+
 ### Configuration
 
 The program configuration is managed through `Anchor.toml`:

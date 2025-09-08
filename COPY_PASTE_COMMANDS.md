@@ -137,10 +137,10 @@ curl https://your-railway-url.railway.app/health
 ```
 
 ### **Test WebSocket Connection**
-- Open `test-websocket.html` in your browser
-- Update the `CONFIG.WS_URL` to your Railway URL
-- Click "Connect" button
-- Should show "Connected to race server"
+- Open your deployed frontend URL in your browser
+- Open browser developer tools (F12) and check the Console tab
+- Look for WebSocket connection messages
+- Verify that races start automatically every 12 seconds
 
 ### **Test Frontend**
 - Open your Vercel deployment URL

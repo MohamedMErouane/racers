@@ -21,7 +21,11 @@ class RacersApp {
       
       // Initialize UI
       this.ui = new UI();
-      window.ui = this.ui; // Make UI globally available
+      
+      // Make UI globally available for debugging (development only)
+      if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
+        window.ui = this.ui;
+      }
       
       // Initialize Socket.IO
       await this.initializeSocket();
@@ -141,8 +145,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const app = new RacersApp();
   app.start();
   
-  // Make app globally available for debugging
-  window.racersApp = app;
+  // Make app globally available for debugging (development only)
+  if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
+    window.racersApp = app;
+  }
 });
 
 // Export for module usage

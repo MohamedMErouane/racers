@@ -67,7 +67,7 @@ Replace `YOUR-RAILWAY-URL` with your actual Railway URL.
 
 1. **Backend Health:** `https://your-railway-url.railway.app/health`
 2. **Frontend:** `https://racers-vercel-live.vercel.app`
-3. **WebSocket Test:** Open `test-websocket.html` and connect
+3. **WebSocket Test:** Open frontend and check browser console for WebSocket connection
 
 ---
 
