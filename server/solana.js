@@ -15,6 +15,26 @@ function computeDiscriminator(instructionName) {
   return Buffer.from(hash.slice(0, 16), 'hex');
 }
 
+// Helper function for precise SOL to lamports conversion
+function solToLamports(sol) {
+  // Validate input is numeric
+  if (typeof sol !== 'number' || isNaN(sol)) {
+    throw new Error('Invalid numeric value for SOL conversion');
+  }
+  
+  // Convert to string and split into integer and fractional parts
+  const solStr = sol.toString();
+  const [integerPart, fractionalPart = ''] = solStr.split('.');
+  
+  // Pad fractional part to 9 decimal places and truncate if longer
+  const paddedFractional = fractionalPart.padEnd(9, '0').slice(0, 9);
+  
+  // Combine integer and fractional parts as lamports
+  const lamportsStr = integerPart + paddedFractional;
+  
+  return new BN(lamportsStr);
+}
+
 // Cache instruction discriminators at module scope
 const DEPOSIT_DISCRIMINATOR = computeDiscriminator('deposit');
 const WITHDRAW_DISCRIMINATOR = computeDiscriminator('withdraw');
@@ -166,7 +186,7 @@ async function buildDepositTransaction(userPublicKey, amount) {
     // Create deposit transaction (unsigned)
     const tx = new Transaction().add(
       await program.methods
-        .deposit(new BN(Math.round(amount * 1e9))) // Convert SOL to lamports with proper rounding
+        .deposit(solToLamports(amount)) // Convert SOL to lamports with precise conversion
         .accounts({
           vault: vaultAddress,
           user: userKey,
@@ -309,7 +329,7 @@ async function buildWithdrawTransaction(userPublicKey, amount) {
 
     // Check vault balance first
     const vaultInfo = await program.account.vault.fetch(vaultAddress);
-    const requestedAmount = new BN(Math.round(amount * 1e9));
+    const requestedAmount = solToLamports(amount);
     if (vaultInfo.balance.lt(requestedAmount)) {
       throw new Error('Insufficient balance in vault');
     }
@@ -317,7 +337,7 @@ async function buildWithdrawTransaction(userPublicKey, amount) {
     // Create withdraw transaction (unsigned)
     const tx = new Transaction().add(
       await program.methods
-        .withdraw(new BN(Math.round(amount * 1e9))) // Convert SOL to lamports with proper rounding
+        .withdraw(solToLamports(amount)) // Convert SOL to lamports with precise conversion
         .accounts({
           vault: vaultAddress,
           user: userKey,

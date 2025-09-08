@@ -180,4 +180,56 @@ describe('API Routes', () => {
       'pending'
     );
   });
+
+  it('should reject bets when race is not in countdown phase', async () => {
+    // Mock game engine state with racing status
+    const gameEngine = require('../server/gameEngine');
+    const mockRaceState = {
+      roundId: 123,
+      startTime: 1234567890,
+      status: 'racing' // Not countdown
+    };
+    vi.mocked(gameEngine.getState).mockReturnValue(mockRaceState);
+    
+    // Mock user with sufficient balance
+    const { pg } = require('../server/db');
+    vi.mocked(pg.getUserBalance).mockResolvedValueOnce(10.0);
+    
+    const response = await request(app)
+      .post('/api/bets')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ racerId: 1, amount: 5.0 })
+      .expect(400);
+    
+    expect(response.body.error).toBe('Bets are only accepted during countdown phase');
+    expect(response.body.currentRaceStatus).toBe('racing');
+  });
+
+  it('should accept bets when race is in countdown phase', async () => {
+    // Mock game engine state with countdown status
+    const gameEngine = require('../server/gameEngine');
+    const mockRaceState = {
+      roundId: 123,
+      startTime: 1234567890,
+      status: 'countdown' // Allow bets
+    };
+    vi.mocked(gameEngine.getState).mockReturnValue(mockRaceState);
+    
+    // Mock user with sufficient balance
+    const { pg } = require('../server/db');
+    vi.mocked(pg.getUserBalance).mockResolvedValueOnce(10.0);
+    vi.mocked(pg.updateUserBalance).mockResolvedValueOnce();
+    vi.mocked(pg.logBet).mockResolvedValueOnce();
+    
+    const { redis } = require('../server/db');
+    vi.mocked(redis.addBet).mockResolvedValueOnce();
+    
+    const response = await request(app)
+      .post('/api/bets')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ racerId: 1, amount: 5.0 })
+      .expect(200);
+    
+    expect(response.body.success).toBe(true);
+  });
 });

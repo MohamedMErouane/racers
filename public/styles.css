@@ -1019,6 +1019,10 @@ body.loaded .chat-collapse-btn {
     animation: fadeInOut 2s ease-in-out infinite;
 }
 
+.hidden {
+    display: none;
+}
+
 @keyframes countdownPulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.1); }

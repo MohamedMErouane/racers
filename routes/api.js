@@ -7,14 +7,29 @@ const router = express.Router();
 
 // Helper functions for precise balance arithmetic
 function solToLamports(sol) {
-  return BigInt(Math.round(sol * 1e9));
+  return stringToLamports(sol.toString());
 }
 
 function lamportsToSol(lamports) {
-  if (typeof lamports === 'string') {
-    return Number(lamports) / 1e9;
+  // Convert lamports to SOL string using big-number arithmetic
+  const lamportsStr = lamports.toString();
+  
+  // Pad with leading zeros if needed to ensure at least 10 digits (for 9 decimal places)
+  const paddedLamports = lamportsStr.padStart(10, '0');
+  
+  // Split into integer and fractional parts
+  const integerPart = paddedLamports.slice(0, -9) || '0';
+  const fractionalPart = paddedLamports.slice(-9);
+  
+  // Remove trailing zeros from fractional part
+  const trimmedFractional = fractionalPart.replace(/0+$/, '');
+  
+  // Return formatted SOL amount as string
+  if (trimmedFractional === '') {
+    return integerPart;
+  } else {
+    return `${integerPart}.${trimmedFractional}`;
   }
-  return Number(lamports) / 1e9;
 }
 
 function stringToLamports(str) {
@@ -290,6 +305,16 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
       });
     }
     
+    // Check race state - only allow bets during countdown phase
+    const gameEngine = require('../server/gameEngine');
+    const raceState = gameEngine.getState();
+    if (raceState.status !== 'countdown') {
+      return res.status(400).json({ 
+        error: 'Bets are only accepted during countdown phase', 
+        currentRaceStatus: raceState.status 
+      });
+    }
+    
     const bet = {
       ...req.body,
       userId: userAddress,
@@ -352,7 +377,7 @@ router.post('/vault/deposit/process', requirePrivy, validateBody(vaultProcessSch
     
     if (result.success) {
       // Convert both amounts to BigInt lamports for precise comparison
-      const claimedLamports = BigInt(Math.round(amount * 1e9));
+      const claimedLamports = solToLamports(amount);
       const verifiedLamports = BigInt(result.verifiedAmountLamports); // Convert string back to BigInt
       
       // Verify the claimed amount matches the transaction amount
@@ -429,7 +454,7 @@ router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultProcessSc
     
     if (result.success) {
       // Convert both amounts to BigInt lamports for precise comparison
-      const claimedLamports = BigInt(Math.round(amount * 1e9));
+      const claimedLamports = solToLamports(amount);
       const verifiedLamports = BigInt(result.verifiedAmountLamports); // Convert string back to BigInt
       
       // Verify the claimed amount matches the transaction amount
@@ -445,6 +470,16 @@ router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultProcessSc
       const currentBalanceStr = await pg.getUserBalance(userAddress);
       const currentBalanceLamports = stringToLamports(currentBalanceStr);
       const verifiedAmountLamports = BigInt(result.verifiedAmountLamports);
+      
+      // Check that the result would not be negative
+      if (currentBalanceLamports < verifiedAmountLamports) {
+        return res.status(400).json({ 
+          error: 'Insufficient balance for withdrawal', 
+          currentBalance: lamportsToString(currentBalanceLamports),
+          requestedAmount: lamportsToString(verifiedAmountLamports)
+        });
+      }
+      
       const newBalanceLamports = currentBalanceLamports - verifiedAmountLamports;
       const newBalanceStr = lamportsToString(newBalanceLamports);
       await pg.updateUserBalance(userAddress, newBalanceStr);
