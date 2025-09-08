@@ -12,21 +12,50 @@ function solToLamports(sol) {
 
 function lamportsToSol(lamports) {
   if (typeof lamports === 'string') {
-    return BigInt(lamports) / BigInt(1e9);
+    return Number(lamports) / 1e9;
   }
-  return lamports / BigInt(1e9);
+  return Number(lamports) / 1e9;
 }
 
 function stringToLamports(str) {
   // Convert string balance to lamports (assuming it's in SOL)
-  const sol = parseFloat(str);
-  return BigInt(Math.round(sol * 1e9));
+  // Validate input is numeric
+  if (typeof str !== 'string' || !/^\d+(\.\d+)?$/.test(str)) {
+    throw new Error('Invalid numeric string for balance conversion');
+  }
+  
+  // Split into integer and fractional parts
+  const [integerPart, fractionalPart = ''] = str.split('.');
+  
+  // Pad fractional part to 9 decimal places and truncate if longer
+  const paddedFractional = fractionalPart.padEnd(9, '0').slice(0, 9);
+  
+  // Combine integer and fractional parts as lamports
+  const lamportsStr = integerPart + paddedFractional;
+  
+  return BigInt(lamportsStr);
 }
 
 function lamportsToString(lamports) {
-  // Convert lamports back to string balance (in SOL)
-  const sol = Number(lamports) / 1e9;
-  return sol.toString();
+  // Convert lamports back to string balance (in SOL) using big-number arithmetic
+  const lamportsStr = lamports.toString();
+  
+  // Pad with leading zeros if needed to ensure at least 10 digits (for 9 decimal places)
+  const paddedLamports = lamportsStr.padStart(10, '0');
+  
+  // Split into integer and fractional parts
+  const integerPart = paddedLamports.slice(0, -9) || '0';
+  const fractionalPart = paddedLamports.slice(-9);
+  
+  // Remove trailing zeros from fractional part
+  const trimmedFractional = fractionalPart.replace(/0+$/, '');
+  
+  // Return formatted SOL amount
+  if (trimmedFractional === '') {
+    return integerPart;
+  } else {
+    return `${integerPart}.${trimmedFractional}`;
+  }
 }
 
 // Rate limiting for chat and bets
@@ -324,7 +353,7 @@ router.post('/vault/deposit/process', requirePrivy, validateBody(vaultProcessSch
     if (result.success) {
       // Convert both amounts to BigInt lamports for precise comparison
       const claimedLamports = BigInt(Math.round(amount * 1e9));
-      const verifiedLamports = result.verifiedAmountLamports; // Already BigInt
+      const verifiedLamports = BigInt(result.verifiedAmountLamports); // Convert string back to BigInt
       
       // Verify the claimed amount matches the transaction amount
       if (claimedLamports !== verifiedLamports) {
@@ -338,7 +367,7 @@ router.post('/vault/deposit/process', requirePrivy, validateBody(vaultProcessSch
       // Update user balance using verified amount from result
       const currentBalanceStr = await pg.getUserBalance(userAddress);
       const currentBalanceLamports = stringToLamports(currentBalanceStr);
-      const verifiedAmountLamports = result.verifiedAmountLamports;
+      const verifiedAmountLamports = BigInt(result.verifiedAmountLamports);
       const newBalanceLamports = currentBalanceLamports + verifiedAmountLamports;
       const newBalanceStr = lamportsToString(newBalanceLamports);
       await pg.updateUserBalance(userAddress, newBalanceStr);
@@ -401,7 +430,7 @@ router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultProcessSc
     if (result.success) {
       // Convert both amounts to BigInt lamports for precise comparison
       const claimedLamports = BigInt(Math.round(amount * 1e9));
-      const verifiedLamports = result.verifiedAmountLamports; // Already BigInt
+      const verifiedLamports = BigInt(result.verifiedAmountLamports); // Convert string back to BigInt
       
       // Verify the claimed amount matches the transaction amount
       if (claimedLamports !== verifiedLamports) {
@@ -415,7 +444,7 @@ router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultProcessSc
       // Update user balance using verified amount from result
       const currentBalanceStr = await pg.getUserBalance(userAddress);
       const currentBalanceLamports = stringToLamports(currentBalanceStr);
-      const verifiedAmountLamports = result.verifiedAmountLamports;
+      const verifiedAmountLamports = BigInt(result.verifiedAmountLamports);
       const newBalanceLamports = currentBalanceLamports - verifiedAmountLamports;
       const newBalanceStr = lamportsToString(newBalanceLamports);
       await pg.updateUserBalance(userAddress, newBalanceStr);
@@ -444,14 +473,12 @@ router.get('/vault/balance/:userPublicKey', requirePrivy, async (req, res) => {
     }
     
     const balance = await solana.getVaultBalance(userPublicKey);
-    // Handle both string (for large values) and number (for safe values) return types
-    const response = { balance };
-    if (typeof balance === 'string') {
-      response.balanceString = balance;
-      // Convert string balance to SOL for display (assuming it's already in SOL)
-      response.balance = parseFloat(balance);
-    }
-    res.json(response);
+    // Return balance string directly to preserve precision for large values
+    // Client should handle formatting as needed
+    res.json({ 
+      balance: balance.toString(), // Ensure it's always a string
+      balanceType: typeof balance === 'string' ? 'string' : 'number'
+    });
   } catch (error) {
     console.error('Error getting vault balance:', error);
     res.status(500).json({ error: 'Internal server error' });

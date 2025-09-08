@@ -230,6 +230,12 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
     
     // Verify the instruction accounts match expected vault and user
     const instruction = tx.instructions[0];
+    
+    // Enforce program ID validation - must match vault program
+    if (!instruction.programId.equals(program.programId)) {
+      throw new Error(`Invalid program ID: expected ${program.programId.toString()}, got ${instruction.programId.toString()}`);
+    }
+    
     if (instruction.programId.equals(program.programId)) {
       // Verify instruction discriminator matches deposit
       const data = instruction.data;
@@ -281,7 +287,7 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
     return { 
       success: true, 
       signature, 
-      verifiedAmountLamports: verifiedAmountLamports, // Keep as BigInt
+      verifiedAmountLamports: verifiedAmountLamports.toString(), // Convert to string for JSON serialization
       verifiedAmount: verifiedAmount
     };
 
@@ -375,6 +381,12 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
     
     // Verify the instruction accounts match expected vault and user
     const instruction = tx.instructions[0];
+    
+    // Enforce program ID validation - must match vault program
+    if (!instruction.programId.equals(program.programId)) {
+      throw new Error(`Invalid program ID: expected ${program.programId.toString()}, got ${instruction.programId.toString()}`);
+    }
+    
     if (instruction.programId.equals(program.programId)) {
       // Verify instruction discriminator matches withdraw
       const data = instruction.data;
@@ -426,7 +438,7 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
     return { 
       success: true, 
       signature, 
-      verifiedAmountLamports: verifiedAmountLamports, // Keep as BigInt
+      verifiedAmountLamports: verifiedAmountLamports.toString(), // Convert to string for JSON serialization
       verifiedAmount: verifiedAmount
     };
 

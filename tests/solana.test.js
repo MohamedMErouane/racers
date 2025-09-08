@@ -421,4 +421,24 @@ describe('Solana Integration', () => {
       .rejects
       .toThrow('Transaction must contain exactly one instruction, found 0');
   });
+
+  it('should reject deposit transaction with mismatched program ID', async () => {
+    const mockTransaction = createMockTransaction('deposit', 1000000000);
+    // Override program ID to be different
+    mockTransaction.instructions[0].programId = { toString: () => 'different-program-id' };
+    
+    await expect(processDepositTransaction(mockTransaction, 'test-user'))
+      .rejects
+      .toThrow('Invalid program ID: expected mock-program-id, got different-program-id');
+  });
+
+  it('should reject withdraw transaction with mismatched program ID', async () => {
+    const mockTransaction = createMockTransaction('withdraw', 1000000000);
+    // Override program ID to be different
+    mockTransaction.instructions[0].programId = { toString: () => 'different-program-id' };
+    
+    await expect(processWithdrawTransaction(mockTransaction, 'test-user'))
+      .rejects
+      .toThrow('Invalid program ID: expected mock-program-id, got different-program-id');
+  });
 });
