@@ -3,34 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { pg, redis } = require('./db');
 const logger = require('../services/logger');
-
-// Utility functions for lamport conversion
-function stringToLamports(str) {
-  try {
-    // Handle BigInt conversion for large numbers
-    const num = parseFloat(str);
-    if (isNaN(num)) return BigInt(0);
-    return BigInt(Math.floor(num * 1e9)); // Convert SOL to lamports
-  } catch (error) {
-    logger.error('Error converting string to lamports:', error);
-    return BigInt(0);
-  }
-}
-
-function solToLamports(sol) {
-  return stringToLamports(sol.toString());
-}
-
-function lamportsToString(lamports) {
-  try {
-    const lamportsBigInt = BigInt(lamports);
-    const sol = Number(lamportsBigInt) / 1e9;
-    return sol.toFixed(9);
-  } catch (error) {
-    logger.error('Error converting lamports to string:', error);
-    return '0.000000000';
-  }
-}
+const { stringToLamports, solToLamports, lamportsToString } = require('../utils/lamports');
 
 // Race timing configuration from environment variables
 const RACE_COUNTDOWN_MS = parseInt(process.env.RACE_COUNTDOWN_MS) || 10000; // 10 seconds default
@@ -121,9 +94,14 @@ function initializeRacers() {
 // Restore race state from Redis on startup
 async function restoreRaceState() {
   try {
-    // Get the most recent round ID from database to check for in-progress races
-    const latestRoundId = await pg.getLatestRoundId();
-    const storedState = await redis.getRaceState(latestRoundId);
+    // Get the highest round ID from Redis to check for in-progress races
+    const highestRoundId = await redis.getHighestRaceRoundId();
+    if (!highestRoundId) {
+      logger.info('No race state found in Redis');
+      return false;
+    }
+    
+    const storedState = await redis.getRaceState(highestRoundId);
     
     if (storedState && (storedState.status === 'racing' || storedState.status === 'countdown')) {
       logger.info(`Restoring race state for round ${storedState.roundId} with status: ${storedState.status}`);

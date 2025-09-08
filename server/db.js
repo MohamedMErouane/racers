@@ -97,6 +97,37 @@ const redisOps = {
     }
   },
 
+  // Get the highest round ID from Redis race keys
+  async getHighestRaceRoundId() {
+    try {
+      const redis = getRedis();
+      if (!redis) {
+        throw new Error('Redis client not initialized');
+      }
+      
+      // Scan for all race:* keys
+      const keys = await redis.keys('race:*');
+      if (keys.length === 0) {
+        return null;
+      }
+      
+      // Extract round IDs from keys and find the highest
+      let highestRoundId = 0;
+      for (const key of keys) {
+        const raceId = key.replace('race:', '');
+        const roundId = parseInt(raceId);
+        if (!isNaN(roundId) && roundId > highestRoundId) {
+          highestRoundId = roundId;
+        }
+      }
+      
+      return highestRoundId > 0 ? highestRoundId : null;
+    } catch (error) {
+      logger.error('Error getting highest race round ID:', error);
+      throw error;
+    }
+  },
+
   // Pub/Sub for real-time updates
   async publishRaceUpdate(raceId, update) {
     try {

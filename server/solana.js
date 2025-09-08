@@ -4,6 +4,7 @@ const { Program, AnchorProvider, Wallet, BN } = anchor;
 const fs = require('fs');
 const path = require('path');
 const logger = require('../services/logger');
+const { solToLamports } = require('../utils/lamports');
 
 let connection = null;
 let program = null;
@@ -16,24 +17,9 @@ function computeDiscriminator(instructionName) {
   return Buffer.from(hash.slice(0, 16), 'hex');
 }
 
-// Helper function for precise SOL to lamports conversion
-function solToLamports(sol) {
-  // Validate input is numeric
-  if (typeof sol !== 'number' || isNaN(sol)) {
-    throw new Error('Invalid numeric value for SOL conversion');
-  }
-  
-  // Convert to string and split into integer and fractional parts
-  const solStr = sol.toString();
-  const [integerPart, fractionalPart = ''] = solStr.split('.');
-  
-  // Pad fractional part to 9 decimal places and truncate if longer
-  const paddedFractional = fractionalPart.padEnd(9, '0').slice(0, 9);
-  
-  // Combine integer and fractional parts as lamports
-  const lamportsStr = integerPart + paddedFractional;
-  
-  return new BN(lamportsStr);
+// Helper function to convert BigInt to BN for Solana compatibility
+function bigIntToBN(bigIntValue) {
+  return new BN(bigIntValue.toString());
 }
 
 // Cache instruction discriminators at module scope
@@ -187,7 +173,7 @@ async function buildDepositTransaction(userPublicKey, amount) {
     // Create deposit transaction (unsigned)
     const tx = new Transaction().add(
       await program.methods
-        .deposit(solToLamports(amount)) // Convert SOL to lamports with precise conversion
+        .deposit(bigIntToBN(solToLamports(amount))) // Convert SOL to lamports with precise conversion
         .accounts({
           vault: vaultAddress,
           user: userKey,
@@ -330,7 +316,7 @@ async function buildWithdrawTransaction(userPublicKey, amount) {
 
     // Check vault balance first
     const vaultInfo = await program.account.vault.fetch(vaultAddress);
-    const requestedAmount = solToLamports(amount);
+    const requestedAmount = bigIntToBN(solToLamports(amount));
     if (vaultInfo.balance.lt(requestedAmount)) {
       throw new Error('Insufficient balance in vault');
     }
@@ -338,7 +324,7 @@ async function buildWithdrawTransaction(userPublicKey, amount) {
     // Create withdraw transaction (unsigned)
     const tx = new Transaction().add(
       await program.methods
-        .withdraw(solToLamports(amount)) // Convert SOL to lamports with precise conversion
+        .withdraw(bigIntToBN(solToLamports(amount))) // Convert SOL to lamports with precise conversion
         .accounts({
           vault: vaultAddress,
           user: userKey,

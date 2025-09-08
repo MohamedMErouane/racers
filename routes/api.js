@@ -4,74 +4,12 @@ const { z } = require('zod');
 const sanitizeHtml = require('sanitize-html');
 const { verifyPrivyToken, getBearerToken } = require('../lib/privy');
 const solana = require('../server/solana');
+const { stringToLamports, solToLamports, lamportsToString } = require('../utils/lamports');
 const router = express.Router();
 
-// Helper functions for precise balance arithmetic
-function solToLamports(sol) {
-  return stringToLamports(sol.toString());
-}
-
+// Helper function for backward compatibility
 function lamportsToSol(lamports) {
-  // Convert lamports to SOL string using big-number arithmetic
-  const lamportsStr = lamports.toString();
-  
-  // Pad with leading zeros if needed to ensure at least 10 digits (for 9 decimal places)
-  const paddedLamports = lamportsStr.padStart(10, '0');
-  
-  // Split into integer and fractional parts
-  const integerPart = paddedLamports.slice(0, -9) || '0';
-  const fractionalPart = paddedLamports.slice(-9);
-  
-  // Remove trailing zeros from fractional part
-  const trimmedFractional = fractionalPart.replace(/0+$/, '');
-  
-  // Return formatted SOL amount as string
-  if (trimmedFractional === '') {
-    return integerPart;
-  } else {
-    return `${integerPart}.${trimmedFractional}`;
-  }
-}
-
-function stringToLamports(str) {
-  // Convert string balance to lamports (assuming it's in SOL)
-  // Validate input is numeric
-  if (typeof str !== 'string' || !/^\d+(\.\d+)?$/.test(str)) {
-    throw new Error('Invalid numeric string for balance conversion');
-  }
-  
-  // Split into integer and fractional parts
-  const [integerPart, fractionalPart = ''] = str.split('.');
-  
-  // Pad fractional part to 9 decimal places and truncate if longer
-  const paddedFractional = fractionalPart.padEnd(9, '0').slice(0, 9);
-  
-  // Combine integer and fractional parts as lamports
-  const lamportsStr = integerPart + paddedFractional;
-  
-  return BigInt(lamportsStr);
-}
-
-function lamportsToString(lamports) {
-  // Convert lamports back to string balance (in SOL) using big-number arithmetic
-  const lamportsStr = lamports.toString();
-  
-  // Pad with leading zeros if needed to ensure at least 10 digits (for 9 decimal places)
-  const paddedLamports = lamportsStr.padStart(10, '0');
-  
-  // Split into integer and fractional parts
-  const integerPart = paddedLamports.slice(0, -9) || '0';
-  const fractionalPart = paddedLamports.slice(-9);
-  
-  // Remove trailing zeros from fractional part
-  const trimmedFractional = fractionalPart.replace(/0+$/, '');
-  
-  // Return formatted SOL amount
-  if (trimmedFractional === '') {
-    return integerPart;
-  } else {
-    return `${integerPart}.${trimmedFractional}`;
-  }
+  return lamportsToString(lamports);
 }
 
 // Rate limiting for chat and bets
@@ -534,11 +472,10 @@ router.get('/vault/balance/:userPublicKey', requirePrivy, async (req, res) => {
     }
     
     const balance = await solana.getVaultBalance(userPublicKey);
-    // Return balance string directly to preserve precision for large values
-    // Client should handle formatting as needed
+    // Return balance as string to preserve precision for large values
+    // Always returns stringified SOL amount
     res.json({ 
-      balance: balance.toString(), // Ensure it's always a string
-      balanceType: typeof balance === 'string' ? 'string' : 'number'
+      balance: balance.toString()
     });
   } catch (error) {
     console.error('Error getting vault balance:', error);

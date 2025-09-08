@@ -238,8 +238,8 @@ export class RaceClient {
     const potSummary = document.getElementById('potSummary');
     if (potSummary) {
       // Use race state totals if available, otherwise show placeholder data
-      const totalBets = data.totalPot || 0;
-      const totalWinners = data.totalBets || 0;
+      const totalPot = data.totalPot || 0;
+      const totalParticipants = data.totalBets || 0;
       
       // Clear existing content
       potSummary.innerHTML = '';
@@ -256,7 +256,7 @@ export class RaceClient {
       totalPotLabel.textContent = 'Total Pot:';
       const totalPotValue = document.createElement('span');
       totalPotValue.className = 'stat-value';
-      totalPotValue.textContent = `${totalBets.toFixed(4)} SOL`;
+      totalPotValue.textContent = `${totalPot.toFixed(4)} SOL`;
       totalPotItem.appendChild(totalPotLabel);
       totalPotItem.appendChild(totalPotValue);
       
@@ -268,7 +268,7 @@ export class RaceClient {
       participantsLabel.textContent = 'Participants:';
       const participantsValue = document.createElement('span');
       participantsValue.className = 'stat-value';
-      participantsValue.textContent = totalWinners.toString();
+      participantsValue.textContent = totalParticipants.toString();
       participantsItem.appendChild(participantsLabel);
       participantsItem.appendChild(participantsValue);
       
@@ -411,22 +411,22 @@ export class RaceClient {
 
   // Update pot statistics display
   updatePotStatistics(data) {
-    // Update total pot display
-    const totalPotElement = document.querySelector('.pot-stats .stat-value');
+    // Update total pot display using specific ID
+    const totalPotElement = document.getElementById('modalTotalPot');
     if (totalPotElement && data.totalPot) {
       totalPotElement.textContent = `${data.totalPot.toFixed(4)} SOL`;
     }
     
-    // Update total bets count
-    const totalBetsElement = document.querySelector('.pot-stats .stat-item:nth-child(2) .stat-value');
+    // Update total bets count using specific ID
+    const totalBetsElement = document.getElementById('modalTotalBets');
     if (totalBetsElement && data.totalBets) {
       totalBetsElement.textContent = data.totalBets.toString();
     }
     
-    // Update race-specific pot info if available
-    const racePotElement = document.getElementById('racePot');
-    if (racePotElement && data.totalPot) {
-      racePotElement.textContent = `${data.totalPot.toFixed(4)} SOL`;
+    // Update race ID if available
+    const raceIdElement = document.getElementById('modalRaceId');
+    if (raceIdElement && data.raceId) {
+      raceIdElement.textContent = `#${data.raceId}`;
     }
   }
 
