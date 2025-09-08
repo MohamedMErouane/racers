@@ -11,15 +11,27 @@ if (!process.env.PRIVY_APP_ID) {
   process.exit(1);
 }
 
+if (!process.env.WS_URL) {
+  console.error('❌ WS_URL environment variable is required');
+  console.error('Please set WS_URL before running npm run build');
+  process.exit(1);
+}
+
+if (!process.env.API_URL) {
+  console.error('❌ API_URL environment variable is required');
+  console.error('Please set API_URL before running npm run build');
+  process.exit(1);
+}
+
 // Read the config template file
 const templatePath = path.join(__dirname, 'public', 'js', 'config.template.js');
 const configPath = path.join(__dirname, 'public', 'js', 'config.js');
 
 let configContent = fs.readFileSync(templatePath, 'utf8');
 
-// Generate URLs based on environment variables or defaults
-const wsUrl = process.env.WS_URL || 'ws://localhost:3001';
-const apiUrl = process.env.API_URL || 'http://localhost:3001/api';
+// Use environment variables (validation ensures they exist)
+const wsUrl = process.env.WS_URL;
+const apiUrl = process.env.API_URL;
 
 // Replace placeholders with environment variables and generated URLs
 configContent = configContent.replace(

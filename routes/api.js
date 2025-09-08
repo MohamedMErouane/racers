@@ -159,7 +159,7 @@ router.get('/race/state', (req, res) => {
 });
 
 // Start a race (requires admin privileges)
-router.post('/race/start', requirePrivy, requireAdmin, (req, res) => {
+router.post('/race/start', requirePrivy, requireAdmin, async (req, res) => {
   try {
     const gameEngine = req.app.get('gameEngine');
     const io = req.app.get('io');
@@ -168,7 +168,7 @@ router.post('/race/start', requirePrivy, requireAdmin, (req, res) => {
       return res.status(503).json({ error: 'Game engine or Socket.IO not available' });
     }
 
-    gameEngine.startRace(io);
+    await gameEngine.startRace(io);
     res.sendStatus(202);
   } catch (error) {
       console.error('Error starting race:', error);

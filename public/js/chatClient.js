@@ -39,7 +39,7 @@ export class ChatClient {
   async sendMessage(message) {
     try {
       // Get token from provided function
-      const token = this.getToken();
+      const token = await this.getToken();
       if (!token) {
         console.error('No authentication token available');
         return false;
@@ -132,7 +132,7 @@ export class ChatClient {
   }
 
   // Handle chat input
-  handleChatInput(event) {
+  async handleChatInput(event) {
     if (event.key === 'Enter') {
       event.preventDefault();
       const input = event.target;
@@ -140,9 +140,9 @@ export class ChatClient {
       
       if (message) {
         // Check if we have a valid token
-        const token = this.getToken();
+        const token = await this.getToken();
         if (token) {
-          this.sendMessage(message);
+          await this.sendMessage(message);
           input.value = '';
         } else {
           // Show notification to connect wallet

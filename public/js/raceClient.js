@@ -69,6 +69,9 @@ export class RaceClient {
     // Update current race state with new data
     this.currentRace = data;
     
+    // Refresh pot statistics to show current race totals (or zero if no bets yet)
+    this.updatePotStatistics(data);
+    
     if (data.status === 'countdown') {
       // Show countdown UI without starting animations
       this.isRacing = false;
@@ -248,7 +251,7 @@ export class RaceClient {
     const potSummary = document.getElementById('potSummary');
     if (potSummary) {
       // Use race state totals if available, otherwise show placeholder data
-      const totalPot = data.totalPot || 0;
+      const totalPot = parseFloat(data.totalPot) || 0;
       const totalParticipants = data.totalBets || 0;
       
       // Clear existing content
@@ -266,7 +269,7 @@ export class RaceClient {
       totalPotLabel.textContent = 'Total Pot:';
       const totalPotValue = document.createElement('span');
       totalPotValue.className = 'stat-value';
-      totalPotValue.textContent = `${totalPot.toFixed(4)} SOL`;
+      totalPotValue.textContent = `${isNaN(totalPot) ? "0.0000" : totalPot.toFixed(4)} SOL`;
       totalPotItem.appendChild(totalPotLabel);
       totalPotItem.appendChild(totalPotValue);
       
