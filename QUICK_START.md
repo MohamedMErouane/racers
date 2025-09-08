@@ -3,11 +3,11 @@
 ## **⚡ 5-MINUTE DEPLOYMENT**
 
 ### **STEP 1: DATABASE (2 minutes)**
-1. Go to: `https://supabase.com/dashboard`
-2. Login → Click project `qikxavxbpbdzqttvrtdj`
-3. SQL Editor → New Query
+1. Set up PostgreSQL database (local or cloud provider)
+2. Create database named `racers`
+3. Connect to your PostgreSQL instance
 4. Copy/paste contents of `setup-database.sql`
-5. Click "Run" → Wait for "Success"
+5. Execute the SQL → Wait for "Success"
 
 ### **STEP 2: BACKEND (2 minutes)**
 ```bash
@@ -34,8 +34,7 @@ vercel --prod
 PRIVY_APP_ID=<YOUR_PRIVY_APP_ID>
 PRIVY_APP_SECRET=<YOUR_PRIVY_APP_SECRET>
 REDIS_URL=<YOUR_REDIS_URL>
-SUPABASE_URL=<YOUR_SUPABASE_URL>
-SUPABASE_SERVICE_KEY=<YOUR_SUPABASE_SERVICE_KEY>
+DATABASE_URL=postgresql://username:password@localhost:5432/racers
 COINBASE_API_KEY_ID=<YOUR_COINBASE_API_KEY_ID>
 COINBASE_SECRET=<YOUR_COINBASE_SECRET>
 PHANTOM_PRIVATE_KEY=<YOUR_PHANTOM_PRIVATE_KEY>

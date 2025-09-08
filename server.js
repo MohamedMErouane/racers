@@ -13,6 +13,7 @@ require('dotenv').config();
 
 // Import custom modules
 const { initializeRedis } = require('./services/redis');
+const logger = require('./services/logger');
 const { initializeSentry } = require('./services/sentry');
 
 // Import socket handlers
@@ -160,25 +161,25 @@ const io = socketIo(server, {
 // Initialize services
 async function initializeServices() {
   try {
-    console.log('🚀 Initializing services...');
+    logger.info('🚀 Initializing services...');
     
     // Initialize Redis
     await initializeRedis();
-    console.log('✅ Redis connected');
+    logger.info('✅ Redis connected');
     
     
     // Initialize Solana
     await initializeSolana();
-    console.log('✅ Solana connected');
+    logger.info('✅ Solana connected');
     
     // Initialize Privy
     const { initPrivy } = require('./lib/privy');
     initPrivy();
-    console.log('✅ Privy initialized');
+    logger.info('✅ Privy initialized');
     
     // Initialize database tables
     await initializeTables();
-    console.log('✅ Database tables initialized');
+    logger.info('✅ Database tables initialized');
     
     // Initialize Socket handlers
     // Chat is handled via HTTP POST, no socket handler needed
@@ -191,16 +192,16 @@ async function initializeServices() {
       });
     });
     
-    console.log('✅ Socket handlers initialized');
+    logger.info('✅ Socket handlers initialized');
     
     // Initialize Game Engine
     app.set('gameEngine', gameEngine);
     app.set('io', io);
-    console.log('✅ Game engine initialized');
+    logger.info('✅ Game engine initialized');
     
     // Initialize the race engine (includes restoration and starting)
     await gameEngine.initRaceEngine(io);
-    console.log('✅ Race engine initialized');
+    logger.info('✅ Race engine initialized');
     
     // Subscribe to race updates for horizontal scaling
     try {
@@ -212,30 +213,30 @@ async function initializeServices() {
           io.emit('race:update', update);
         }
       });
-      console.log('✅ Race pub/sub subscription initialized (pattern: race:*)');
+      logger.info('✅ Race pub/sub subscription initialized (pattern: race:*)');
     } catch (error) {
-      console.error('❌ Failed to initialize race pub/sub:', error);
+      logger.error('❌ Failed to initialize race pub/sub:', error);
     }
     
     // Check admin configuration
     const adminAddresses = process.env.ADMIN_ADDRESSES;
     if (!adminAddresses || adminAddresses.trim() === '') {
-      console.error('❌ ADMIN_ADDRESSES environment variable is required but not set');
-      console.error('Please set ADMIN_ADDRESSES to a comma-separated list of admin wallet addresses');
+      logger.error('❌ ADMIN_ADDRESSES environment variable is required but not set');
+      logger.error('Please set ADMIN_ADDRESSES to a comma-separated list of admin wallet addresses');
       process.exit(1);
     }
-    console.log('✅ Admin configuration validated');
+    logger.info('✅ Admin configuration validated');
     
-    console.log('🎉 All services initialized successfully!');
+    logger.info('🎉 All services initialized successfully!');
   } catch (error) {
-    console.error('❌ Failed to initialize services:', error);
+    logger.error('❌ Failed to initialize services:', error);
     process.exit(1);
   }
 }
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  logger.error('Error:', err);
   res.status(500).json({
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
@@ -255,40 +256,40 @@ async function startServer() {
   await initializeServices();
   
   server.listen(PORT, HOST, () => {
-    console.log(`🚀 Server running on ${HOST}:${PORT}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔗 CORS Origin: ${process.env.CORS_ORIGIN || 'https://racers.fun'}`);
+    logger.info(`🚀 Server running on ${HOST}:${PORT}`);
+    logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.info(`🔗 CORS Origin: ${process.env.CORS_ORIGIN || 'https://racers.fun'}`);
   });
 }
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
+  logger.info('SIGTERM received, shutting down gracefully');
   server.close(() => {
-    console.log('Process terminated');
+    logger.info('Process terminated');
     process.exit(0);
   });
 });
 
 process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully');
+  logger.info('SIGINT received, shutting down gracefully');
   server.close(() => {
-    console.log('Process terminated');
+    logger.info('Process terminated');
     process.exit(0);
   });
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
+  logger.error('Uncaught Exception:', err);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
   process.exit(1);
 });
 
-startServer().catch(console.error);
+startServer().catch(logger.error);
 
 module.exports = { app, server, io };

@@ -37,11 +37,11 @@
 ## **❌ WHAT YOU NEED TO DO (MANUAL ONLY):**
 
 ### **🗄️ 1. DATABASE SETUP (2 minutes)**
-- [ ] Go to `https://supabase.com/dashboard`
-- [ ] Login → Click project `qikxavxbpbdzqttvrtdj`
-- [ ] SQL Editor → New Query
+- [ ] Set up PostgreSQL database (local or cloud provider)
+- [ ] Create database named `racers`
+- [ ] Connect to your PostgreSQL instance
 - [ ] Copy/paste contents of `setup-database.sql`
-- [ ] Click "Run" → Wait for "Success"
+- [ ] Execute the SQL → Wait for "Success"
 
 ### **🖥️ 2. BACKEND DEPLOYMENT (3 minutes)**
 - [ ] Install Railway CLI: `npm install -g @railway/cli`

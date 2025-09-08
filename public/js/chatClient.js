@@ -158,7 +158,7 @@ export class ChatClient {
   setupEventListeners() {
     const chatInput = document.getElementById('chatInput');
     if (chatInput) {
-      chatInput.addEventListener('keypress', (e) => this.handleChatInput(e));
+      chatInput.addEventListener('keydown', (e) => this.handleChatInput(e));
     }
   }
 

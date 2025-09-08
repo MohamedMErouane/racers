@@ -228,7 +228,7 @@ async function startRace(socketIo) {
       countdown: countdownSeconds,
       roundId: raceState.roundId,
       raceId: raceState.raceId,
-      totalPot: parseFloat(lamportsToString(raceState.totalPotLamports)),
+      totalPot: lamportsToString(raceState.totalPotLamports),
       totalBets: raceState.totalBets
     });
   }
@@ -279,7 +279,7 @@ async function startRace(socketIo) {
           status: 'racing',
           roundId: raceState.roundId,
           raceId: raceState.raceId,
-          totalPot: parseFloat(lamportsToString(raceState.totalPotLamports)),
+          totalPot: lamportsToString(raceState.totalPotLamports),
           totalBets: raceState.totalBets
         });
       }
@@ -424,7 +424,7 @@ async function stopRace(winner, options = {}) {
       startTime: raceState.startTime,
       endTime: raceState.endTime,
       roundId: raceState.roundId,
-      totalPot: parseFloat(lamportsToString(raceState.totalPotLamports)),
+      totalPot: lamportsToString(raceState.totalPotLamports),
       totalBets: raceState.totalBets
     });
   }
@@ -497,7 +497,7 @@ function addBetToRace(amount) {
 // Get race totals
 function getRaceTotals() {
   return {
-    totalPot: parseFloat(lamportsToString(raceState.totalPotLamports)),
+    totalPot: lamportsToString(raceState.totalPotLamports),
     totalBets: raceState.totalBets
   };
 }
@@ -525,14 +525,14 @@ async function settleRace(raceId, winnerId) {
       const betLamports = stringToLamports(bet.amount);
       return sum + betLamports;
     }, BigInt(0));
-    const totalPot = parseFloat(lamportsToString(totalPotLamports));
+    const totalPot = lamportsToString(totalPotLamports);
     const treasuryFeeLamports = totalPotLamports * BigInt(4) / BigInt(100); // 4% treasury fee
     const rakebackPoolLamports = totalPotLamports * BigInt(10) / BigInt(100); // 10% rakeback to losers
     const winnerPoolLamports = totalPotLamports * BigInt(86) / BigInt(100); // 86% to winners
     
-    const treasuryFee = parseFloat(lamportsToString(treasuryFeeLamports));
-    const rakebackPool = parseFloat(lamportsToString(rakebackPoolLamports));
-    const winnerPool = parseFloat(lamportsToString(winnerPoolLamports));
+    const treasuryFee = lamportsToString(treasuryFeeLamports);
+    const rakebackPool = lamportsToString(rakebackPoolLamports);
+    const winnerPool = lamportsToString(winnerPoolLamports);
     
     // Calculate winnings for each winner (pro-rata) using BigInt
     const totalWinningAmountLamports = winningBets.reduce((sum, bet) => {
