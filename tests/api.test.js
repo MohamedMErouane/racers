@@ -265,4 +265,59 @@ describe('API Routes', () => {
     // Ensure no BigInt serialization errors occur
     expect(JSON.stringify(response.body)).not.toContain('BigInt');
   });
+
+  it('should return race state with current pot totals for mid-race requests', async () => {
+    // Mock game engine with mid-race state including pot totals
+    const mockGameEngine = {
+      getState: vi.fn().mockReturnValue({
+        racers: [
+          { id: 1, name: 'Racer 1', x: 500, finished: false },
+          { id: 2, name: 'Racer 2', x: 300, finished: false }
+        ],
+        status: 'racing',
+        seed: 'mid-race-seed',
+        tick: 50,
+        startTime: Date.now() - 5000,
+        endTime: Date.now() + 7000,
+        winner: null,
+        roundId: 2,
+        raceId: 'race_2',
+        countdownStartTime: null,
+        settled: false,
+        totalPotLamports: '2500000000', // 2.5 SOL in lamports as string
+        totalPot: 2.5, // Numeric total pot for clients
+        totalBets: 8 // Number of bets placed
+      })
+    };
+
+    app.set('gameEngine', mockGameEngine);
+
+    const response = await request(app)
+      .get('/api/race/state')
+      .expect(200);
+
+    // Verify pot totals are included for late-joining clients
+    expect(response.body.totalPot).toBe(2.5);
+    expect(response.body.totalBets).toBe(8);
+    expect(response.body.totalPotLamports).toBe('2500000000');
+    expect(response.body.status).toBe('racing');
+    expect(response.body.racers).toHaveLength(2);
+  });
+
+  it('should reject requests with wallet-less Privy tokens', async () => {
+    // Mock Privy token verification to return payload without address
+    vi.mocked(verifyPrivyToken).mockResolvedValueOnce({
+      userId: 'test-user-id',
+      email: 'test@example.com',
+      // No address field - wallet not connected
+    });
+
+    const response = await request(app)
+      .post('/api/bets')
+      .set('Authorization', 'Bearer valid-token')
+      .send({ racerId: 1, amount: 1.0 })
+      .expect(400);
+
+    expect(response.body.error).toBe('Wallet not connected. Please connect your wallet to continue.');
+  });
 });

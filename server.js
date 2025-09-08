@@ -198,9 +198,9 @@ async function initializeServices() {
     app.set('io', io);
     console.log('✅ Game engine initialized');
     
-    // Start the race engine
-    await gameEngine.startRace(io);
-    console.log('✅ Race engine started');
+    // Initialize the race engine (includes restoration and starting)
+    await gameEngine.initRaceEngine(io);
+    console.log('✅ Race engine initialized');
     
     // Subscribe to race updates for horizontal scaling
     try {

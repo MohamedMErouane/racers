@@ -38,8 +38,10 @@ A production-ready, on-chain anime racing platform with server-side race engine,
 ```bash
 git clone <repository-url>
 cd racers-vercel-live
-npm install
+npm install  # or npm ci for production
 ```
+
+**Note**: The `node_modules` directory is not included in the repository. You must run `npm install` or `npm ci` after cloning to install dependencies.
 
 ### 2. Environment Setup
 

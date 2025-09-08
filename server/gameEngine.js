@@ -163,6 +163,21 @@ async function restoreRaceState() {
   return false; // No state to restore
 }
 
+// Initialize race engine - called once at startup
+async function initRaceEngine(socketIo) {
+  io = socketIo;
+  
+  // Try to restore state from previous session
+  const stateRestored = await restoreRaceState();
+  if (stateRestored) {
+    logger.info('Race state restored from previous session');
+    return; // Race state was restored, don't start a new one
+  }
+  
+  // No previous state found, start a fresh race
+  await startRace(socketIo);
+}
+
 // Start a new race
 async function startRace(socketIo) {
   // Guard against double-starting
@@ -180,12 +195,6 @@ async function startRace(socketIo) {
   }
   
   io = socketIo;
-  
-  // Try to restore state first
-  const stateRestored = await restoreRaceState();
-  if (stateRestored) {
-    return; // Race state was restored, don't start a new one
-  }
   
   // Get latest round ID from database and increment it
   const latestRoundId = await pg.getLatestRoundId();
@@ -453,7 +462,9 @@ function getState() {
   // Clone race state and convert BigInt values to strings for JSON serialization
   const sanitizedState = {
     ...raceState,
-    totalPotLamports: raceState.totalPotLamports.toString()
+    totalPotLamports: raceState.totalPotLamports.toString(),
+    totalPot: parseFloat(lamportsToString(raceState.totalPotLamports)),
+    totalBets: raceState.totalBets
   };
   return sanitizedState;
 }
@@ -593,6 +604,7 @@ async function settleRace(raceId, winnerId) {
 }
 
 module.exports = {
+  initRaceEngine,
   startRace,
   stopRace,
   getState,

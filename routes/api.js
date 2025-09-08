@@ -76,6 +76,13 @@ async function requirePrivy(req, res, next) {
       username = `User_${payload.address.slice(0, 8)}`; // Use first 8 chars of address
     }
 
+    // Validate that user has connected a wallet
+    if (!payload.address) {
+      return res.status(400).json({ 
+        error: 'Wallet not connected. Please connect your wallet to continue.' 
+      });
+    }
+
     // Attach user info to request
     req.user = {
       id: payload.userId || payload.sub,
