@@ -97,7 +97,8 @@ const redisOps = {
     }
   },
 
-  // Get the highest round ID from Redis race keys
+  // Get the highest round ID from Redis race keys using SCAN (non-blocking)
+  // Note: This function should only be called at startup to limit scans
   async getHighestRaceRoundId() {
     try {
       const redis = getRedis();
@@ -105,21 +106,28 @@ const redisOps = {
         throw new Error('Redis client not initialized');
       }
       
-      // Scan for all race:* keys
-      const keys = await redis.keys('race:*');
-      if (keys.length === 0) {
-        return null;
-      }
-      
-      // Extract round IDs from keys and find the highest
+      let cursor = '0';
       let highestRoundId = 0;
-      for (const key of keys) {
-        const raceId = key.replace('race:', '');
-        const roundId = parseInt(raceId);
-        if (!isNaN(roundId) && roundId > highestRoundId) {
-          highestRoundId = roundId;
+      
+      // Use SCAN to iterate through race:* keys without blocking
+      do {
+        const result = await redis.scan(cursor, {
+          MATCH: 'race:*',
+          COUNT: 100
+        });
+        
+        cursor = result[0];
+        const keys = result[1];
+        
+        // Extract round IDs from keys and find the highest
+        for (const key of keys) {
+          const raceId = key.replace('race:', '');
+          const roundId = parseInt(raceId);
+          if (!isNaN(roundId) && roundId > highestRoundId) {
+            highestRoundId = roundId;
+          }
         }
-      }
+      } while (cursor !== '0');
       
       return highestRoundId > 0 ? highestRoundId : null;
     } catch (error) {

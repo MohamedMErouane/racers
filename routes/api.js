@@ -278,10 +278,12 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
     const newBalanceStr = lamportsToString(newBalanceLamports);
     await pg.updateUserBalance(userAddress, newBalanceStr);
     
-    // Log the bet to database with current race ID
+    // Log the bet to database with current race ID (convert to lamports for precision)
     const currentRaceState = gameEngine.getState();
     const raceId = currentRaceState.startTime ? `race_${currentRaceState.startTime}` : `race_${Date.now()}_${currentRaceState.roundId}`;
-    await pg.logBet(userAddress, raceId, bet.racerId, amount, 'pending');
+    const betAmountLamportsForLog = solToLamports(amount);
+    const betAmountString = lamportsToString(betAmountLamportsForLog);
+    await pg.logBet(userAddress, raceId, bet.racerId, betAmountString, 'pending');
     
     // Add bet to Redis for real-time updates
     await redis.addBet(bet);

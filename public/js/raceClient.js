@@ -45,6 +45,13 @@ export class RaceClient {
     this.currentRace = state;
     this.raceState = state;
     this.updateRaceUI();
+    
+    // Initialize HUD elements from current race state
+    this.updatePotStatistics({
+      totalPot: state.totalPot || 0,
+      totalBets: state.totalBets || 0,
+      raceId: state.roundId
+    });
   }
 
   // Update race progress
@@ -222,10 +229,10 @@ export class RaceClient {
       // Create winner time
       const winnerTime = document.createElement('div');
       winnerTime.className = 'winner-time';
-      // Use finishTime if available, otherwise compute elapsed time
+      // Compute elapsed time using startTime
       let timeText = '0.00s';
-      if (data.winner.finishTime && data.startTime) {
-        const elapsedMs = data.winner.finishTime - data.startTime;
+      if (data.startTime) {
+        const elapsedMs = data.endTime - data.startTime;
         timeText = (elapsedMs / 1000).toFixed(2) + 's';
       }
       winnerTime.textContent = timeText;
@@ -414,7 +421,23 @@ export class RaceClient {
 
   // Update pot statistics display
   updatePotStatistics(data) {
-    // Update total pot display using specific ID
+    // Update HUD total pot display
+    const hudTotalPotElement = document.getElementById('totalPot');
+    if (hudTotalPotElement && typeof data.totalPot === 'number') {
+      hudTotalPotElement.textContent = `${data.totalPot.toFixed(4)} SOL`;
+    } else if (hudTotalPotElement) {
+      hudTotalPotElement.textContent = '0.0000 SOL';
+    }
+    
+    // Update HUD total bets count
+    const hudTotalBetsElement = document.getElementById('totalBets');
+    if (hudTotalBetsElement && typeof data.totalBets === 'number') {
+      hudTotalBetsElement.textContent = data.totalBets.toString();
+    } else if (hudTotalBetsElement) {
+      hudTotalBetsElement.textContent = '0';
+    }
+    
+    // Update modal total pot display using specific ID
     const totalPotElement = document.getElementById('modalTotalPot');
     if (totalPotElement && typeof data.totalPot === 'number') {
       totalPotElement.textContent = `${data.totalPot.toFixed(4)} SOL`;
@@ -422,7 +445,7 @@ export class RaceClient {
       totalPotElement.textContent = '0.0000 SOL';
     }
     
-    // Update total bets count using specific ID
+    // Update modal total bets count using specific ID
     const totalBetsElement = document.getElementById('modalTotalBets');
     if (totalBetsElement && typeof data.totalBets === 'number') {
       totalBetsElement.textContent = data.totalBets.toString();

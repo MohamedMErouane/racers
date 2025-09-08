@@ -106,8 +106,11 @@ async function restoreRaceState() {
     if (storedState && (storedState.status === 'racing' || storedState.status === 'countdown')) {
       logger.info(`Restoring race state for round ${storedState.roundId} with status: ${storedState.status}`);
       
-      // Restore the race state
+      // Restore the race state, converting string back to BigInt
       Object.assign(raceState, storedState);
+      if (storedState.totalPotLamports) {
+        raceState.totalPotLamports = BigInt(storedState.totalPotLamports);
+      }
       
       // If race was in progress, restart the appropriate intervals
       if (storedState.status === 'racing') {
@@ -327,7 +330,12 @@ async function updateRace() {
   
   // Store race state in Redis for horizontal scaling and crash recovery
   try {
-    await redis.setRaceState(raceState.roundId, raceState);
+    // Convert BigInt to string for JSON serialization
+    const stateForRedis = {
+      ...raceState,
+      totalPotLamports: raceState.totalPotLamports.toString()
+    };
+    await redis.setRaceState(raceState.roundId, stateForRedis);
     
     // Publish race update for other instances
     await redis.publishRaceUpdate(raceState.roundId, {
@@ -375,6 +383,7 @@ async function stopRace(winner, options = {}) {
       winner: winner,
       seed: raceState.seed,
       results: raceState.racers,
+      startTime: raceState.startTime,
       endTime: raceState.endTime,
       roundId: raceState.roundId,
       totalPot: parseFloat(lamportsToString(raceState.totalPotLamports)),
