@@ -237,8 +237,9 @@ export class RaceClient {
     // Populate pot summary
     const potSummary = document.getElementById('potSummary');
     if (potSummary) {
-      const totalBets = data.results?.reduce((sum, racer) => sum + (racer.bets || 0), 0) || 0;
-      const totalWinners = data.results?.filter(racer => racer.bets > 0).length || 0;
+      // Use race state totals if available, otherwise show placeholder data
+      const totalBets = data.totalPot || 0;
+      const totalWinners = data.totalBets || 0;
       
       // Clear existing content
       potSummary.innerHTML = '';
@@ -293,16 +294,14 @@ export class RaceClient {
     // Populate top winners
     const topWinners = document.getElementById('topWinners');
     if (topWinners && data.results) {
-      const winners = data.results
-        .filter(racer => racer.bets > 0)
-        .sort((a, b) => b.bets - a.bets)
-        .slice(0, 5);
+      // Show race results without bet data since it's not available
+      const winners = data.results.slice(0, 5);
       
       // Clear existing content
       topWinners.innerHTML = '';
       
       // Create winner items using DOM API
-      winners.forEach(racer => {
+      winners.forEach((racer, index) => {
         const winnerItem = document.createElement('div');
         winnerItem.className = 'winner-item';
         
@@ -320,7 +319,7 @@ export class RaceClient {
         
         const winnerAmount = document.createElement('div');
         winnerAmount.className = 'winner-amount';
-        winnerAmount.textContent = `${racer.bets.toFixed(4)} SOL`;
+        winnerAmount.textContent = `Position: ${index + 1}`;
         
         // Assemble winner item
         winnerInfo.appendChild(racerIcon);

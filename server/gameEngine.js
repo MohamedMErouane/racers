@@ -4,6 +4,34 @@ const path = require('path');
 const { pg, redis } = require('./db');
 const logger = require('../services/logger');
 
+// Utility functions for lamport conversion
+function stringToLamports(str) {
+  try {
+    // Handle BigInt conversion for large numbers
+    const num = parseFloat(str);
+    if (isNaN(num)) return BigInt(0);
+    return BigInt(Math.floor(num * 1e9)); // Convert SOL to lamports
+  } catch (error) {
+    logger.error('Error converting string to lamports:', error);
+    return BigInt(0);
+  }
+}
+
+function solToLamports(sol) {
+  return stringToLamports(sol.toString());
+}
+
+function lamportsToString(lamports) {
+  try {
+    const lamportsBigInt = BigInt(lamports);
+    const sol = Number(lamportsBigInt) / 1e9;
+    return sol.toFixed(9);
+  } catch (error) {
+    logger.error('Error converting lamports to string:', error);
+    return '0.000000000';
+  }
+}
+
 // Race timing configuration from environment variables
 const RACE_COUNTDOWN_MS = parseInt(process.env.RACE_COUNTDOWN_MS) || 10000; // 10 seconds default
 const RACE_DURATION_MS = parseInt(process.env.RACE_DURATION_MS) || 12000; // 12 seconds default
@@ -55,7 +83,9 @@ const raceState = {
   startTime: null,
   endTime: null,
   winner: null,
-  roundId: 0             // Incrementing race number
+  roundId: 0,            // Incrementing race number
+  totalPot: 0,           // Total SOL in the pot
+  totalBets: 0           // Total number of bets placed
 };
 
 let raceInterval = null;
@@ -171,6 +201,8 @@ async function startRace(socketIo) {
   raceState.endTime = null;   // Will be set when racing begins
   raceState.racers = initializeRacers();
   raceState.winner = null;
+  raceState.totalPot = 0;     // Reset pot for new race
+  raceState.totalBets = 0;    // Reset bet count for new race
   
   logger.info(`Race countdown started with seed: ${raceState.seed}`);
   
@@ -182,7 +214,9 @@ async function startRace(socketIo) {
       racers: raceState.racers,
       status: 'countdown',
       countdown: countdownSeconds,
-      roundId: raceState.roundId
+      roundId: raceState.roundId,
+      totalPot: raceState.totalPot,
+      totalBets: raceState.totalBets
     });
   }
   
@@ -229,7 +263,9 @@ async function startRace(socketIo) {
           startTime: raceState.startTime,
           endTime: raceState.endTime,
           status: 'racing',
-          roundId: raceState.roundId
+          roundId: raceState.roundId,
+          totalPot: raceState.totalPot,
+          totalBets: raceState.totalBets
         });
       }
       
@@ -240,13 +276,13 @@ async function startRace(socketIo) {
 
 // Start the race loop at 60Hz
 function startRaceLoop() {
-  raceInterval = setInterval(() => {
-    updateRace();
+  raceInterval = setInterval(async () => {
+    await updateRace();
   }, 1000 / 60); // 60Hz
 }
 
 // Update race physics
-function updateRace() {
+async function updateRace() {
   if (raceState.status !== 'racing') return;
   
   const now = Date.now();
@@ -362,7 +398,9 @@ async function stopRace(winner, options = {}) {
       seed: raceState.seed,
       results: raceState.racers,
       endTime: raceState.endTime,
-      roundId: raceState.roundId
+      roundId: raceState.roundId,
+      totalPot: raceState.totalPot,
+      totalBets: raceState.totalBets
     });
   }
   
@@ -372,8 +410,22 @@ async function stopRace(winner, options = {}) {
     const raceId = raceState.startTime ? `race_${raceState.startTime}` : `race_${Date.now()}_${raceState.roundId}`;
     await pg.logRaceResult(raceId, raceState.seed, winner ? winner.id : 0, raceState.roundId);
     logger.info(`Race Results - Round: ${raceState.roundId}, Seed: ${raceState.seed}, Winner: ${winner ? winner.name : 'Unknown'}`);
+    
+    // Settle race bets and distribute winnings
+    const settlementResult = await settleRace(raceId, winner ? winner.id : 0);
+    
+    // Emit settlement event
+    if (io) {
+      io.emit('race:settled', {
+        raceId: raceId,
+        roundId: raceState.roundId,
+        winner: winner,
+        settlement: settlementResult
+      });
+    }
+    
   } catch (error) {
-    logger.error('Error logging race results:', error);
+    logger.error('Error logging race results or settling race:', error);
   }
   
   // Start new race after settle delay only if restart is true
@@ -389,10 +441,134 @@ function getState() {
   return raceState;
 }
 
+// Add bet to race totals
+function addBetToRace(amount) {
+  raceState.totalPot += amount;
+  raceState.totalBets += 1;
+  
+  logger.info(`Bet added: ${amount} SOL. Total pot: ${raceState.totalPot} SOL, Total bets: ${raceState.totalBets}`);
+}
+
+// Get race totals
+function getRaceTotals() {
+  return {
+    totalPot: raceState.totalPot,
+    totalBets: raceState.totalBets
+  };
+}
+
+// Settle race bets and distribute winnings
+async function settleRace(raceId, winnerId) {
+  try {
+    logger.info(`Starting race settlement for race ${raceId}, winner: ${winnerId}`);
+    
+    // Get all pending bets for this race
+    const bets = await pg.getRaceBets(raceId);
+    if (bets.length === 0) {
+      logger.info('No bets to settle for this race');
+      return { winners: [], losers: [], totalPayout: 0 };
+    }
+    
+    // Separate winning and losing bets
+    const winningBets = bets.filter(bet => bet.racer_id === winnerId);
+    const losingBets = bets.filter(bet => bet.racer_id !== winnerId);
+    
+    logger.info(`Settling ${winningBets.length} winning bets and ${losingBets.length} losing bets`);
+    
+    // Calculate total pot and fees
+    const totalPot = raceState.totalPot;
+    const treasuryFee = totalPot * 0.04; // 4% treasury fee
+    const rakebackPool = totalPot * 0.10; // 10% rakeback to losers
+    const winnerPool = totalPot * 0.86; // 86% to winners
+    
+    // Calculate winnings for each winner (pro-rata)
+    const totalWinningAmount = winningBets.reduce((sum, bet) => sum + parseFloat(bet.amount), 0);
+    const winnerPayouts = [];
+    
+    for (const bet of winningBets) {
+      const betAmount = parseFloat(bet.amount);
+      const payoutRatio = totalWinningAmount > 0 ? betAmount / totalWinningAmount : 0;
+      const payout = winnerPool * payoutRatio;
+      
+      // Get current balance and add winnings
+      const currentBalanceStr = await pg.getUserBalance(bet.user_id);
+      const currentBalanceLamports = stringToLamports(currentBalanceStr);
+      const payoutLamports = solToLamports(payout);
+      const newBalanceLamports = currentBalanceLamports + payoutLamports;
+      const newBalanceStr = lamportsToString(newBalanceLamports);
+      
+      // Update user balance
+      await pg.updateUserBalance(bet.user_id, newBalanceStr);
+      
+      // Update bet result
+      await pg.updateBetResult(bet.user_id, raceId, bet.racer_id, 'won');
+      
+      winnerPayouts.push({
+        userId: bet.user_id,
+        betAmount: betAmount,
+        payout: payout,
+        newBalance: newBalanceStr
+      });
+      
+      logger.info(`Winner payout: ${bet.user_id} bet ${betAmount} SOL, won ${payout.toFixed(4)} SOL`);
+    }
+    
+    // Calculate rakeback for each loser (equal distribution)
+    const rakebackPerLoser = losingBets.length > 0 ? rakebackPool / losingBets.length : 0;
+    const loserPayouts = [];
+    
+    for (const bet of losingBets) {
+      const betAmount = parseFloat(bet.amount);
+      
+      // Get current balance and add rakeback
+      const currentBalanceStr = await pg.getUserBalance(bet.user_id);
+      const currentBalanceLamports = stringToLamports(currentBalanceStr);
+      const rakebackLamports = solToLamports(rakebackPerLoser);
+      const newBalanceLamports = currentBalanceLamports + rakebackLamports;
+      const newBalanceStr = lamportsToString(newBalanceLamports);
+      
+      // Update user balance
+      await pg.updateUserBalance(bet.user_id, newBalanceStr);
+      
+      // Update bet result
+      await pg.updateBetResult(bet.user_id, raceId, bet.racer_id, 'lost');
+      
+      loserPayouts.push({
+        userId: bet.user_id,
+        betAmount: betAmount,
+        rakeback: rakebackPerLoser,
+        newBalance: newBalanceStr
+      });
+      
+      logger.info(`Loser rakeback: ${bet.user_id} bet ${betAmount} SOL, received ${rakebackPerLoser.toFixed(4)} SOL rakeback`);
+    }
+    
+    const settlementResult = {
+      winners: winnerPayouts,
+      losers: loserPayouts,
+      totalPayout: winnerPool,
+      totalRakeback: rakebackPool,
+      treasuryFee: treasuryFee,
+      totalPot: totalPot
+    };
+    
+    logger.info(`Race settlement completed: ${winnerPayouts.length} winners, ${loserPayouts.length} losers, total payout: ${winnerPool.toFixed(4)} SOL`);
+    
+    return settlementResult;
+    
+  } catch (error) {
+    logger.error('Error settling race:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   startRace,
   stopRace,
   getState,
+  addBetToRace,
+  getRaceTotals,
+  settleRace,
   refreshRacerStatsCache,
   deterministicRandom
 };

@@ -215,6 +215,38 @@ const pgOps = {
     }
   },
 
+  // Get bets for a specific race
+  async getRaceBets(raceId) {
+    try {
+      const query = `
+        SELECT user_id, racer_id, amount, result
+        FROM bet_history
+        WHERE race_id = $1 AND result = 'pending'
+        ORDER BY created_at ASC
+      `;
+      const result = await pg.query(query, [raceId]);
+      return result.rows;
+    } catch (error) {
+      logger.error('Error getting race bets:', error);
+      throw error;
+    }
+  },
+
+  // Update bet result
+  async updateBetResult(userId, raceId, racerId, result) {
+    try {
+      const query = `
+        UPDATE bet_history
+        SET result = $4
+        WHERE user_id = $1 AND race_id = $2 AND racer_id = $3
+      `;
+      await pg.query(query, [userId, raceId, racerId, result]);
+    } catch (error) {
+      logger.error('Error updating bet result:', error);
+      throw error;
+    }
+  },
+
   // Vault transaction history
   async logVaultTransaction(userId, transactionType, amount, transactionHash, status = 'completed') {
     try {

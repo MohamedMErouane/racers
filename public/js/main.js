@@ -23,7 +23,7 @@ class RacersApp {
       this.ui = new UI();
       
       // Make UI globally available for debugging (development only)
-      if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
+      if ((typeof process !== 'undefined' && process.env.NODE_ENV === 'development') || window.location.hostname === 'localhost') {
         window.ui = this.ui;
       }
       
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
   app.start();
   
   // Make app globally available for debugging (development only)
-  if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
+  if ((typeof process !== 'undefined' && process.env.NODE_ENV === 'development') || window.location.hostname === 'localhost') {
     window.racersApp = app;
   }
 });

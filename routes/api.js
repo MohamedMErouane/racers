@@ -348,14 +348,20 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
     // Add bet to Redis for real-time updates
     await redis.addBet(bet);
     
+    // Update race totals in game engine
+    gameEngine.addBetToRace(amount);
+    
+    // Get updated race totals
+    const raceTotals = gameEngine.getRaceTotals();
+    
     // Emit bet placed event to all connected clients for live updates
     const io = req.app.get('io');
     if (io) {
       io.emit('bet:placed', {
         bet,
         raceId,
-        totalPot: currentRaceState.totalPot || 0,
-        totalBets: currentRaceState.totalBets || 0
+        totalPot: raceTotals.totalPot,
+        totalBets: raceTotals.totalBets
       });
     }
     
