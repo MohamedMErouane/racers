@@ -232,4 +232,37 @@ describe('API Routes', () => {
     
     expect(response.body.success).toBe(true);
   });
+
+  it('should return race state with non-zero pot without BigInt serialization errors', async () => {
+    // Mock game engine with non-zero pot
+    const mockGameEngine = {
+      getState: vi.fn().mockReturnValue({
+        racers: [],
+        status: 'racing',
+        seed: 'test-seed',
+        tick: 10,
+        startTime: Date.now(),
+        endTime: Date.now() + 12000,
+        winner: null,
+        roundId: 1,
+        raceId: 'race_1',
+        countdownStartTime: null,
+        settled: false,
+        totalPotLamports: '1000000000', // 1 SOL in lamports as string
+        totalBets: 5
+      })
+    };
+
+    app.set('gameEngine', mockGameEngine);
+
+    const response = await request(app)
+      .get('/api/race/state')
+      .expect(200);
+
+    expect(response.body.totalPotLamports).toBe('1000000000');
+    expect(response.body.totalBets).toBe(5);
+    expect(response.body.status).toBe('racing');
+    // Ensure no BigInt serialization errors occur
+    expect(JSON.stringify(response.body)).not.toContain('BigInt');
+  });
 });

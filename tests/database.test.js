@@ -175,4 +175,32 @@ describe('Database Operations', () => {
     const bet = { racerId: 1, amount: 1, userId: 'test', timestamp: Date.now() };
     await expect(redis.addBet(bet)).rejects.toThrow('Redis connection failed');
   });
+
+  it('should get highest race round ID using SCAN with flat arguments', async () => {
+    // Mock Redis SCAN to return multiple pages of results
+    mockRedis.scan
+      .mockResolvedValueOnce(['1', ['race:1', 'race:3']]) // First page
+      .mockResolvedValueOnce(['2', ['race:5', 'race:2']]) // Second page  
+      .mockResolvedValueOnce(['0', ['race:7']]); // Final page
+
+    const { redis } = await import('../server/db.js');
+    
+    const highestRoundId = await redis.getHighestRaceRoundId();
+    
+    expect(highestRoundId).toBe(7);
+    expect(mockRedis.scan).toHaveBeenCalledWith('0', 'MATCH', 'race:*', 'COUNT', 100);
+    expect(mockRedis.scan).toHaveBeenCalledWith('1', 'MATCH', 'race:*', 'COUNT', 100);
+    expect(mockRedis.scan).toHaveBeenCalledWith('2', 'MATCH', 'race:*', 'COUNT', 100);
+  });
+
+  it('should return 0 when no race keys exist', async () => {
+    // Mock Redis SCAN to return no keys
+    mockRedis.scan.mockResolvedValueOnce(['0', []]);
+
+    const { redis } = await import('../server/db.js');
+    
+    const highestRoundId = await redis.getHighestRaceRoundId();
+    
+    expect(highestRoundId).toBe(0);
+  });
 });

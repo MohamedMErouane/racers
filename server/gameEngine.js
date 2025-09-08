@@ -425,6 +425,17 @@ async function stopRace(winner, options = {}) {
       });
     }
     
+    // Persist finished race state to Redis for crash recovery
+    try {
+      await redis.setRaceState(raceState.roundId, {
+        ...raceState,
+        totalPotLamports: raceState.totalPotLamports.toString()
+      });
+      logger.info(`Finished race state persisted to Redis for round ${raceState.roundId}`);
+    } catch (redisError) {
+      logger.error('Error persisting finished race state to Redis:', redisError);
+    }
+    
   } catch (error) {
     logger.error('Error logging race results or settling race:', error);
   }
@@ -439,7 +450,12 @@ async function stopRace(winner, options = {}) {
 
 // Get current race state
 function getState() {
-  return raceState;
+  // Clone race state and convert BigInt values to strings for JSON serialization
+  const sanitizedState = {
+    ...raceState,
+    totalPotLamports: raceState.totalPotLamports.toString()
+  };
+  return sanitizedState;
 }
 
 // Add bet to race totals

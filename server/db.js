@@ -111,10 +111,7 @@ const redisOps = {
       
       // Use SCAN to iterate through race:* keys without blocking
       do {
-        const result = await redis.scan(cursor, {
-          MATCH: 'race:*',
-          COUNT: 100
-        });
+        const result = await redis.scan(cursor, 'MATCH', 'race:*', 'COUNT', 100);
         
         cursor = result[0];
         const keys = result[1];

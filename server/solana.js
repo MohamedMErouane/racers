@@ -238,6 +238,11 @@ async function processDepositTransaction(signedTransaction, expectedUserAddress)
     // Verify the instruction accounts match expected vault and user
     const instruction = tx.instructions[0];
     
+    // Enforce exact account count - must have exactly 3 accounts (vault, user, system program)
+    if (instruction.keys.length !== 3) {
+      throw new Error(`Transaction must have exactly 3 accounts, found ${instruction.keys.length}`);
+    }
+    
     // Enforce program ID validation - must match vault program
     if (!instruction.programId.equals(program.programId)) {
       throw new Error(`Invalid program ID: expected ${program.programId.toString()}, got ${instruction.programId.toString()}`);
@@ -388,6 +393,11 @@ async function processWithdrawTransaction(signedTransaction, expectedUserAddress
     
     // Verify the instruction accounts match expected vault and user
     const instruction = tx.instructions[0];
+    
+    // Enforce exact account count - must have exactly 3 accounts (vault, user, system program)
+    if (instruction.keys.length !== 3) {
+      throw new Error(`Transaction must have exactly 3 accounts, found ${instruction.keys.length}`);
+    }
     
     // Enforce program ID validation - must match vault program
     if (!instruction.programId.equals(program.programId)) {

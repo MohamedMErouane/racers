@@ -225,4 +225,30 @@ describe('Race Engine', () => {
     expect(pg.getLatestRoundId).toHaveBeenCalled(); // Should check latest round ID
     expect(redis.getRaceState).toHaveBeenCalledWith(5); // Should check correct round ID
   });
+
+  it('should persist finished race state to Redis after settlement', async () => {
+    // Mock dependencies
+    vi.mocked(pg.getLatestRoundId).mockResolvedValueOnce(0);
+    vi.mocked(pg.logRaceResult).mockResolvedValueOnce();
+    vi.mocked(pg.getRaceBets).mockResolvedValueOnce([]);
+    vi.mocked(redis.setRaceState).mockResolvedValueOnce();
+    
+    // Start a race
+    await startRace(mockIo);
+    
+    // Simulate race completion with a winner
+    const winner = { id: 1, name: 'Winner', x: 1000, finished: true };
+    await stopRace(winner, { restart: false });
+    
+    // Verify that finished race state was persisted to Redis
+    expect(redis.setRaceState).toHaveBeenCalledWith(
+      expect.any(Number), // roundId
+      expect.objectContaining({
+        status: 'finished',
+        settled: true,
+        winner: winner,
+        totalPotLamports: expect.any(String) // Should be string for JSON serialization
+      })
+    );
+  });
 });

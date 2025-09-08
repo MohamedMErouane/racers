@@ -442,4 +442,82 @@ describe('Solana Integration', () => {
       .rejects
       .toThrow('Invalid program ID: expected mock-program-id, got different-program-id');
   });
+
+  it('should reject deposit transaction with excess accounts', async () => {
+    const mockTransaction = {
+      signatures: [{ publicKey: { toString: () => 'test-user' } }],
+      instructions: [{
+        programId: { toString: () => 'mock-program-id', equals: vi.fn().mockReturnValue(true) },
+        keys: [
+          { pubkey: { toString: () => 'vault-address', equals: vi.fn().mockReturnValue(true) } },
+          { pubkey: { toString: () => 'test-user', equals: vi.fn().mockReturnValue(true) }, isSigner: true },
+          { pubkey: { toString: () => 'system-program', equals: vi.fn().mockReturnValue(true) } },
+          { pubkey: { toString: () => 'extra-account', equals: vi.fn().mockReturnValue(true) } } // Extra account
+        ],
+        data: Buffer.concat([Buffer.from('deposit-discriminator'), Buffer.alloc(8)])
+      }]
+    };
+
+    await expect(processDepositTransaction(mockTransaction, 'test-user'))
+      .rejects
+      .toThrow('Transaction must have exactly 3 accounts, found 4');
+  });
+
+  it('should reject withdraw transaction with excess accounts', async () => {
+    const mockTransaction = {
+      signatures: [{ publicKey: { toString: () => 'test-user' } }],
+      instructions: [{
+        programId: { toString: () => 'mock-program-id', equals: vi.fn().mockReturnValue(true) },
+        keys: [
+          { pubkey: { toString: () => 'vault-address', equals: vi.fn().mockReturnValue(true) } },
+          { pubkey: { toString: () => 'test-user', equals: vi.fn().mockReturnValue(true) }, isSigner: true },
+          { pubkey: { toString: () => 'system-program', equals: vi.fn().mockReturnValue(true) } },
+          { pubkey: { toString: () => 'extra-account', equals: vi.fn().mockReturnValue(true) } } // Extra account
+        ],
+        data: Buffer.concat([Buffer.from('withdraw-discriminator'), Buffer.alloc(8)])
+      }]
+    };
+
+    await expect(processWithdrawTransaction(mockTransaction, 'test-user'))
+      .rejects
+      .toThrow('Transaction must have exactly 3 accounts, found 4');
+  });
+
+  it('should reject deposit transaction with insufficient accounts', async () => {
+    const mockTransaction = {
+      signatures: [{ publicKey: { toString: () => 'test-user' } }],
+      instructions: [{
+        programId: { toString: () => 'mock-program-id', equals: vi.fn().mockReturnValue(true) },
+        keys: [
+          { pubkey: { toString: () => 'vault-address', equals: vi.fn().mockReturnValue(true) } },
+          { pubkey: { toString: () => 'test-user', equals: vi.fn().mockReturnValue(true) }, isSigner: true }
+          // Missing system program account
+        ],
+        data: Buffer.concat([Buffer.from('deposit-discriminator'), Buffer.alloc(8)])
+      }]
+    };
+
+    await expect(processDepositTransaction(mockTransaction, 'test-user'))
+      .rejects
+      .toThrow('Transaction must have exactly 3 accounts, found 2');
+  });
+
+  it('should reject withdraw transaction with insufficient accounts', async () => {
+    const mockTransaction = {
+      signatures: [{ publicKey: { toString: () => 'test-user' } }],
+      instructions: [{
+        programId: { toString: () => 'mock-program-id', equals: vi.fn().mockReturnValue(true) },
+        keys: [
+          { pubkey: { toString: () => 'vault-address', equals: vi.fn().mockReturnValue(true) } },
+          { pubkey: { toString: () => 'test-user', equals: vi.fn().mockReturnValue(true) }, isSigner: true }
+          // Missing system program account
+        ],
+        data: Buffer.concat([Buffer.from('withdraw-discriminator'), Buffer.alloc(8)])
+      }]
+    };
+
+    await expect(processWithdrawTransaction(mockTransaction, 'test-user'))
+      .rejects
+      .toThrow('Transaction must have exactly 3 accounts, found 2');
+  });
 });
