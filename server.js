@@ -54,9 +54,7 @@ function getSolanaRpcOrigin() {
 const connectSrc = [
   "'self'", 
   "https://api.privy.io", 
-  "https://auth.privy.io", 
-  "https://api.mainnet-beta.solana.com", 
-  "https://api.devnet.solana.com"
+  "https://auth.privy.io"
 ];
 
 // Add WebSocket connections based on environment variables
@@ -203,6 +201,15 @@ async function initializeServices() {
     // Start the race engine
     gameEngine.startRace(io);
     console.log('✅ Race engine started');
+    
+    // Check admin configuration
+    const adminAddresses = process.env.ADMIN_ADDRESSES;
+    if (!adminAddresses || adminAddresses.trim() === '') {
+      console.error('❌ ADMIN_ADDRESSES environment variable is required but not set');
+      console.error('Please set ADMIN_ADDRESSES to a comma-separated list of admin wallet addresses');
+      process.exit(1);
+    }
+    console.log('✅ Admin configuration validated');
     
     console.log('🎉 All services initialized successfully!');
   } catch (error) {

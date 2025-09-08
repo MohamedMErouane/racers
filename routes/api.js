@@ -159,7 +159,8 @@ function requireAdmin(req, res, next) {
       process.env.ADMIN_ADDRESSES.split(',').map(addr => addr.trim()) : [];
     
     if (adminAddresses.length === 0) {
-      return res.status(503).json({ error: 'Admin configuration not set' });
+      console.error('❌ ADMIN_ADDRESSES environment variable is not set');
+      return res.status(403).json({ error: 'Admin access not configured' });
     }
     
     if (!req.user || !req.user.address) {
@@ -317,7 +318,7 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
     }
     
     // Check race state - only allow bets during countdown phase
-    const gameEngine = require('../server/gameEngine');
+    const gameEngine = req.app.get('gameEngine');
     const raceState = gameEngine.getState();
     if (raceState.status !== 'countdown') {
       return res.status(400).json({ 
@@ -339,7 +340,6 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
     await pg.updateUserBalance(userAddress, newBalanceStr);
     
     // Log the bet to database with current race ID
-    const gameEngine = require('../server/gameEngine');
     const currentRaceState = gameEngine.getState();
     const raceId = currentRaceState.startTime ? `race_${currentRaceState.startTime}` : `race_${Date.now()}_${currentRaceState.roundId}`;
     await pg.logBet(userAddress, raceId, bet.racerId, amount, 'pending');
@@ -408,8 +408,9 @@ router.post('/vault/deposit/process', requirePrivy, validateBody(vaultProcessSch
       const newBalanceStr = lamportsToString(newBalanceLamports);
       await pg.updateUserBalance(userAddress, newBalanceStr);
       
-      // Log vault transaction
-      await pg.logVaultTransaction(userAddress, 'deposit', result.verifiedAmount || 0, result.signature);
+      // Log vault transaction with exact lamport amount converted to SOL string
+      const depositAmountStr = lamportsToString(verifiedAmountLamports);
+      await pg.logVaultTransaction(userAddress, 'deposit', depositAmountStr, result.signature);
       
       result.newBalance = lamportsToString(newBalanceLamports);
     }
@@ -495,8 +496,9 @@ router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultProcessSc
       const newBalanceStr = lamportsToString(newBalanceLamports);
       await pg.updateUserBalance(userAddress, newBalanceStr);
       
-      // Log vault transaction
-      await pg.logVaultTransaction(userAddress, 'withdraw', result.verifiedAmount || 0, result.signature);
+      // Log vault transaction with exact lamport amount converted to SOL string
+      const withdrawAmountStr = lamportsToString(verifiedAmountLamports);
+      await pg.logVaultTransaction(userAddress, 'withdraw', withdrawAmountStr, result.signature);
       
       result.newBalance = lamportsToString(newBalanceLamports);
     }

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Import Solana module
+// Import Solana module using CommonJS
 const solana = require('../server/solana');
+const { Transaction } = require('@solana/web3.js');
 
 // Mock Solana dependencies
 const mockConnection = {
@@ -112,7 +113,7 @@ function createMockTransaction(type, amount) {
 }
 
 // Import the function we want to test
-const { computeDiscriminator } = require('../server/solana');
+// computeDiscriminator is not exported, so we'll test it indirectly
 
 describe('Solana Integration', () => {
   beforeEach(() => {
@@ -139,7 +140,7 @@ describe('Solana Integration', () => {
     };
     
     const mockTransaction = vi.fn(() => mockTx);
-    vi.mocked(require('@solana/web3.js').Transaction).mockImplementation(mockTransaction);
+    vi.mocked(Transaction).mockImplementation(mockTransaction);
     
     const result = await processDepositTransaction('mock-signed-tx', 'mock-user-address');
     
@@ -167,7 +168,7 @@ describe('Solana Integration', () => {
     };
     
     const mockTransaction = vi.fn(() => mockTx);
-    vi.mocked(require('@solana/web3.js').Transaction).mockImplementation(mockTransaction);
+    vi.mocked(Transaction).mockImplementation(mockTransaction);
     
     const result = await processDepositTransaction('mock-signed-tx', 'mock-user-address');
     
@@ -199,7 +200,7 @@ describe('Solana Integration', () => {
     };
     
     const mockTransaction = vi.fn(() => mockTx);
-    vi.mocked(require('@solana/web3.js').Transaction).mockImplementation(mockTransaction);
+    vi.mocked(Transaction).mockImplementation(mockTransaction);
     
     const result = await processDepositTransaction('mock-signed-tx', 'mock-user-address');
     
@@ -231,7 +232,7 @@ describe('Solana Integration', () => {
     };
     
     const mockTransaction = vi.fn(() => mockTx);
-    vi.mocked(require('@solana/web3.js').Transaction).mockImplementation(mockTransaction);
+    vi.mocked(Transaction).mockImplementation(mockTransaction);
     
     const result = await processDepositTransaction('mock-signed-tx', 'mock-user-address');
     
@@ -378,7 +379,7 @@ describe('Solana Integration', () => {
       signatures: [{ publicKey: 'mock-user' }]
     };
     
-    vi.mocked(require('@solana/web3.js').Transaction.from).mockReturnValue(mockTx);
+    vi.mocked(Transaction.from).mockReturnValue(mockTx);
     
     const { processDepositTransaction } = solana;
     
@@ -397,7 +398,7 @@ describe('Solana Integration', () => {
       signatures: [{ publicKey: 'mock-user' }]
     };
     
-    vi.mocked(require('@solana/web3.js').Transaction.from).mockReturnValue(mockTx);
+    vi.mocked(Transaction.from).mockReturnValue(mockTx);
     
     const { processWithdrawTransaction } = solana;
     
@@ -413,7 +414,7 @@ describe('Solana Integration', () => {
       signatures: [{ publicKey: 'mock-user' }]
     };
     
-    vi.mocked(require('@solana/web3.js').Transaction.from).mockReturnValue(mockTx);
+    vi.mocked(Transaction.from).mockReturnValue(mockTx);
     
     const { processDepositTransaction } = solana;
     
