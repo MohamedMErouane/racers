@@ -59,6 +59,9 @@ Required environment variables:
 - `SOLANA_RPC_URL` - Solana RPC endpoint
 - `PROGRAM_ID` - Your Solana program ID
 - `PHANTOM_PRIVATE_KEY` - Phantom wallet private key
+- `CORS_ORIGIN` - Comma-separated list of allowed origins (e.g., `https://yourdomain.com,https://api.yourdomain.com`)
+
+**Security Note**: For production deployments, always set `CORS_ORIGIN` to restrict access to your specific domain and its WebSocket endpoints. The CSP allows generic `ws:` and `wss:` protocols as fallbacks for local development only.
 
 ### 3. Database Setup
 

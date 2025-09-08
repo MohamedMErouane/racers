@@ -320,4 +320,109 @@ describe('API Routes', () => {
 
     expect(response.body.error).toBe('Wallet not connected. Please connect your wallet to continue.');
   });
+
+  it('should handle pot totals exceeding 2^53 lamports without precision loss', async () => {
+    // Mock game engine with very large pot (exceeding Number.MAX_SAFE_INTEGER)
+    const largePotLamports = BigInt('9007199254740992') + BigInt('1000000000'); // 2^53 + 1 SOL
+    const mockGameEngine = {
+      getState: vi.fn().mockReturnValue({
+        racers: [],
+        status: 'racing',
+        seed: 'large-pot-seed',
+        tick: 10,
+        startTime: Date.now(),
+        endTime: Date.now() + 12000,
+        winner: null,
+        roundId: 1,
+        raceId: 'race_1',
+        countdownStartTime: null,
+        settled: false,
+        totalPotLamports: largePotLamports.toString(),
+        totalPot: '9007199255.740992', // String representation to preserve precision
+        totalBets: 1000
+      })
+    };
+
+    app.set('gameEngine', mockGameEngine);
+
+    const response = await request(app)
+      .get('/api/race/state')
+      .expect(200);
+
+    // Verify large pot is returned as string to preserve precision
+    expect(response.body.totalPot).toBe('9007199255.740992');
+    expect(response.body.totalPotLamports).toBe(largePotLamports.toString());
+    expect(typeof response.body.totalPot).toBe('string');
+    
+    // Verify the value exceeds Number.MAX_SAFE_INTEGER
+    expect(parseFloat(response.body.totalPot)).toBeGreaterThan(Number.MAX_SAFE_INTEGER);
+  });
+
+  it('should require authentication for GET /api/chat', async () => {
+    const response = await request(app)
+      .get('/api/chat')
+      .expect(401);
+
+    expect(response.body.error).toBe('Authentication required');
+  });
+
+  it('should require authentication for GET /api/bets', async () => {
+    const response = await request(app)
+      .get('/api/bets')
+      .expect(401);
+
+    expect(response.body.error).toBe('Authentication required');
+  });
+
+  it('should apply rate limiting to GET /api/chat', async () => {
+    // Mock authentication for rate limit testing
+    vi.mocked(verifyPrivyToken).mockResolvedValue({
+      userId: 'test-user-id',
+      address: 'test-address',
+      email: 'test@example.com'
+    });
+
+    // Make multiple requests to trigger rate limit
+    const requests = Array(35).fill().map(() => 
+      request(app)
+        .get('/api/chat')
+        .set('Authorization', 'Bearer valid-token')
+    );
+
+    const responses = await Promise.all(requests);
+    
+    // Some requests should be rate limited (status 429)
+    const rateLimitedResponses = responses.filter(r => r.status === 429);
+    expect(rateLimitedResponses.length).toBeGreaterThan(0);
+    
+    // Check rate limit message
+    const rateLimitedResponse = rateLimitedResponses[0];
+    expect(rateLimitedResponse.body.message).toBe('Too many read requests, please slow down');
+  });
+
+  it('should apply rate limiting to GET /api/bets', async () => {
+    // Mock authentication for rate limit testing
+    vi.mocked(verifyPrivyToken).mockResolvedValue({
+      userId: 'test-user-id',
+      address: 'test-address',
+      email: 'test@example.com'
+    });
+
+    // Make multiple requests to trigger rate limit
+    const requests = Array(35).fill().map(() => 
+      request(app)
+        .get('/api/bets')
+        .set('Authorization', 'Bearer valid-token')
+    );
+
+    const responses = await Promise.all(requests);
+    
+    // Some requests should be rate limited (status 429)
+    const rateLimitedResponses = responses.filter(r => r.status === 429);
+    expect(rateLimitedResponses.length).toBeGreaterThan(0);
+    
+    // Check rate limit message
+    const rateLimitedResponse = rateLimitedResponses[0];
+    expect(rateLimitedResponse.body.message).toBe('Too many read requests, please slow down');
+  });
 });

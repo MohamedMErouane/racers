@@ -251,4 +251,47 @@ describe('Race Engine', () => {
       })
     );
   });
+
+  it('should prevent concurrent updateRace executions', async () => {
+    // Mock dependencies
+    vi.mocked(pg.getLatestRoundId).mockResolvedValueOnce(0);
+    
+    // Track concurrent executions
+    let updateRaceCallCount = 0;
+    let concurrentExecutions = 0;
+    
+    // Mock updateRace to simulate slow execution and track concurrency
+    const originalUpdateRace = gameEngine.updateRace;
+    gameEngine.updateRace = vi.fn().mockImplementation(async () => {
+      updateRaceCallCount++;
+      const currentCall = updateRaceCallCount;
+      
+      // Simulate slow execution
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Check if another call started while this one was running
+      if (updateRaceCallCount > currentCall) {
+        concurrentExecutions++;
+      }
+      
+      // Call original updateRace
+      return originalUpdateRace.call(gameEngine);
+    });
+    
+    // Start a race
+    await startRace(mockIo);
+    
+    // Wait for multiple ticks to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Stop the race
+    await stopRace({ id: 1, name: 'Test Winner' }, { restart: false });
+    
+    // Verify no concurrent executions occurred
+    expect(concurrentExecutions).toBe(0);
+    expect(updateRaceCallCount).toBeGreaterThan(1); // Should have multiple sequential calls
+    
+    // Restore original function
+    gameEngine.updateRace = originalUpdateRace;
+  });
 });

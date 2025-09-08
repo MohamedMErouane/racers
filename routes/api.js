@@ -25,6 +25,12 @@ const betRateLimit = rateLimit({
   message: 'Too many bet requests, please slow down'
 });
 
+const readRateLimit = rateLimit({
+  windowMs: 10000, // 10 seconds
+  max: 30, // 30 requests per window
+  message: 'Too many read requests, please slow down'
+});
+
 // Validation schemas
 const chatMessageSchema = z.object({
   message: z.string().min(1).max(500)
@@ -188,7 +194,7 @@ router.post('/race/stop', requirePrivy, requireAdmin, async (req, res) => {
 });
 
 // Chat endpoints
-router.get('/chat', async (req, res) => {
+router.get('/chat', readRateLimit, requirePrivy, async (req, res) => {
   try {
     const { redis } = require('../server/db');
     const messages = await redis.getChatMessages(100);
@@ -232,7 +238,7 @@ router.post('/chat', chatRateLimit, requirePrivy, validateBody(chatMessageSchema
 });
 
 // Bet endpoints
-router.get('/bets', async (req, res) => {
+router.get('/bets', readRateLimit, requirePrivy, async (req, res) => {
   try {
     const { redis } = require('../server/db');
     const bets = await redis.getBets(100);

@@ -423,8 +423,15 @@ export class RaceClient {
   updatePotStatistics(data) {
     // Update HUD total pot display
     const hudTotalPotElement = document.getElementById('totalPot');
-    if (hudTotalPotElement && typeof data.totalPot === 'number') {
-      hudTotalPotElement.textContent = `${data.totalPot.toFixed(4)} SOL`;
+    if (hudTotalPotElement && data.totalPot) {
+      // Handle string or number values, check for safe integer range
+      const potValue = typeof data.totalPot === 'string' ? parseFloat(data.totalPot) : data.totalPot;
+      if (potValue <= Number.MAX_SAFE_INTEGER) {
+        hudTotalPotElement.textContent = `${potValue.toFixed(4)} SOL`;
+      } else {
+        // For very large values, display as string to preserve precision
+        hudTotalPotElement.textContent = `${data.totalPot} SOL`;
+      }
     } else if (hudTotalPotElement) {
       hudTotalPotElement.textContent = '0.0000 SOL';
     }
@@ -439,8 +446,15 @@ export class RaceClient {
     
     // Update modal total pot display using specific ID
     const totalPotElement = document.getElementById('modalTotalPot');
-    if (totalPotElement && typeof data.totalPot === 'number') {
-      totalPotElement.textContent = `${data.totalPot.toFixed(4)} SOL`;
+    if (totalPotElement && data.totalPot) {
+      // Handle string or number values, check for safe integer range
+      const potValue = typeof data.totalPot === 'string' ? parseFloat(data.totalPot) : data.totalPot;
+      if (potValue <= Number.MAX_SAFE_INTEGER) {
+        totalPotElement.textContent = `${potValue.toFixed(4)} SOL`;
+      } else {
+        // For very large values, display as string to preserve precision
+        totalPotElement.textContent = `${data.totalPot} SOL`;
+      }
     } else if (totalPotElement) {
       totalPotElement.textContent = '0.0000 SOL';
     }

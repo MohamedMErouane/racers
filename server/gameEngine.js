@@ -291,9 +291,24 @@ async function startRace(socketIo) {
 
 // Start the race loop at 60Hz
 function startRaceLoop() {
-  raceInterval = setInterval(async () => {
-    await updateRace();
-  }, 1000 / 60); // 60Hz
+  const tickInterval = 1000 / 60; // 60Hz
+  
+  async function raceTick() {
+    try {
+      await updateRace();
+    } catch (error) {
+      logger.error('Error in race tick:', error);
+      // Continue the loop even if there's an error
+    }
+    
+    // Schedule next tick only if race is still running
+    if (raceState.status === 'racing') {
+      raceInterval = setTimeout(raceTick, tickInterval);
+    }
+  }
+  
+  // Start the first tick
+  raceTick();
 }
 
 // Update race physics
@@ -463,7 +478,7 @@ function getState() {
   const sanitizedState = {
     ...raceState,
     totalPotLamports: raceState.totalPotLamports.toString(),
-    totalPot: parseFloat(lamportsToString(raceState.totalPotLamports)),
+    totalPot: lamportsToString(raceState.totalPotLamports), // Return as string to preserve precision
     totalBets: raceState.totalBets
   };
   return sanitizedState;
