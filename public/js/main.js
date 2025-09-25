@@ -2,6 +2,8 @@
 import { RaceClient } from './raceClient.js';
 import { ChatClient } from './chatClient.js';
 import { WalletClient } from './walletClient.js';
+import { BettingClient } from './bettingClient.js';
+import { VaultClient } from './vaultClient.js';
 import { UI } from './ui.js';
 
 class RacersApp {
@@ -10,6 +12,8 @@ class RacersApp {
     this.raceClient = null;
     this.chatClient = null;
     this.walletClient = null;
+    this.bettingClient = null;
+    this.vaultClient = null;
     this.ui = null;
     this.isInitialized = false;
   }
@@ -34,6 +38,8 @@ class RacersApp {
       this.raceClient = new RaceClient(this.socket);
       this.walletClient = new WalletClient();
       this.chatClient = new ChatClient(this.socket, () => this.walletClient?.getAccessToken());
+      this.bettingClient = new BettingClient(() => this.walletClient?.getAccessToken(), this.socket);
+      this.vaultClient = new VaultClient(() => this.walletClient?.getAccessToken(), this.walletClient);
       
       // Setup event handlers
       this.setupEventHandlers();
@@ -41,14 +47,18 @@ class RacersApp {
       // Initialize wallet client first
       await this.walletClient.initialize();
       
-      // Initialize race client and chat client after wallet is ready
+      // Initialize race client, chat client, and betting client after wallet is ready
       await Promise.all([
         this.raceClient.setupEventHandlers(),
-        this.chatClient.initialize()
+        this.chatClient.initialize(),
+        this.bettingClient.initialize()
       ]);
       
       this.isInitialized = true;
       console.log('✅ Racers.fun initialized successfully!');
+      
+      // Hide loading screen
+      this.hideLoadingScreen();
       
       // Show welcome notification
       this.ui.showNotification('Welcome to Racers.fun!', 'success');
@@ -56,6 +66,9 @@ class RacersApp {
     } catch (error) {
       console.error('❌ Failed to initialize Racers.fun:', error);
       this.ui.showNotification('Failed to initialize application', 'error');
+      
+      // Hide loading screen even on error
+      this.hideLoadingScreen();
     }
   }
 
@@ -136,6 +149,19 @@ class RacersApp {
     // Refresh chat history now that user is authenticated
     if (this.chatClient) {
       this.chatClient.fetchChatHistory();
+    }
+    
+    // Refresh balance now that user is authenticated
+    if (this.bettingClient) {
+      this.bettingClient.fetchBalance();
+    }
+  }
+
+  // Hide loading screen
+  hideLoadingScreen() {
+    const loadingScreen = document.getElementById('loadingScreen');
+    if (loadingScreen) {
+      loadingScreen.style.display = 'none';
     }
   }
 

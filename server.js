@@ -37,6 +37,16 @@ const server = http.createServer(app);
 // Initialize Sentry first
 initializeSentry(app);
 
+// Health check endpoint (must be before other routes)
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 // Parse Solana RPC URL for CSP
 function getSolanaRpcOrigin() {
   const rpcUrl = process.env.SOLANA_RPC_URL;
@@ -98,8 +108,8 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       connectSrc: connectSrc,
-      scriptSrc: ["'self'", "https://auth.privy.io"],
-      styleSrc: ["'self'", "https://fonts.googleapis.com"],
+      scriptSrc: ["'self'", "https://auth.privy.io", "https://unpkg.com"],
+      styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
     },
@@ -202,6 +212,16 @@ async function initializeServices() {
     // Initialize the race engine (includes restoration and starting)
     await gameEngine.initRaceEngine(io);
     logger.info('✅ Race engine initialized');
+    
+    // Initialize transaction listener for Solana deposits/withdrawals
+    const { transactionListener } = require('./server/transactionListener');
+    const listenerInitialized = await transactionListener.initialize();
+    if (listenerInitialized) {
+      await transactionListener.startListening();
+      logger.info('✅ Solana transaction listener started');
+    } else {
+      logger.warn('⚠️ Solana transaction listener disabled');
+    }
     
     // Subscribe to race updates for horizontal scaling
     try {

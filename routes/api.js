@@ -60,8 +60,24 @@ async function requirePrivy(req, res, next) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // Verify the Privy JWT token
-    const payload = await verifyPrivyToken(token);
+    let payload;
+
+    // Check if this is a mock token (starts with "mock.jwt.token.")
+    if (token.startsWith('mock.jwt.token.') && process.env.NODE_ENV === 'development') {
+      console.log('🎭 Processing mock authentication token');
+      try {
+        // Decode the mock token
+        const mockPayload = token.replace('mock.jwt.token.', '');
+        payload = JSON.parse(atob(mockPayload));
+        console.log('✅ Mock token decoded:', { sub: payload.sub, email: payload.email });
+      } catch (error) {
+        console.error('❌ Failed to decode mock token:', error);
+        return res.status(401).json({ error: 'Invalid mock token' });
+      }
+    } else {
+      // Verify the real Privy JWT token
+      payload = await verifyPrivyToken(token);
+    }
 
     // Generate username from email or use address as fallback
     let username = 'Anonymous';
@@ -78,12 +94,16 @@ async function requirePrivy(req, res, next) {
       if (!username) {
         username = 'Anonymous';
       }
-    } else if (payload.address) {
-      username = `User_${payload.address.slice(0, 8)}`; // Use first 8 chars of address
+    } else if (payload.address || payload.wallet) {
+      const address = payload.address || payload.wallet;
+      username = `User_${address.slice(0, 8)}`; // Use first 8 chars of address
     }
 
-    // Validate that user has connected a wallet
-    if (!payload.address) {
+    // For mock tokens, we don't require a connected wallet
+    const requireWallet = !token.startsWith('mock.jwt.token.');
+    
+    // Validate that user has connected a wallet (only for real tokens)
+    if (requireWallet && !payload.address) {
       return res.status(400).json({ 
         error: 'Wallet not connected. Please connect your wallet to continue.' 
       });
@@ -92,10 +112,15 @@ async function requirePrivy(req, res, next) {
     // Attach user info to request
     req.user = {
       id: payload.userId || payload.sub,
-      address: payload.address,
+      address: payload.address || payload.wallet || 'mock_wallet_address',
       username: username,
-      verified: true
+      verified: true,
+      isMock: token.startsWith('mock.jwt.token.')
     };
+
+    if (req.user.isMock) {
+      console.log('🎭 Mock user authenticated:', req.user.username);
+    }
 
     next();
   } catch (error) {
@@ -237,6 +262,59 @@ router.post('/chat', chatRateLimit, requirePrivy, validateBody(chatMessageSchema
   }
 });
 
+// Balance endpoint
+router.get('/balance', readRateLimit, requirePrivy, async (req, res) => {
+  try {
+    const { pg } = require('../server/db');
+    const userAddress = req.user.address;
+    
+    const balance = await pg.getUserBalance(userAddress);
+    res.json({ 
+      balance,
+      address: userAddress
+    });
+  } catch (error) {
+    console.error('Error getting user balance:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Odds endpoint - get current betting odds for active race
+router.get('/odds', readRateLimit, async (req, res) => {
+  try {
+    const { pg } = require('../server/db');
+    const { getCurrentRace } = require('../server/gameEngine');
+    
+    // Get current race info
+    const currentRace = getCurrentRace();
+    if (!currentRace || !currentRace.raceId) {
+      return res.json({
+        error: 'No active race',
+        odds: null,
+        raceId: null
+      });
+    }
+    
+    // Get current odds for the active race
+    const odds = await pg.getCurrentOdds(currentRace.raceId);
+    
+    // Also get any saved snapshot for this race
+    const snapshot = await pg.getRaceOddsSnapshot(currentRace.raceId);
+    
+    // Return current odds with additional metadata
+    res.json({
+      ...odds,
+      roundId: currentRace.roundId,
+      status: currentRace.status,
+      countdown: currentRace.countdown || 0,
+      hasSnapshot: !!snapshot
+    });
+  } catch (error) {
+    console.error('Error getting race odds:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Bet endpoints
 router.get('/bets', readRateLimit, requirePrivy, async (req, res) => {
   try {
@@ -307,6 +385,9 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
     // Get updated race totals
     const raceTotals = gameEngine.getRaceTotals();
     
+    // Broadcast updated odds immediately after bet is placed
+    gameEngine.broadcastOddsUpdate();
+    
     // Emit bet placed event to all connected clients for live updates
     const io = req.app.get('io');
     if (io) {
@@ -325,6 +406,27 @@ router.post('/bets', betRateLimit, requirePrivy, validateBody(betSchema), async 
     });
   } catch (error) {
     console.error('Error adding bet:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Bet history endpoint
+router.get('/bet-history', readRateLimit, requirePrivy, async (req, res) => {
+  try {
+    const { pg } = require('../server/db');
+    const userAddress = req.user.address;
+    
+    const query = `
+      SELECT * FROM bet_history 
+      WHERE user_id = $1 
+      ORDER BY created_at DESC 
+      LIMIT 50
+    `;
+    const result = await pg.query(query, [userAddress]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error getting bet history:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -353,7 +455,7 @@ router.post('/vault/deposit/process', requirePrivy, validateBody(vaultProcessSch
       return res.status(400).json({ error: 'Signed transaction required' });
     }
     
-    const result = await solana.processDepositTransaction(signedTransaction, userAddress);
+    const result = await solana.processDepositTransaction(signedTransaction, userAddress, amount);
     
     if (result.success) {
       // Convert both amounts to BigInt lamports for precise comparison
@@ -429,7 +531,7 @@ router.post('/vault/withdraw/process', requirePrivy, validateBody(vaultProcessSc
       return res.status(400).json({ error: 'Signed transaction required' });
     }
     
-    const result = await solana.processWithdrawTransaction(signedTransaction, userAddress);
+    const result = await solana.processWithdrawTransaction(signedTransaction, userAddress, amount);
     
     if (result.success) {
       // Convert both amounts to BigInt lamports for precise comparison

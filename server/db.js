@@ -213,8 +213,15 @@ const pgOps = {
       const query = 'SELECT balance FROM user_balances WHERE user_id = $1';
       const result = await pg.query(query, [userId]);
       const balance = result.rows[0]?.balance;
-      // Return balance as string to preserve precision, defaulting to '0' if not found
-      return balance ? balance.toString() : '0';
+      
+      // If user doesn't exist, create them with 0 SOL starting balance
+      if (!result.rows[0]) {
+        await this.updateUserBalance(userId, '0.0');
+        return '0.0';
+      }
+      
+      // Return balance as string to preserve precision
+      return balance ? balance.toString() : '0.0';
     } catch (error) {
       logger.error('Error getting user balance:', error);
       throw error; // Rethrow to let callers handle the error
@@ -268,6 +275,151 @@ const pgOps = {
     }
   },
 
+  // Get current odds for a race based on bet distribution
+  async getCurrentOdds(raceId) {
+    try {
+      const query = `
+        SELECT 
+          racer_id,
+          SUM(amount) as total_bet,
+          COUNT(*) as bet_count
+        FROM bet_history
+        WHERE race_id = $1 AND result = 'pending'
+        GROUP BY racer_id
+        ORDER BY racer_id ASC
+      `;
+      const result = await pg.query(query, [raceId]);
+      
+      // Calculate total pot
+      const totalPot = result.rows.reduce((sum, row) => sum + parseFloat(row.total_bet), 0);
+      
+      // Calculate odds for each racer
+      const odds = {};
+      const defaultOdds = 2.0; // Default odds when no bets exist
+      
+      if (totalPot === 0) {
+        // No bets yet, return default odds for all racers (1-8)
+        for (let i = 1; i <= 8; i++) {
+          odds[i] = {
+            racerId: i,
+            odds: defaultOdds,
+            totalBet: 0,
+            betCount: 0,
+            probability: 12.5, // Equal probability
+            payout: defaultOdds
+          };
+        }
+      } else {
+        // Calculate odds based on bet distribution
+        const houseEdge = 0.14; // 14% house edge (86% payout)
+        const availablePayout = totalPot * (1 - houseEdge);
+        
+        // Create odds for all racers (1-8)
+        for (let i = 1; i <= 8; i++) {
+          const racerBets = result.rows.find(row => parseInt(row.racer_id) === i);
+          const racerTotalBet = racerBets ? parseFloat(racerBets.total_bet) : 0;
+          const racerBetCount = racerBets ? parseInt(racerBets.bet_count) : 0;
+          
+          let racerOdds, probability, payout;
+          
+          if (racerTotalBet === 0) {
+            // No bets on this racer - high odds
+            racerOdds = 10.0;
+            probability = availablePayout / (totalPot * racerOdds) * 100;
+            payout = racerOdds;
+          } else {
+            // Calculate odds based on proportion of total bets
+            const betProportion = racerTotalBet / totalPot;
+            probability = betProportion * 100;
+            
+            // Odds = total available payout / racer's share
+            payout = availablePayout / racerTotalBet;
+            racerOdds = Math.max(1.1, Math.min(10.0, payout)); // Cap between 1.1x and 10x
+          }
+          
+          odds[i] = {
+            racerId: i,
+            odds: parseFloat(racerOdds.toFixed(2)),
+            totalBet: racerTotalBet,
+            betCount: racerBetCount,
+            probability: parseFloat(probability.toFixed(1)),
+            payout: parseFloat(payout.toFixed(2))
+          };
+        }
+      }
+      
+      const oddsData = {
+        raceId,
+        totalPot,
+        timestamp: new Date().toISOString(),
+        odds
+      };
+
+      // Save odds snapshot to database for this race
+      await this.saveRaceOddsSnapshot(raceId, oddsData);
+      
+      return oddsData;
+    } catch (error) {
+      logger.error('Error calculating current odds:', error);
+      throw error;
+    }
+  },
+
+  // Save race odds snapshot to database
+  async saveRaceOddsSnapshot(raceId, oddsData) {
+    try {
+      // Extract round ID from race ID (e.g., "race_654" -> 654)
+      const roundId = parseInt(raceId.replace('race_', '')) || 0;
+      
+      const query = `
+        INSERT INTO race_odds_snapshots (race_id, round_id, odds_data, total_pot, total_bets, created_at)
+        VALUES ($1, $2, $3, $4, $5, NOW())
+        ON CONFLICT (race_id) DO UPDATE SET
+        odds_data = EXCLUDED.odds_data,
+        total_pot = EXCLUDED.total_pot,
+        total_bets = EXCLUDED.total_bets,
+        created_at = EXCLUDED.created_at
+      `;
+      
+      await pg.query(query, [
+        raceId,
+        roundId,
+        JSON.stringify(oddsData),
+        oddsData.totalPot || 0,
+        Object.values(oddsData.odds).reduce((sum, o) => sum + o.betCount, 0)
+      ]);
+    } catch (error) {
+      logger.error('Error saving race odds snapshot:', error);
+      // Don't throw here - this is just for tracking
+    }
+  },
+
+  // Get historical odds for a specific race
+  async getRaceOddsSnapshot(raceId) {
+    try {
+      const query = `
+        SELECT odds_data, total_pot, total_bets, created_at
+        FROM race_odds_snapshots
+        WHERE race_id = $1
+      `;
+      const result = await pg.query(query, [raceId]);
+      
+      if (result.rows.length > 0) {
+        return {
+          ...result.rows[0].odds_data,
+          totalPot: parseFloat(result.rows[0].total_pot),
+          totalBets: result.rows[0].total_bets,
+          snapshotTime: result.rows[0].created_at
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      logger.error('Error getting race odds snapshot:', error);
+      return null;
+    }
+  },
+
   // Update bet result
   async updateBetResult(userId, raceId, racerId, result) {
     try {
@@ -279,6 +431,32 @@ const pgOps = {
       await pg.query(query, [userId, raceId, racerId, result]);
     } catch (error) {
       logger.error('Error updating bet result:', error);
+      throw error;
+    }
+  },
+
+
+
+  // Get race odds snapshot
+  async getRaceOddsSnapshot(raceId) {
+    try {
+      const query = `
+        SELECT race_id, round_id, odds_data, total_pot, total_bets, created_at
+        FROM race_odds_snapshots
+        WHERE race_id = $1
+      `;
+      const result = await pg.query(query, [raceId]);
+      if (result.rows[0]) {
+        return {
+          ...result.rows[0],
+          odds_data: result.rows[0].odds_data, // Already parsed by pg
+          total_pot: parseFloat(result.rows[0].total_pot),
+          total_bets: parseInt(result.rows[0].total_bets)
+        };
+      }
+      return null;
+    } catch (error) {
+      logger.error('Error getting race odds snapshot:', error);
       throw error;
     }
   },
@@ -346,6 +524,20 @@ async function initializeTables() {
         status VARCHAR(20) NOT NULL DEFAULT 'completed',
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create race_odds_snapshots table for tracking odds per race
+    await pg.query(`
+      CREATE TABLE IF NOT EXISTS race_odds_snapshots (
+        id SERIAL PRIMARY KEY,
+        race_id VARCHAR(255) NOT NULL,
+        round_id INTEGER NOT NULL,
+        odds_data JSONB NOT NULL,
+        total_pot DECIMAL(20, 9) NOT NULL DEFAULT 0,
+        total_bets INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(race_id)
       )
     `);
 

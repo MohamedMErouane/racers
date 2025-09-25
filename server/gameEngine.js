@@ -145,7 +145,7 @@ async function restoreRaceState() {
         // Race finished but not settled - complete settlement before starting new race
         logger.info(`Found unfinished race ${storedState.raceId}, completing settlement...`);
         try {
-          await settleRace(storedState.raceId, storedState.winner);
+          await settleRace(storedState.raceId, storedState.winner, null);
           logger.info(`Settlement completed for race ${storedState.raceId}`);
         } catch (error) {
           logger.error(`Error settling race ${storedState.raceId}:`, error);
@@ -217,6 +217,23 @@ async function startRace(socketIo) {
   raceState.totalBets = 0;    // Reset bet count for new race
   
   logger.info(`Race countdown started with seed: ${raceState.seed}`);
+  
+  // Save initial odds snapshot for new race (all default odds)
+  try {
+    const initialOdds = await pg.getCurrentOdds(raceState.raceId);
+    await pg.saveRaceOddsSnapshot(
+      raceState.raceId,
+      raceState.roundId,
+      initialOdds.odds,
+      0, // No bets yet
+      0  // No bet count yet
+    );
+  } catch (error) {
+    logger.error('Error saving initial odds snapshot:', error);
+  }
+  
+  // Start odds streaming for this race
+  startOddsStreaming();
   
   // Emit race start (countdown phase)
   if (io) {
@@ -437,7 +454,7 @@ async function stopRace(winner, options = {}) {
     logger.info(`Race Results - Round: ${raceState.roundId}, Seed: ${raceState.seed}, Winner: ${winner ? winner.name : 'Unknown'}`);
     
     // Settle race bets and distribute winnings
-    const settlementResult = await settleRace(raceId, winner ? winner.id : 0);
+    const settlementResult = await settleRace(raceId, winner ? winner.id : 0, io);
     
     // Emit settlement event
     if (io) {
@@ -503,7 +520,7 @@ function getRaceTotals() {
 }
 
 // Settle race bets and distribute winnings
-async function settleRace(raceId, winnerId) {
+async function settleRace(raceId, winnerId, io = null) {
   try {
     logger.info(`Starting race settlement for race ${raceId}, winner: ${winnerId}`);
     
@@ -610,6 +627,33 @@ async function settleRace(raceId, winnerId) {
     
     logger.info(`Race settlement completed: ${winnerPayouts.length} winners, ${loserPayouts.length} losers, total payout: ${lamportsToString(winnerPoolLamports)} SOL`);
     
+    // Emit individual notifications to winners and losers via socket.io
+    if (io) {
+      // Notify winners
+      winnerPayouts.forEach(payout => {
+        io.emit('bet:win', {
+          userId: payout.userId,
+          raceId: raceId,
+          betAmount: payout.betAmount,
+          winnings: payout.payout,
+          newBalance: payout.newBalance,
+          message: `🎉 You won ${payout.payout} SOL! Your bet paid off!`
+        });
+      });
+      
+      // Notify losers with rakeback
+      loserPayouts.forEach(payout => {
+        io.emit('bet:rakeback', {
+          userId: payout.userId,
+          raceId: raceId,
+          betAmount: payout.betAmount,
+          rakeback: payout.rakeback,
+          newBalance: payout.newBalance,
+          message: `💰 You received ${payout.rakeback} SOL rakeback!`
+        });
+      });
+    }
+    
     // Mark race as settled
     raceState.settled = true;
     
@@ -621,14 +665,86 @@ async function settleRace(raceId, winnerId) {
   }
 }
 
+// Get current race information
+function getCurrentRace() {
+  return {
+    raceId: raceState.raceId,
+    roundId: raceState.roundId,
+    status: raceState.status,
+    seed: raceState.seed,
+    startTime: raceState.startTime,
+    endTime: raceState.endTime,
+    totalPot: lamportsToString(raceState.totalPotLamports),
+    totalBets: raceState.totalBets
+  };
+}
+
+// Broadcast odds update to all connected clients
+async function broadcastOddsUpdate() {
+  try {
+    if (!raceState.raceId || raceState.status === 'finished') {
+      return; // Don't broadcast odds for finished races
+    }
+    
+    const odds = await pg.getCurrentOdds(raceState.raceId);
+    
+    // Save odds snapshot to database
+    await pg.saveRaceOddsSnapshot(
+      raceState.raceId,
+      raceState.roundId,
+      odds.odds,
+      odds.totalPot,
+      raceState.totalBets
+    );
+    
+    // Emit to all connected clients via Socket.IO
+    if (global.io) {
+      global.io.emit('odds_update', odds);
+    }
+  } catch (error) {
+    logger.error('Error broadcasting odds update:', error);
+  }
+}
+
+// Schedule regular odds updates during countdown/betting period
+function startOddsStreaming() {
+  // Clear any existing interval
+  if (global.oddsInterval) {
+    clearInterval(global.oddsInterval);
+  }
+  
+  // Broadcast odds every 2 seconds during countdown and betting
+  global.oddsInterval = setInterval(async () => {
+    if (raceState.status === 'countdown') {
+      await broadcastOddsUpdate();
+    } else if (raceState.status === 'racing' || raceState.status === 'finished') {
+      // Stop odds updates when race starts or finishes
+      clearInterval(global.oddsInterval);
+      global.oddsInterval = null;
+    }
+  }, 2000);
+}
+
+// Stop odds streaming
+function stopOddsStreaming() {
+  if (global.oddsInterval) {
+    clearInterval(global.oddsInterval);
+    global.oddsInterval = null;
+  }
+}
+
 module.exports = {
   initRaceEngine,
   startRace,
   stopRace,
   getState,
+  getCurrentRace,
   addBetToRace,
   getRaceTotals,
   settleRace,
+  broadcastOddsUpdate,
+  startOddsStreaming,
+  stopOddsStreaming,
   refreshRacerStatsCache,
   deterministicRandom
 };

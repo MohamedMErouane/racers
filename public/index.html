@@ -86,6 +86,10 @@
                         <div class="stat-value" id="myBets">0 SOL</div>
                         <div class="stat-label">My Bets</div>
                     </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="userBalance">100.0 SOL</div>
+                        <div class="stat-label">My Balance</div>
+                    </div>
                 </div>
             </div>
 
@@ -176,6 +180,21 @@
                 </div>
             </div>
             
+            <!-- Live Odds Display -->
+            <div class="odds-display">
+                <div class="odds-header">
+                    <h4>Live Betting Odds</h4>
+                    <div class="total-pot-info">
+                        <span>Total Pot: </span>
+                        <span id="totalPotDisplay">0 SOL</span>
+                    </div>
+                </div>
+                
+                <div class="odds-grid" id="oddsGrid">
+                    <!-- Odds will be dynamically populated here -->
+                </div>
+            </div>
+            
             <!-- Live Betting Distribution -->
             <div class="betting-distribution">
                 <div class="distribution-header">
@@ -251,22 +270,77 @@
         </div>
     </div>
 
+    <!-- Withdraw Modal -->
+    <div class="deposit-modal" id="withdrawModal">
+        <div class="deposit-content">
+            <div class="deposit-header">
+                <h2>Withdraw</h2>
+                <button class="close-btn" id="closeWithdrawModal">×</button>
+            </div>
+            
+            <div class="deposit-body">
+                <div class="token-section">
+                    <label>Token</label>
+                    <div class="token-selector">
+                        <div class="token-option selected">
+                            <div class="token-icon">◎</div>
+                            <div class="token-info">
+                                <span class="token-name">SOL</span>
+                                <span class="token-label">Solana</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="balance-section">
+                    <div class="balance-info">
+                        <span class="balance-usd" id="platformBalanceUSD">≈ $0.00 USD</span>
+                        <span class="balance-amount" id="platformBalance">Platform Balance: 0.000 SOL</span>
+                    </div>
+                </div>
+                
+                <div class="amount-section">
+                    <label>Amount</label>
+                    <div class="amount-input-container">
+                        <input type="number" id="withdrawAmount" placeholder="0.00" step="0.01" min="0.01">
+                        <span class="amount-usd">= $0.00</span>
+                        <div class="token-unit">◎</div>
+                    </div>
+                </div>
+                
+                <div class="fee-info">
+                    <span class="fee-text">Enjoy 0% fees on SOL deposits & withdrawals!</span>
+                </div>
+                
+                <button class="deposit-action-btn" id="confirmWithdrawBtn">
+                    WITHDRAW NOW
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Sound Toggle -->
     <div class="sound-toggle" id="soundToggle">
         <span class="sound-icon">🔊</span>
     </div>
 
 
-  <!-- Privy SDK -->
-  <script src="https://auth.privy.io/js/sdk.js"></script>
+  <!-- Privy SDK Loader -->
+  <script src="/js/privy-loader.js"></script>
+  
+  <!-- Mock Privy Fallback -->
+  <script src="/js/mock-privy.js"></script>
   
   <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
+  
+  <!-- Solana Web3.js -->
+  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 
-<!-- Configuration -->
-<script src="/js/config.js"></script>
+  <!-- Configuration (load before modules) -->
+  <script src="/js/config.js"></script>
 
-<!-- Main Application Script -->
-<script type="module" src="/js/main.js"></script>
+  <!-- Main Application Script -->
+  <script type="module" src="/js/main.js"></script>
 </body>
 </html> 

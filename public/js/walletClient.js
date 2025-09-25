@@ -7,12 +7,49 @@ export class WalletClient {
     this.accessToken = null;
   }
 
+  // Wait for Privy SDK to load
+  async waitForPrivySDK(maxWaitTime = 10000) {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < maxWaitTime) {
+      // Check if Privy is available (real or mock)
+      if (typeof Privy !== 'undefined' && window.privyLoaded) {
+        const privyType = window.usingMockPrivy ? 'Mock Privy' : 'Real Privy SDK';
+        console.log(`✅ ${privyType} loaded successfully`);
+        return true;
+      }
+      
+      console.log('⏳ Waiting for Privy SDK to load...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    console.error('❌ Privy SDK failed to load within timeout');
+    console.error('Debug: Privy type:', typeof Privy);
+    console.error('Debug: privyLoaded flag:', window.privyLoaded);
+    console.error('Debug: usingMockPrivy flag:', window.usingMockPrivy);
+    return false;
+  }
+
   // Initialize Privy wallet
   async initWallet() {
     try {
-      if (typeof Privy === 'undefined') {
-        throw new Error('Privy SDK not loaded');
+      console.log('🔄 Initializing Privy wallet...');
+      console.log('Config APP_ID:', window.CONFIG?.PRIVY_APP_ID);
+      
+      // Wait for Privy SDK to load
+      const sdkLoaded = await this.waitForPrivySDK();
+      if (!sdkLoaded) {
+        throw new Error('Privy SDK failed to load - please check your internet connection and refresh the page');
       }
+      
+      // Check if we have a valid app ID
+      if (!window.CONFIG?.PRIVY_APP_ID) {
+        throw new Error('Privy App ID not configured');
+      }
+      
+      console.log('🔧 Creating Privy instance...');
+      const privyType = window.usingMockPrivy ? 'Mock' : 'Real';
+      console.log(`📦 Using ${privyType} Privy SDK`);
       
       this.privy = new Privy({
         appId: window.CONFIG.PRIVY_APP_ID,
@@ -28,16 +65,25 @@ export class WalletClient {
         }
       });
       
+      console.log('⏳ Waiting for Privy to be ready...');
       await this.privy.ready();
+      console.log('✅ Privy is ready');
       
       if (this.privy.authenticated) {
+        console.log('🔐 User already authenticated, handling login...');
         await this.handleLogin();
       }
       
-      this.privy.on('login', () => this.handleLogin());
-      this.privy.on('logout', () => this.handleLogout());
+      this.privy.on('login', () => {
+        console.log('🎉 Login event received');
+        this.handleLogin();
+      });
+      this.privy.on('logout', () => {
+        console.log('👋 Logout event received');
+        this.handleLogout();
+      });
       
-      console.log('✅ Privy wallet initialized');
+      console.log('✅ Privy wallet initialized successfully');
       return true;
     } catch (error) {
       console.error('❌ Privy wallet initialization failed:', error);
@@ -120,14 +166,23 @@ export class WalletClient {
   // Connect wallet
   async connectWallet() {
     try {
+      console.log('🔄 Attempting to connect wallet...');
+      
       if (!this.privy) {
-        throw new Error('Privy not initialized');
+        console.error('❌ Privy not initialized');
+        // Try to initialize again
+        const initialized = await this.initWallet();
+        if (!initialized) {
+          throw new Error('Privy not initialized and failed to initialize');
+        }
       }
       
+      console.log('🔗 Calling Privy login...');
       await this.privy.login();
+      console.log('✅ Privy login completed');
     } catch (error) {
       console.error('❌ Wallet connection failed:', error);
-      alert('Failed to connect wallet');
+      alert(`Failed to connect wallet: ${error.message}`);
     }
   }
 
@@ -157,14 +212,44 @@ export class WalletClient {
   setupEventListeners() {
     const walletBtn = document.getElementById('walletBtn');
     if (walletBtn) {
-      walletBtn.addEventListener('click', () => this.connectWallet());
+      walletBtn.addEventListener('click', async () => {
+        console.log('💰 Wallet button clicked');
+        
+        // Show loading state
+        const originalText = walletBtn.textContent;
+        walletBtn.textContent = 'Connecting...';
+        walletBtn.disabled = true;
+        
+        try {
+          await this.connectWallet();
+        } finally {
+          // Reset button state if connection failed
+          if (!this.isAuthenticated) {
+            walletBtn.textContent = originalText;
+            walletBtn.disabled = false;
+          }
+        }
+      });
+      console.log('🎯 Wallet button event listener attached');
+    } else {
+      console.error('❌ Wallet button not found in DOM');
     }
   }
 
   // Initialize wallet client
   async initialize() {
+    console.log('🚀 Starting wallet client initialization...');
+    
+    // Wait longer for the DOM and external scripts to be fully loaded
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
     const success = await this.initWallet();
     if (success) {
+      this.setupEventListeners();
+      console.log('✅ Wallet client fully initialized');
+    } else {
+      console.log('⚠️ Wallet client initialized in fallback mode');
+      // Still setup event listeners for retry functionality
       this.setupEventListeners();
     }
     return success;

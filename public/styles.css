@@ -1687,6 +1687,88 @@ body.loaded .chat-collapse-btn {
 }
 
 /* Betting Distribution */
+/* Odds Display */
+.odds-display {
+    padding: 20px;
+    border-bottom: 1px solid #1f2937;
+}
+
+.odds-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.odds-header h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+}
+
+.total-pot-info {
+    font-size: 14px;
+    color: #9ca3af;
+}
+
+.total-pot-info span:first-child {
+    color: #9ca3af;
+}
+
+.total-pot-info span:nth-child(2) {
+    color: #10b981;
+    font-weight: bold;
+}
+
+.odds-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.odds-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(31, 41, 55, 0.6);
+    border-radius: 6px;
+    border: 1px solid rgba(55, 65, 81, 0.5);
+    transition: all 0.2s ease;
+}
+
+.odds-item:hover {
+    background: rgba(31, 41, 55, 0.8);
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+.odds-racer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.odds-racer-name {
+    font-size: 12px;
+    color: white;
+    font-weight: 500;
+}
+
+.odds-value {
+    font-size: 12px;
+    color: #10b981;
+    font-weight: bold;
+}
+
+.odds-probability {
+    font-size: 10px;
+    color: #9ca3af;
+    margin-left: 4px;
+}
+
 .betting-distribution {
     padding: 20px;
     flex: 1;
@@ -2800,6 +2882,84 @@ body.loaded .chat-collapse-btn {
     font-weight: 500;
     z-index: 10000;
     animation: slideIn 0.3s ease;
+}
+
+/* Notification System */
+.notification {
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    z-index: 10001;
+    max-width: 350px;
+    min-width: 250px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    animation: notificationSlideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.notification.success {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.9));
+    border-left: 4px solid #10b981;
+}
+
+.notification.error {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.9));
+    border-left: 4px solid #ef4444;
+}
+
+.notification.info {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.9));
+    border-left: 4px solid #3b82f6;
+}
+
+.notification.warning {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9));
+    border-left: 4px solid #f59e0b;
+}
+
+.notification-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.notification-message {
+    flex: 1;
+    line-height: 1.4;
+}
+
+.notification.hide {
+    animation: notificationSlideOut 0.3s ease-in-out forwards;
+}
+
+@keyframes notificationSlideIn {
+    0% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes notificationSlideOut {
+    0% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
 }
 
 /* Inline styles moved from HTML */
