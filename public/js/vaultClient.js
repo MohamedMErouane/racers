@@ -607,49 +607,37 @@ export class VaultClient {
   }
 
   // Show notification to user
-  showNotification(message, type = 'info') {
-    // Remove any existing notifications
-    const existingNotification = document.querySelector('.vault-notification');
-    if (existingNotification) {
-      existingNotification.remove();
-    }
-
+  showNotification(message, type = 'success') {
+    console.log(`📢 ${type.toUpperCase()}: ${message}`);
+    
+    // Remove any existing notifications first
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => {
+        notification.remove();
+    });
+    
     // Create notification element
     const notification = document.createElement('div');
-    notification.className = `vault-notification vault-notification-${type}`;
-    notification.innerHTML = `
-      <div class="vault-notification-content">
-        <span class="vault-notification-message">${message}</span>
-        <button class="vault-notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
-      </div>
-    `;
-
-    // Add styles
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      max-width: 400px;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      z-index: 10000;
-      font-family: 'Orbitron', sans-serif;
-      animation: slideIn 0.3s ease-out;
-      ${type === 'success' ? 'background: linear-gradient(135deg, #00ff88, #00cc6a); color: #000;' : ''}
-      ${type === 'error' ? 'background: linear-gradient(135deg, #ff4444, #cc0000); color: #fff;' : ''}
-      ${type === 'info' ? 'background: linear-gradient(135deg, #4488ff, #0066cc); color: #fff;' : ''}
-    `;
-
-    // Add to page
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    // Add to body (will appear on left due to CSS)
     document.body.appendChild(notification);
-
-    // Auto-remove after 5 seconds
+    
+    // Show notification with animation
     setTimeout(() => {
-      if (notification.parentNode) {
-        notification.style.animation = 'slideOut 0.3s ease-in';
-        setTimeout(() => notification.remove(), 300);
-      }
-    }, 5000);
+        notification.classList.add('show');
+    }, 50);
+    
+    // Auto remove after 3 seconds (changed from 4000 to 3000)
+    setTimeout(() => {
+        notification.classList.remove('show');
+        notification.classList.add('hide');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 200); // Wait for slide-out animation
+    }, 3000); // Changed from 4000ms to 3000ms (3 seconds)
   }
 }

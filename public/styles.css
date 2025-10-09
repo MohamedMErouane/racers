@@ -940,13 +940,17 @@ body.loaded .chat-collapse-btn {
     padding: 12px 20px;
     border-bottom: 1px solid rgba(147, 51, 234, 0.3);
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
+    text-align: center;
 }
 
 .race-stats {
     display: flex;
     gap: 30px;
+    justify-content: center;
+    margin-top: 10px;
 }
 
 .stat-item {
@@ -1605,9 +1609,6 @@ body.loaded .chat-collapse-btn {
     font-weight: bold;
     outline: none;
     transition: all 0.3s ease;
-    text-align: center;
-    min-width: 0;
-    width: 100%;
 }
 
 #customBetAmount:focus {
@@ -2375,29 +2376,6 @@ body.loaded .chat-collapse-btn {
     color: rgba(239, 68, 68, 0.7) !important;
 }
 
-/* Sound Toggle */
-.sound-toggle {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(45deg, #9333ea, #6366f1);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 4px 20px rgba(147, 51, 234, 0.3);
-    transition: all 0.3s ease;
-    z-index: 1000;
-}
-
-/* Hide sound toggle when disabled */
-.sound-toggle.hidden {
-    display: none !important;
-}
-
 /* Greyed out betting controls during race */
 .betting-panel.race-active .character-selection,
 .betting-panel.race-active .betting-options {
@@ -2888,118 +2866,59 @@ body.loaded .chat-collapse-btn {
 .notification {
     position: fixed;
     top: 100px;
-    right: 20px;
-    padding: 16px 20px;
-    border-radius: 12px;
+    left: 20px; /* Changed from right to left */
+    background: linear-gradient(135deg, #10b981, #059669);
     color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
     font-weight: 600;
     font-size: 14px;
     z-index: 10001;
+    transform: translateX(-120%); /* Start from left side hidden */
+    transition: all 0.3s ease-in-out;
+    border-left: 4px solid #34d399;
     max-width: 350px;
-    min-width: 250px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    animation: notificationSlideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    display: flex;
-    align-items: center;
-    gap: 12px;
 }
 
-.notification.success {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.9));
-    border-left: 4px solid #10b981;
-}
-
-.notification.error {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.9));
-    border-left: 4px solid #ef4444;
-}
-
-.notification.info {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.9));
-    border-left: 4px solid #3b82f6;
-}
-
-.notification.warning {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9));
-    border-left: 4px solid #f59e0b;
-}
-
-.notification-icon {
-    font-size: 20px;
-    flex-shrink: 0;
-}
-
-.notification-message {
-    flex: 1;
-    line-height: 1.4;
+/* Faster animation timing for 3-second display */
+.notification.show {
+    transform: translateX(0);
+    animation: slideInLeft 0.2s ease-out forwards;
 }
 
 .notification.hide {
-    animation: notificationSlideOut 0.3s ease-in-out forwards;
+    animation: slideOutLeft 0.2s ease-in forwards;
 }
 
-@keyframes notificationSlideIn {
-    0% {
-        transform: translateX(100%);
+/* Faster slide animations */
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-120%);
         opacity: 0;
     }
-    100% {
+    to {
         transform: translateX(0);
         opacity: 1;
     }
 }
 
-@keyframes notificationSlideOut {
-    0% {
+@keyframes slideOutLeft {
+    from {
         transform: translateX(0);
         opacity: 1;
     }
-    100% {
-        transform: translateX(100%);
+    to {
+        transform: translateX(-120%);
         opacity: 0;
     }
 }
 
-/* Inline styles moved from HTML */
-.wallet-actions {
-    display: none;
+.notification.slide-in {
+    animation: slideInLeft 0.3s ease-out forwards;
 }
 
-.chat-input {
-    width: 100%;
-    padding: 10px 12px;
-    background: rgba(30, 30, 40, 0.9);
-    border: 1px solid rgba(147, 51, 234, 0.5);
-    border-radius: 8px;
-    color: white;
-    font-size: 14px;
-    outline: none;
-    transition: all 0.2s ease;
-}
-
-.name-selection {
-    display: none;
-}
-
-.name-input {
-    width: 100%;
-    padding: 10px 12px;
-    background: rgba(30, 30, 40, 0.9);
-    border: 1px solid rgba(147, 51, 234, 0.5);
-    border-radius: 8px;
-    color: white;
-    font-size: 14px;
-    outline: none;
-    transition: all 0.2s ease;
-}
-
-.race-header h2 {
-    font-size: 24px;
-    margin-bottom: 5px;
-}
-
-.race-header span {
-    color: #9ca3af;
+.notification.slide-out {
+    animation: slideOutLeft 0.3s ease-in forwards;
 }
