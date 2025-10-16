@@ -163,30 +163,74 @@ export class BettingClient {
   // Populate character grid for selection
   populateCharacterGrid() {
     const characterGrid = document.getElementById('characterGrid');
-    if (!characterGrid || !this.racers.length) return;
-
+    if (!characterGrid || !this.racers) return;
+    
     characterGrid.innerHTML = '';
     
     this.racers.forEach(racer => {
-      const characterCard = document.createElement('div');
-      characterCard.className = 'character-grid-item';
-      characterCard.dataset.racerId = racer.id;
+      if (!racer.name) return;
       
-      characterCard.innerHTML = `
-        <img src="${racer.avatar}" alt="${racer.name}" class="character-avatar">
-        <div class="character-name">${racer.name}</div>
-        <div class="character-stats">
-          <div class="stat">Speed: ${racer.speed}</div>
-          <div class="stat">Acc: ${racer.acceleration}</div>
-        </div>
-      `;
+      const racerElement = document.createElement('div');
+      racerElement.className = 'character-grid-item';
+      racerElement.dataset.racerId = racer.id;
       
-      characterCard.addEventListener('click', () => {
+      // Create image element
+      const img = document.createElement('img');
+      img.className = 'character-avatar';
+      img.alt = racer.name;
+      img.src = racer.avatar || `images/characters/${racer.name.toLowerCase()}-face.png`;
+      
+      // Handle image load success
+      img.onload = () => {
+        console.log(`✅ Loaded image for ${racer.name}`);
+      };
+      
+      // Handle image load error
+      img.onerror = () => {
+        console.warn(`❌ Failed to load image for ${racer.name}: ${img.src}`);
+        
+        // Create fallback
+        const fallback = document.createElement('div');
+        fallback.className = 'character-fallback';
+        fallback.style.background = racer.color || '#ff69b4';
+        fallback.textContent = racer.name.charAt(0).toUpperCase();
+        
+        // Replace image with fallback
+        img.style.display = 'none';
+        racerElement.appendChild(fallback);
+      };
+      
+      // Add click handler
+      racerElement.addEventListener('click', () => {
+        // Remove selected class from others
+        document.querySelectorAll('.character-grid-item').forEach(el => {
+          el.classList.remove('selected');
+        });
+        
+        // Add selected class to clicked item
+        racerElement.classList.add('selected');
+        
+        // Call the select racer method
         this.selectRacer(racer.id, racer.name);
       });
       
-      characterGrid.appendChild(characterCard);
+      racerElement.appendChild(img);
+      characterGrid.appendChild(racerElement);
     });
+    
+    console.log(`✅ Character grid populated with ${this.racers.length} racers`);
+    
+    // Add keyboard navigation for horizontal scrolling
+    characterGrid.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') {
+        characterGrid.scrollBy({ left: -120, behavior: 'smooth' });
+      } else if (e.key === 'ArrowRight') {
+        characterGrid.scrollBy({ left: 120, behavior: 'smooth' });
+      }
+    });
+    
+    // Make it focusable for keyboard navigation
+    characterGrid.setAttribute('tabindex', '0');
   }
 
   // Select a racer for betting
