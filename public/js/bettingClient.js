@@ -39,6 +39,11 @@ export class BettingClient {
     this.socket.on('odds_update', (data) => {
       this.handleOddsUpdate(data);
     });
+    
+    // Listen for betting distribution updates
+    this.socket.on('betting_distribution', (data) => {
+      this.updateBettingDistribution(data);
+    });
   }
   
   // Handle new race starting
@@ -505,10 +510,371 @@ export class BettingClient {
     return this.currentRaceBets.reduce((sum, bet) => sum + bet.amount, 0);
   }
 
-  // Initialize betting client
+  // Update pie chart with betting distribution data
+  updateBettingDistribution(distributionData) {
+    console.log('📊 Updating betting distribution:', distributionData);
+    
+    // Update pie chart visual
+    this.updatePieChart(distributionData);
+    
+    // Update favorite character in center
+    this.updateFavoriteCharacter(distributionData);
+    
+    // Update distribution legend
+    this.updateDistributionLegend(distributionData);
+  }
+
+  // Update the pie chart visual
+  updatePieChart(data) {
+    const pieChart = document.querySelector('.pie-chart-visual');
+    if (!pieChart) return;
+    
+    // Create SVG pie chart
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '200');
+    svg.setAttribute('height', '200');
+    svg.setAttribute('viewBox', '0 0 200 200');
+    
+    const centerX = 100;
+    const centerY = 100;
+    const radius = 80;
+    
+    let currentAngle = 0;
+    
+    // Clear existing content
+    pieChart.innerHTML = '';
+    
+    // Create pie slices for each character with bets
+    Object.entries(data).forEach(([racerId, raceData]) => {
+      if (raceData.percentage > 0) {
+        const racer = this.racers.find(r => r.id == racerId);
+        if (!racer) return;
+        
+        const sliceAngle = (raceData.percentage / 100) * 360;
+        const endAngle = currentAngle + sliceAngle;
+        
+        // Create pie slice path
+        const path = this.createPieSlice(centerX, centerY, radius, currentAngle, endAngle, racer.color || '#ff69b4');
+        svg.appendChild(path);
+        
+        currentAngle = endAngle;
+      }
+    });
+    
+    pieChart.appendChild(svg);
+  }
+
+  // Create a pie slice SVG path
+  createPieSlice(centerX, centerY, radius, startAngle, endAngle, color) {
+    const startAngleRad = (startAngle * Math.PI) / 180;
+    const endAngleRad = (endAngle * Math.PI) / 180;
+    
+    const x1 = centerX + radius * Math.cos(startAngleRad);
+    const y1 = centerY + radius * Math.sin(startAngleRad);
+    const x2 = centerX + radius * Math.cos(endAngleRad);
+    const y2 = centerY + radius * Math.sin(endAngleRad);
+    
+    const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+    
+    const pathData = [
+      `M ${centerX} ${centerY}`,
+      `L ${x1} ${y1}`,
+      `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`,
+      'Z'
+    ].join(' ');
+    
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', pathData);
+    path.setAttribute('fill', color);
+    path.setAttribute('stroke', '#2a2a3a');
+    path.setAttribute('stroke-width', '2');
+    
+    return path;
+  }
+
+  // Update favorite character in pie chart center
+  updateFavoriteCharacter(data) {
+    // Find character with highest percentage
+    let favoriteRacerId = null;
+    let highestPercentage = 0;
+    
+    Object.entries(data).forEach(([racerId, raceData]) => {
+      if (raceData.percentage > highestPercentage) {
+        highestPercentage = raceData.percentage;
+        favoriteRacerId = racerId;
+      }
+    });
+    
+    const favoriteCharacter = this.racers.find(r => r.id == favoriteRacerId);
+    if (!favoriteCharacter) return;
+    
+    // Update pie chart center with favorite character
+    const pieChartCenter = document.querySelector('.pie-chart-center');
+    if (pieChartCenter) {
+      pieChartCenter.innerHTML = '';
+      
+      const img = document.createElement('img');
+      img.src = favoriteCharacter.avatar || `images/characters/${favoriteCharacter.name.toLowerCase()}-face.png`;
+      img.alt = favoriteCharacter.name;
+      img.style.cssText = `
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+      `;
+      
+      img.onerror = () => {
+        // Fallback
+        const fallback = document.createElement('div');
+        fallback.style.cssText = `
+          width: 100%;
+          height: 100%;
+          background: ${favoriteCharacter.color || '#ff69b4'};
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: 20px;
+        `;
+        fallback.textContent = favoriteCharacter.name.charAt(0).toUpperCase();
+        pieChartCenter.appendChild(fallback);
+      };
+      
+      img.onload = () => {
+        console.log(`✅ Updated favorite character: ${favoriteCharacter.name}`);
+      };
+      
+      pieChartCenter.appendChild(img);
+    }
+    
+    // Update favorite text
+    const favoriteInfo = document.querySelector('.favorite-text');
+    if (favoriteInfo) {
+      favoriteInfo.innerHTML = `Favorite: <span style="color: ${favoriteCharacter.color || '#ff69b4'}">${favoriteCharacter.name}</span> (${highestPercentage}%)`;
+    }
+  }
+
+  // Update distribution legend with character images and percentages
+  updateDistributionLegend(data) {
+    const distributionLegend = document.querySelector('.distribution-legend');
+    if (!distributionLegend) {
+      console.warn('Distribution legend element not found');
+      return;
+    }
+    
+    distributionLegend.innerHTML = '';
+    
+    // Sort by percentage (highest first) and filter out 0%
+    const sortedData = Object.entries(data)
+      .filter(([racerId, raceData]) => raceData.percentage > 0)
+      .sort(([,a], [,b]) => b.percentage - a.percentage)
+      .slice(0, 6); // Show top 6
+    
+    sortedData.forEach(([racerId, raceData]) => {
+      const racer = this.racers.find(r => r.id == racerId);
+      if (!racer) return;
+      
+      const legendItem = document.createElement('div');
+      legendItem.className = 'legend-item';
+      legendItem.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: rgba(30, 30, 40, 0.8);
+        margin-bottom: 6px;
+        border-left: 4px solid ${racer.color || '#ff69b4'};
+        transition: all 0.3s ease;
+      `;
+      
+      // Left side: Color indicator + Character image + Name
+      const leftSide = document.createElement('div');
+      leftSide.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+      `;
+      
+      // Color indicator
+      const colorDot = document.createElement('div');
+      colorDot.style.cssText = `
+        width: 12px;
+        height: 12px;
+        background: ${racer.color || '#ff69b4'};
+        border-radius: 50%;
+        flex-shrink: 0;
+      `;
+      
+      // Character image
+      const img = document.createElement('img');
+      img.src = racer.avatar || `images/characters/${racer.name.toLowerCase()}-face.png`;
+      img.alt = racer.name;
+      img.style.cssText = `
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid ${racer.color || '#ff69b4'};
+        flex-shrink: 0;
+      `;
+      
+      img.onerror = () => {
+        const fallback = document.createElement('div');
+        fallback.style.cssText = `
+          width: 24px;
+          height: 24px;
+          background: ${racer.color || '#ff69b4'};
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: 12px;
+          border: 2px solid ${racer.color || '#ff69b4'};
+          flex-shrink: 0;
+        `;
+        fallback.textContent = racer.name.charAt(0).toUpperCase();
+        leftSide.replaceChild(fallback, img);
+      };
+      
+      // Character name
+      const nameSpan = document.createElement('span');
+      nameSpan.style.cssText = `
+        color: white;
+        font-size: 14px;
+        font-weight: bold;
+        flex: 1;
+      `;
+      nameSpan.textContent = racer.name;
+      
+      // Right side: Percentage
+      const percentSpan = document.createElement('span');
+      percentSpan.style.cssText = `
+        color: ${racer.color || '#ff69b4'};
+        font-size: 14px;
+        font-weight: bold;
+        min-width: 45px;
+        text-align: right;
+      `;
+      percentSpan.textContent = `${raceData.percentage.toFixed(1)}%`;
+      
+      // Assemble the legend item
+      leftSide.appendChild(colorDot);
+      leftSide.appendChild(img);
+      leftSide.appendChild(nameSpan);
+      
+      legendItem.appendChild(leftSide);
+      legendItem.appendChild(percentSpan);
+      
+      // Add hover effect
+      legendItem.addEventListener('mouseenter', () => {
+        legendItem.style.background = 'rgba(40, 40, 50, 0.9)';
+        legendItem.style.transform = 'translateY(-1px)';
+      });
+      
+      legendItem.addEventListener('mouseleave', () => {
+        legendItem.style.background = 'rgba(30, 30, 40, 0.8)';
+        legendItem.style.transform = 'translateY(0)';
+      });
+      
+      distributionLegend.appendChild(legendItem);
+    });
+    
+    console.log(`✅ Updated distribution legend with ${sortedData.length} items`);
+  }
+
+  // Listen for betting distribution updates from server
+  setupBettingDistributionListener() {
+    if (!this.socket) return;
+    
+    this.socket.on('betting_distribution', (data) => {
+      console.log('📊 Betting distribution update:', data);
+      this.updateBettingDistribution(data);
+    });
+  }
+
+  // Fetch current betting distribution (now generates random data)
+  async fetchBettingDistribution() {
+    try {
+      // Generate random betting distribution data
+      const distributionData = this.generateRandomBettingDistribution();
+      this.updateBettingDistribution(distributionData);
+      return distributionData;
+    } catch (error) {
+      console.error('Error generating betting distribution:', error);
+      this.showDefaultDistribution();
+    }
+  }
+
+  // Generate random betting distribution for testing
+  generateRandomBettingDistribution() {
+    if (!this.racers || this.racers.length === 0) {
+      return {};
+    }
+    
+    const distributionData = {};
+    let totalPercentage = 0;
+    
+    // Randomly select 3-5 characters to have bets
+    const numBettedCharacters = Math.floor(Math.random() * 3) + 3; // 3-5 characters
+    const selectedRacers = [...this.racers]
+      .sort(() => Math.random() - 0.5) // Shuffle array
+      .slice(0, numBettedCharacters);
+    
+    // Generate random percentages that add up to 100%
+    const randomPercentages = [];
+    for (let i = 0; i < selectedRacers.length; i++) {
+      if (i === selectedRacers.length - 1) {
+        // Last character gets remaining percentage
+        randomPercentages.push(100 - totalPercentage);
+      } else {
+        // Random percentage between 5% and 40%
+        const percentage = Math.floor(Math.random() * 35) + 5;
+        randomPercentages.push(Math.min(percentage, 100 - totalPercentage - (selectedRacers.length - i - 1) * 5));
+        totalPercentage += randomPercentages[i];
+      }
+    }
+    
+    // Assign data to selected racers
+    selectedRacers.forEach((racer, index) => {
+      distributionData[racer.id] = {
+        percentage: randomPercentages[index],
+        totalBets: Math.floor(Math.random() * 50) + 10, // 10-60 total bets
+        totalAmount: (randomPercentages[index] * 0.1 * Math.random() + 0.5).toFixed(2) // Random SOL amount
+      };
+    });
+    
+    console.log('🎲 Generated random betting distribution:', distributionData);
+    return distributionData;
+  }
+
+  // Add a method to refresh betting distribution periodically
+  startRandomDistributionUpdates() {
+    // Update every 10-15 seconds with new random data
+    setInterval(() => {
+      const newDistribution = this.generateRandomBettingDistribution();
+      this.updateBettingDistribution(newDistribution);
+    }, Math.random() * 5000 + 10000); // 10-15 seconds
+  }
+
+  // Update your initialize method
   async initialize() {
     this.setupEventListeners();
     await this.loadRacers(); // Load racers and populate character grid
+    
+    // Setup betting distribution with random data
+    this.setupBettingDistributionListener();
+    await this.fetchBettingDistribution();
+    
+    // Start periodic random updates
+    this.startRandomDistributionUpdates();
+    
     // Try to fetch balance if user is already connected
     await this.fetchBalance();
   }

@@ -182,13 +182,6 @@
             
             <!-- Live Odds Display -->
             <div class="odds-display">
-                <div class="odds-header">
-                    <h4>Live Betting Odds</h4>
-                    <div class="total-pot-info">
-                        <span>Total Pot: </span>
-                        <span id="totalPotAmount">0 SOL</span>
-                    </div>
-                </div>
                 <div class="odds-grid" id="oddsGrid">
                     <!-- Odds items will be populated here by JavaScript -->
                 </div>
@@ -196,26 +189,22 @@
             
             <!-- Live Betting Distribution -->
             <div class="betting-distribution">
-                <div class="distribution-header">
-                    <h4>Live Betting Distribution</h4>
-                    <div class="favorite-info">
-                        <span>Favorite: </span>
-                        <span id="favoriteCharacter">None</span>
-                        <span id="favoritePercentage">(0%)</span>
-                    </div>
+                <h3>Live Betting Distribution</h3>
+                
+                <!-- Pie Chart Container -->
+                <div class="pie-chart-container">
+                    <div class="pie-chart-visual"></div>
+                    <div class="pie-chart-center"></div>
                 </div>
                 
-                <div class="distribution-content">
-                    <div class="pie-chart-container">
-                        <canvas id="pieChart" width="250" height="250"></canvas>
-                        <div class="pie-chart-center">
-                            <img src="" alt="" id="centerCharacterImg">
-                        </div>
-
-                    </div>
-                    
-                    <div class="distribution-legend" id="distributionLegend"></div>
+                <!-- Favorite Info -->
+                <div class="favorite-info">
+                    <span>Favorite: </span>
+                    <span class="favorite-text">None (0%)</span>
                 </div>
+                
+                <!-- Legend Container -->
+                <div class="distribution-legend"></div>
             </div>
         </div>
     </div>
