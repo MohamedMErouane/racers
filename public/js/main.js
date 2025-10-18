@@ -35,7 +35,7 @@ class RacersApp {
       await this.initializeSocket();
       
       // Initialize clients
-      this.raceClient = new RaceClient(this.socket);
+      this.raceClient = new RaceClient(this.socket, this.ui);
       this.walletClient = new WalletClient();
       this.chatClient = new ChatClient(this.socket, () => this.walletClient?.getAccessToken());
       this.bettingClient = new BettingClient(() => this.walletClient?.getAccessToken(), this.socket);

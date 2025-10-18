@@ -1,484 +1,740 @@
-// Race client module
+// Complete raceClient.js with all methods
+
 export class RaceClient {
-  constructor(socket) {
+  constructor(socket, ui = null) {
     this.socket = socket;
-    this.currentRace = null;
+    this.ui = ui;
     this.raceState = null;
-    this.isRacing = false;
-    this.countdown = 0;
+    this.canvas = null;
+    this.ctx = null;
+    this.animationId = null;
+    this.characterImages = new Map();
+    this.raceStartTime = null;
+    this.raceDuration = 30000; // 30 seconds race
+    this.currentBackground = null;
+    this.currentBackgroundName = 'default';
   }
 
-  // Listen for race events
+  // Setup event handlers
   setupEventHandlers() {
-    this.socket.on('race:state', (state) => {
-      this.updateRaceState(state);
-    });
-
-    this.socket.on('race:update', (update) => {
-      this.updateRaceProgress(update);
-    });
+    if (!this.socket) return;
 
     this.socket.on('race:start', (data) => {
       this.handleRaceStart(data);
     });
 
-    this.socket.on('race:countdown', (data) => {
-      this.handleCountdown(data);
+    this.socket.on('race:update', (data) => {
+      this.updateRaceProgress(data);
     });
 
     this.socket.on('race:end', (data) => {
       this.handleRaceEnd(data);
     });
 
-    this.socket.on('bet:placed', (data) => {
-      this.handleBetPlaced(data);
-    });
-
-    // Request current race state after connection is established
-    this.socket.on('connect', () => {
-      this.requestRaceState();
-    });
-  }
-
-  // Update race state
-  updateRaceState(state) {
-    this.currentRace = state;
-    this.raceState = state;
-    this.updateRaceUI();
+    // Initialize canvas
+    this.initializeCanvas();
     
-    // Initialize HUD elements from current race state
-    this.updatePotStatistics({
-      totalPot: state.totalPot || 0,
-      totalBets: state.totalBets || 0,
-      raceId: state.roundId
-    });
+    // Load character sprites
+    this.loadCharacterSprites();
   }
 
-  // Update race progress
-  updateRaceProgress(update) {
-    if (this.raceState) {
-      this.raceState.racers = update.racers;
-      this.raceState.timeElapsed = update.timeElapsed;
-      this.raceState.timeRemaining = update.timeRemaining;
-      this.updateRaceVisualization();
+  // Initialize race canvas
+  initializeCanvas() {
+    this.canvas = document.getElementById('raceCanvas');
+    if (!this.canvas) {
+      console.warn('Race canvas not found');
+      return;
+    }
+
+    this.ctx = this.canvas.getContext('2d');
+    
+    // Make canvas responsive to container size
+    const container = this.canvas.parentElement;
+    const containerRect = container.getBoundingClientRect();
+    
+    // Set canvas size based on container
+    this.canvas.width = Math.max(800, containerRect.width - 40);
+    this.canvas.height = Math.max(600, containerRect.height - 40);
+    
+    // Style canvas to fill container
+    this.canvas.style.width = '100%';
+    this.canvas.style.height = '100%';
+    this.canvas.style.background = '#1a1a2e';
+    this.canvas.style.borderRadius = '12px';
+    this.canvas.style.display = 'block';
+    
+    console.log(`Canvas size: ${this.canvas.width}x${this.canvas.height}`);
+  }
+
+  // Load random race background from your actual images
+  loadRandomBackground() {
+       const backgrounds = [
+      'background-image17.png',           // Desert/Nuketown theme
+      'background-image19.png',    // Post-apocalyptic theme  
+      'background-image24.png',             // Ninja village theme
+      'background-image33.png',             // Pure desert theme
+      'background-image34.png',           // Springfield theme
+      'background-image35.png',          // Pirate ship theme
+      'background-image36.png',          // Night mountain theme
+      'background-image37.png',       // Desert/RV theme
+      'background-image38.png'          // Colorful fantasy theme
+    ];
+    // Pick random background
+    const randomBg = backgrounds[Math.floor(Math.random() * backgrounds.length)];
+    const backgroundPath = `images/backgrounds/${randomBg}`;
+    
+    console.log(`🎨 Loading background: ${backgroundPath}`);
+    
+    const bgImage = new Image();
+    bgImage.onload = () => {
+      console.log(`✅ Loaded background: ${backgroundPath}`);
+      this.currentBackground = bgImage;
+      this.currentBackgroundName = randomBg.replace('.png', '');
+    };
+    
+    bgImage.onerror = () => {
+      console.log(`⚠️ Background not found: ${backgroundPath}, using fallback`);
+      this.currentBackground = null;
+      this.currentBackgroundName = 'default';
+    };
+    
+    bgImage.src = backgroundPath;
+  }
+
+  // Load character running sprites
+  async loadCharacterSprites() {
+    try {
+      const response = await fetch('/js/animeRacers.json');
+      const racers = await response.json();
+      
+      racers.forEach(racer => {
+        if (racer.name && racer.id) {
+          const img = new Image();
+          
+          // Use the exact paths from your JSON
+          const imagePath = racer.avatar2 || racer.avatar || `images/characters/${racer.name.toLowerCase()}-face.png`;
+          
+          img.onload = () => {
+            console.log(`✅ Loaded sprite for ${racer.name}: ${imagePath}`);
+            this.characterImages.set(racer.id, img);
+          };
+          
+          img.onerror = () => {
+            console.warn(`❌ Failed to load sprite for ${racer.name}: ${imagePath}`);
+          };
+          
+          img.src = imagePath;
+        }
+      });
+    } catch (error) {
+      console.error('Failed to load character sprites:', error);
     }
   }
 
   // Handle race start
   handleRaceStart(data) {
-    // Update current race state with new data
-    this.currentRace = data;
+    console.log('🏁 Race starting soon...', data);
     
-    // Refresh pot statistics to show current race totals (or zero if no bets yet)
-    this.updatePotStatistics(data);
+    // Load random background for this race
+    this.loadRandomBackground();
     
-    if (data.status === 'countdown') {
-      // Show countdown UI without starting animations
-      this.isRacing = false;
-      this.countdown = data.countdown;
-      this.updateRaceUI();
-      this.showCountdownUI();
-      console.log('⏰ Race countdown started:', data);
-    } else if (data.status === 'racing') {
-      // Begin race visualization
-      this.isRacing = true;
-      this.countdown = 0;
-      this.updateRaceUI();
-      this.startRaceVisualization();
-      console.log('🏁 Race started:', data);
+    this.raceState = {
+      racers: data.racers || this.generateMockRacers(),
+      isRunning: false, // Don't start immediately
+      positions: {}
+    };
+    
+    // Initialize positions
+    this.raceState.racers.forEach((racer, index) => {
+      this.raceState.positions[racer.id] = {
+        progress: 0,
+        position: index + 1,
+        speed: racer.speed || (Math.random() * 2 + 3)
+      };
+    });
+    
+    // Show race container
+    const raceContainer = document.getElementById('raceContainer');
+    if (raceContainer) {
+      raceContainer.style.display = 'block';
     }
+    
+    // Start countdown
+    this.showCountdown();
+  }
+
+  // Add countdown method
+  showCountdown() {
+    let countdownValue = 3;
+    
+    const countdownInterval = setInterval(() => {
+      // Update countdown display on canvas instead of overlay
+      this.drawRaceWithCountdown(countdownValue);
+      
+      countdownValue--;
+      
+      if (countdownValue < 0) {
+        clearInterval(countdownInterval);
+        // Start the actual race
+        this.raceStartTime = Date.now();
+        this.raceState.isRunning = true;
+        this.startRaceAnimation();
+      }
+    }, 1000);
+  }
+
+  // Draw race with countdown overlay
+  drawRaceWithCountdown(countdown) {
+    if (!this.ctx || !this.raceState) return;
+    
+    // Clear canvas
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Draw race track background
+    this.drawRaceTrack();
+    
+    // Draw racing lanes
+    this.drawRacingLanes();
+    
+    // Draw finish line
+    this.drawFinishLine();
+    
+    // Draw racers at starting positions
+    this.drawRacers();
+    
+    // Draw countdown in center without blocking the view
+    if (countdown > 0) {
+      // Semi-transparent background for countdown
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      this.ctx.fillRect(this.canvas.width/2 - 80, this.canvas.height/2 - 60, 160, 120);
+      
+      // Countdown number
+      this.ctx.fillStyle = '#ff69b4';
+      this.ctx.font = 'bold 72px Arial';
+      this.ctx.textAlign = 'center';
+      this.ctx.strokeStyle = '#000';
+      this.ctx.lineWidth = 4;
+      this.ctx.strokeText(countdown.toString(), this.canvas.width/2, this.canvas.height/2 + 20);
+      this.ctx.fillText(countdown.toString(), this.canvas.width/2, this.canvas.height/2 + 20);
+      
+      // "GET READY" text
+      this.ctx.fillStyle = '#fff';
+      this.ctx.font = 'bold 20px Arial';
+      this.ctx.fillText('GET READY!', this.canvas.width/2, this.canvas.height/2 - 20);
+    }
+  }
+
+  // Generate mock racers for testing
+  generateMockRacers() {
+    return [
+      { id: 1, name: 'Hana', color: '#ff1493', speed: 4.1 },
+      { id: 2, name: 'Miku', color: '#00ced1', speed: 4.6 },
+      { id: 3, name: 'Akane', color: '#ff4500', speed: 4.8 },
+      { id: 4, name: 'Sakura', color: '#ff69b4', speed: 4.5 },
+      { id: 5, name: 'Kira', color: '#ffa500', speed: 4.4 },
+      { id: 6, name: 'Luna', color: '#9370db', speed: 4.3 },
+      { id: 7, name: 'Yuki', color: '#00bfff', speed: 4.2 },
+      { id: 8, name: 'Neko', color: '#ffd700', speed: 4.7 }
+    ];
+  }
+
+  // Start race animation loop - THIS WAS MISSING!
+  startRaceAnimation() {
+    const animate = () => {
+      if (!this.raceState || !this.raceState.isRunning) return;
+      
+      this.updateRacePositions();
+      this.drawRace();
+      
+      // Check if race should end
+      const elapsedTime = Date.now() - this.raceStartTime;
+      if (elapsedTime >= this.raceDuration) {
+        this.handleRaceEnd();
+        return;
+      }
+      
+      this.animationId = requestAnimationFrame(animate);
+    };
+    
+    animate();
+  }
+
+  // Update race positions
+  updateRacePositions() {
+    if (!this.raceState) return;
+    
+    const elapsedTime = Date.now() - this.raceStartTime;
+    const raceProgress = Math.min(elapsedTime / this.raceDuration, 1);
+    
+    this.raceState.racers.forEach(racer => {
+      const position = this.raceState.positions[racer.id];
+      if (!position) return;
+      
+      // Add some randomness to make race exciting
+      const speedVariation = (Math.random() - 0.5) * 0.1;
+      const adjustedSpeed = position.speed + speedVariation;
+      
+      // Update progress - characters move from bottom (0) to top (1)
+      position.progress = Math.min(raceProgress * (adjustedSpeed / 4.5), 1);
+    });
+    
+    // Update position rankings (highest progress = closest to top = best position)
+    const sortedRacers = [...this.raceState.racers].sort((a, b) => {
+      return this.raceState.positions[b.id].progress - this.raceState.positions[a.id].progress;
+    });
+    
+    sortedRacers.forEach((racer, index) => {
+      this.raceState.positions[racer.id].position = index + 1;
+    });
+    
+    // Update displays
+    this.updatePositionsDisplay();
+    this.updateSpeedDisplay();
+  }
+
+  // Draw the race
+  drawRace() {
+    if (!this.ctx || !this.raceState) return;
+    
+    // Clear canvas
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Draw race track background
+    this.drawRaceTrack();
+    
+    // Draw racing lanes
+    this.drawRacingLanes();
+    
+    // Draw finish line
+    this.drawFinishLine();
+    
+    // Draw racers
+    this.drawRacers();
+  }
+
+  // Draw race track background
+  drawRaceTrack() {
+    // If we have a background image, use it
+    if (this.currentBackground && this.currentBackground.complete) {
+      // Draw the background image to fill the canvas
+      this.ctx.drawImage(this.currentBackground, 0, 0, this.canvas.width, this.canvas.height);
+      
+      // Add a subtle overlay to make the track more visible
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+      this.ctx.fillRect(0, this.canvas.height * 0.6, this.canvas.width, this.canvas.height * 0.4);
+      
+    } else {
+      // Fallback: Simple gradient background
+      const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+      gradient.addColorStop(0, '#87CEEB'); // Sky blue
+      gradient.addColorStop(0.6, '#F4A460'); // Sandy brown
+      gradient.addColorStop(1, '#CD853F'); // Peru
+      
+      this.ctx.fillStyle = gradient;
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+  }
+
+  // Draw racing lanes
+  drawRacingLanes() {
+    const laneWidth = this.canvas.width / 8;
+    
+    // Draw vertical track lanes
+    for (let i = 0; i < 8; i++) {
+      const x = i * laneWidth;
+      
+      // Lane background - alternating colors
+      this.ctx.fillStyle = i % 2 === 0 ? 'rgba(139, 69, 19, 0.3)' : 'rgba(160, 82, 45, 0.3)';
+      this.ctx.fillRect(x, 0, laneWidth, this.canvas.height);
+      
+      // Lane borders (vertical lines)
+      this.ctx.strokeStyle = 'rgba(101, 67, 33, 0.8)';
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, 0);
+      this.ctx.lineTo(x, this.canvas.height);
+      this.ctx.stroke();
+    }
+  }
+
+  // Draw finish line
+  drawFinishLine() {
+    const finishY = 60; // TOP of canvas
+    const trackWidth = this.canvas.width;
+    
+    // Finish line poles
+    this.ctx.fillStyle = '#8B4513';
+    this.ctx.fillRect(50, finishY - 10, 100, 20);
+    this.ctx.fillRect(trackWidth - 150, finishY - 10, 100, 20);
+    
+    // Checkered pattern across the top
+    this.ctx.fillStyle = '#000';
+    this.ctx.fillRect(0, finishY - 20, trackWidth, 40);
+    
+    this.ctx.fillStyle = '#fff';
+    for (let x = 0; x < trackWidth; x += 20) {
+      for (let y = finishY - 20; y < finishY + 20; y += 20) {
+        if ((Math.floor(x / 20) + Math.floor((y - (finishY - 20)) / 20)) % 2 === 0) {
+          this.ctx.fillRect(x, y, 20, 20);
+        }
+      }
+    }
+    
+    // "FINISH" text
+    this.ctx.fillStyle = '#FF0000';
+    this.ctx.font = 'bold 24px Arial';
+    this.ctx.textAlign = 'center';
+    this.ctx.strokeStyle = '#000';
+    this.ctx.lineWidth = 2;
+    this.ctx.strokeText('FINISH', trackWidth / 2, finishY - 30);
+    this.ctx.fillText('FINISH', trackWidth / 2, finishY - 30);
+  }
+
+  // Draw racers
+  drawRacers() {
+    if (!this.raceState) return;
+    
+    const laneWidth = this.canvas.width / 8; // Divide canvas into 8 vertical lanes
+    const raceHeight = this.canvas.height - 120; // Leave space for finish line at top
+    
+    this.raceState.racers.forEach((racer, index) => {
+      const position = this.raceState.positions[racer.id];
+      if (!position) return;
+      
+      const laneX = (index * laneWidth) + (laneWidth / 2); // Horizontal position in lane
+      
+      // Characters move from BOTTOM to TOP
+      const racerY = this.canvas.height - 50 - (position.progress * raceHeight);
+      
+      // Draw character
+      const characterImg = this.characterImages.get(racer.id);
+      if (characterImg && characterImg.complete) {
+        // Draw character sprite
+        this.ctx.drawImage(characterImg, laneX - 20, racerY - 20, 40, 40);
+      } else {
+        // Fallback: colored circle with character initial
+        this.ctx.fillStyle = racer.color;
+        this.ctx.beginPath();
+        this.ctx.arc(laneX, racerY, 15, 0, 2 * Math.PI);
+        this.ctx.fill();
+        
+        // White border
+        this.ctx.strokeStyle = '#fff';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        
+        // Character initial
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = 'bold 14px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(racer.name.charAt(0), laneX, racerY + 5);
+      }
+    });
+  }
+
+  // Update positions display
+  updatePositionsDisplay() {
+    const positionsDisplay = document.getElementById('positionsDisplay');
+    if (!positionsDisplay || !this.raceState) return;
+    
+    const sortedRacers = [...this.raceState.racers].sort((a, b) => {
+      return this.raceState.positions[a.id].position - this.raceState.positions[b.id].position;
+    });
+    
+    positionsDisplay.innerHTML = '<h3 style="color: #FFD700; margin: 0 0 10px 0;">POSITIONS</h3>';
+    sortedRacers.forEach((racer) => {
+      const position = this.raceState.positions[racer.id];
+      const progressPercent = (position.progress * 100).toFixed(1);
+      
+      const div = document.createElement('div');
+      div.style.cssText = `
+        color: white;
+        font-size: 14px;
+        margin: 4px 0;
+        padding: 4px 8px;
+        background: rgba(0,0,0,0.5);
+        border-left: 3px solid ${racer.color};
+        border-radius: 4px;
+      `;
+      div.textContent = `${position.position}. ${racer.name} (${progressPercent}%)`;
+      positionsDisplay.appendChild(div);
+    });
+  }
+
+  // Update speed display
+  updateSpeedDisplay() {
+    const speedDisplay = document.getElementById('speedDisplay');
+    if (!speedDisplay || !this.raceState) return;
+    
+    let topSpeed = 0;
+    this.raceState.racers.forEach(racer => {
+      const position = this.raceState.positions[racer.id];
+      if (position && position.speed > topSpeed) {
+        topSpeed = position.speed;
+      }
+    });
+    
+    speedDisplay.innerHTML = `
+      <h3 style="color: #FFD700; margin: 0 0 10px 0;">TOP SPEED</h3>
+      <div style="color: #00FF00; font-size: 24px; font-weight: bold;">
+        ${(topSpeed * 8).toFixed(0)} km/h
+      </div>
+    `;
   }
 
   // Handle race end
   handleRaceEnd(data) {
-    this.isRacing = false;
-    this.updateRaceUI();
-    this.showWinnerModal(data);
-    console.log('🏆 Race ended:', data);
-  }
-
-  // Update race UI
-  updateRaceUI() {
-    if (!this.currentRace) return;
+    console.log('🏁 Race ended:', data);
     
-    const raceNumber = document.getElementById('raceNumber');
-    if (raceNumber) {
-      raceNumber.textContent = this.currentRace.roundId || '--';
+    if (this.raceState) {
+      this.raceState.isRunning = false;
     }
     
-    this.updateCountdown(this.currentRace.countdown || 0);
-  }
-
-  // Update countdown
-  updateCountdown(countdown) {
-    this.countdown = countdown;
-    
-    const countdownElement = document.getElementById('countdown');
-    if (countdownElement) {
-      countdownElement.textContent = countdown;
+    if (this.animationId) {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
     }
     
-    const nextRaceElement = document.getElementById('nextRaceTime');
-    if (nextRaceElement) {
-      nextRaceElement.textContent = `${countdown}s`;
-    }
-  }
-
-  // Show countdown UI
-  showCountdownUI() {
-    // Update countdown display
-    this.updateCountdown(this.countdown);
-    
-    // Show countdown message
-    const countdownElement = document.getElementById('countdownMessage');
-    if (countdownElement) {
-      countdownElement.textContent = `Race starting in ${this.countdown} seconds...`;
-      countdownElement.style.display = 'block';
-    }
-  }
-
-  // Handle countdown updates
-  handleCountdown(data) {
-    this.countdown = data.countdown;
-    this.updateCountdown(this.countdown);
-    console.log('⏰ Countdown update:', this.countdown);
-  }
-
-  // Update race visualization
-  updateRaceVisualization() {
-    const canvas = document.getElementById('raceCanvas');
-    if (canvas && this.raceState) {
-      const ctx = canvas.getContext('2d');
-      this.drawRacers(ctx, this.raceState.racers);
-    }
-  }
-
-  // Draw racers on canvas
-  drawRacers(ctx, racers) {
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    
-    racers.forEach((racer, index) => {
-      const x = (racer.x / 1000) * ctx.canvas.width;
-      const y = 100 + (index * 80);
+    // Show winner
+    if (this.raceState) {
+      const winner = [...this.raceState.racers].sort((a, b) => {
+        return this.raceState.positions[b.id].progress - this.raceState.positions[a.id].progress;
+      })[0];
       
-      ctx.fillStyle = racer.color || '#ff69b4';
-      ctx.fillRect(x, y, 50, 50);
-      
-      ctx.fillStyle = 'white';
-      ctx.font = '14px Arial';
-      ctx.fillText(racer.name, x, y - 10);
-    });
-  }
-
-  // Start race visualization
-  startRaceVisualization() {
-    // Hide countdown message when race starts
-    const countdownElement = document.getElementById('countdownMessage');
-    if (countdownElement) {
-      countdownElement.style.display = 'none';
-    }
-    
-    this.animateRace();
-  }
-
-  // Animate race
-  animateRace() {
-    if (this.isRacing) {
-      this.updateRaceVisualization();
-      requestAnimationFrame(() => this.animateRace());
-    }
-  }
-
-  // Helper function to get CSS class for racer color
-  getRacerColorClass(color) {
-    const colorMap = {
-      '#ff4757': 'racer-red',
-      '#3742fa': 'racer-blue', 
-      '#2ed573': 'racer-green',
-      '#ffa502': 'racer-yellow',
-      '#a55eea': 'racer-purple',
-      '#ff6b9d': 'racer-pink',
-      '#ff6348': 'racer-orange',
-      '#17a2b8': 'racer-cyan'
-    };
-    return colorMap[color] || 'racer-red'; // Default to red if color not found
-  }
-
-  // Show winner modal
-  showWinnerModal(data) {
-    console.log('🏆 Race ended:', data);
-    
-    // Populate winner display
-    const winnerDisplay = document.getElementById('winnerDisplay');
-    if (winnerDisplay && data.winner) {
-      // Clear existing content
-      winnerDisplay.innerHTML = '';
-      
-      // Create winner racer container
-      const winnerRacer = document.createElement('div');
-      winnerRacer.className = 'winner-racer';
-      
-      // Create racer icon
-      const racerIcon = document.createElement('div');
-      const colorClass = this.getRacerColorClass(data.winner.color);
-      racerIcon.className = `racer-icon ${colorClass}`;
-      racerIcon.textContent = data.winner.name;
-      
-      // Create winner name
-      const winnerName = document.createElement('div');
-      winnerName.className = 'winner-name';
-      winnerName.textContent = data.winner.name;
-      
-      // Create winner time
-      const winnerTime = document.createElement('div');
-      winnerTime.className = 'winner-time';
-      // Compute elapsed time using startTime
-      let timeText = '0.00s';
-      if (data.startTime) {
-        const elapsedMs = data.endTime - data.startTime;
-        timeText = (elapsedMs / 1000).toFixed(2) + 's';
+      if (winner) {
+        // Add a small delay to ensure race animation completes
+        setTimeout(() => {
+          this.showWinner(winner);
+        }, 500);
       }
-      winnerTime.textContent = timeText;
+    }
+  }
+
+  // Show winner
+  showWinner(winner) {
+    console.log('🏆 Showing winner:', winner);
+    
+    // Show the winner modal using UI if available
+    if (this.ui && this.ui.showWinnerModal) {
+      // Use the character's avatar or face image
+      let characterImage = 'images/characters/hana-face.png'; // fallback
       
-      // Assemble the winner display
-      winnerRacer.appendChild(racerIcon);
-      winnerRacer.appendChild(winnerName);
-      winnerRacer.appendChild(winnerTime);
-      winnerDisplay.appendChild(winnerRacer);
+      if (winner.avatar) {
+        // Use the avatar from the character data
+        characterImage = winner.avatar;
+      } else if (winner.name) {
+        // Fallback to face image based on name
+        const characterName = winner.name.toLowerCase();
+        characterImage = `images/characters/${characterName}-face.png`;
+      }
+      
+      // Prepare winner data for the modal
+      const winnerData = {
+        name: winner.name,
+        image: characterImage,
+        totalPot: '20.00 SOL ($3305.60)', // You can get this from race data
+        yourBet: '0.00 SOL ($0.00)',
+        winnings: '+0.00 SOL ($0.00)',
+        netResult: '+0.00 SOL ($0.00)'
+      };
+      
+      this.ui.showWinnerModal(winnerData);
+      
+      // Auto-close the modal after 10 seconds (optional)
+      setTimeout(() => {
+        if (this.ui.hideWinnerModal) {
+          this.ui.hideWinnerModal();
+        }
+      }, 10000);
+      
+    } else {
+      // Fallback to the old method if UI is not available
+      const winnerDisplay = document.getElementById('winnerDisplay');
+      if (winnerDisplay) {
+        winnerDisplay.innerHTML = `
+          <div style="text-align: center; color: white; padding: 30px; background: rgba(0,0,0,0.9); border-radius: 12px; border: 3px solid ${winner.color};">
+            <h2 style="color: ${winner.color}; margin: 0 0 10px 0; font-size: 32px;">🏆 WINNER! 🏆</h2>
+            <h3 style="margin: 10px 0; font-size: 24px;">${winner.name}</h3>
+            <p style="font-size: 16px;">Congratulations!</p>
+          </div>
+        `;
+        winnerDisplay.style.display = 'block';
+        
+        // Hide after 5 seconds
+        setTimeout(() => {
+          winnerDisplay.style.display = 'none';
+        }, 5000);
+      }
+    }
+  }
+
+  // Add any missing methods that might be called
+  updateRaceProgress(data) {
+    // Handle real-time race updates if needed
+    console.log('Race progress update:', data);
+  }
+
+  // Update the updateDistributionLegend method in bettingClient.js with better styling
+  updateDistributionLegend(data) {
+    const distributionLegend = document.querySelector('.distribution-legend');
+    if (!distributionLegend) {
+      console.warn('Distribution legend element not found');
+      return;
     }
     
-    // Populate pot summary
-    const potSummary = document.getElementById('potSummary');
-    if (potSummary) {
-      // Use race state totals if available, otherwise show placeholder data
-      const totalPot = parseFloat(data.totalPot) || 0;
-      const totalParticipants = data.totalBets || 0;
-      
-      // Clear existing content
-      potSummary.innerHTML = '';
-      
-      // Create pot stats container
-      const potStats = document.createElement('div');
-      potStats.className = 'pot-stats';
-      
-      // Create Total Pot stat
-      const totalPotItem = document.createElement('div');
-      totalPotItem.className = 'stat-item';
-      const totalPotLabel = document.createElement('span');
-      totalPotLabel.className = 'stat-label';
-      totalPotLabel.textContent = 'Total Pot:';
-      const totalPotValue = document.createElement('span');
-      totalPotValue.className = 'stat-value';
-      totalPotValue.textContent = `${isNaN(totalPot) ? "0.0000" : totalPot.toFixed(4)} SOL`;
-      totalPotItem.appendChild(totalPotLabel);
-      totalPotItem.appendChild(totalPotValue);
-      
-      // Create Participants stat
-      const participantsItem = document.createElement('div');
-      participantsItem.className = 'stat-item';
-      const participantsLabel = document.createElement('span');
-      participantsLabel.className = 'stat-label';
-      participantsLabel.textContent = 'Participants:';
-      const participantsValue = document.createElement('span');
-      participantsValue.className = 'stat-value';
-      participantsValue.textContent = totalParticipants.toString();
-      participantsItem.appendChild(participantsLabel);
-      participantsItem.appendChild(participantsValue);
-      
-      // Create Race ID stat
-      const raceIdItem = document.createElement('div');
-      raceIdItem.className = 'stat-item';
-      const raceIdLabel = document.createElement('span');
-      raceIdLabel.className = 'stat-label';
-      raceIdLabel.textContent = 'Race ID:';
-      const raceIdValue = document.createElement('span');
-      raceIdValue.className = 'stat-value';
-      raceIdValue.textContent = `#${data.roundId}`;
-      raceIdItem.appendChild(raceIdLabel);
-      raceIdItem.appendChild(raceIdValue);
-      
-      // Assemble pot stats
-      potStats.appendChild(totalPotItem);
-      potStats.appendChild(participantsItem);
-      potStats.appendChild(raceIdItem);
-      potSummary.appendChild(potStats);
-    }
+    distributionLegend.innerHTML = '';
     
-    // Populate top winners
-    const topWinners = document.getElementById('topWinners');
-    if (topWinners && data.results) {
-      // Show race results without bet data since it's not available
-      const winners = data.results.slice(0, 5);
+    // Sort by percentage (highest first) and filter out 0%
+    const sortedData = Object.entries(data)
+      .filter(([racerId, raceData]) => raceData.percentage > 0)
+      .sort(([,a], [,b]) => b.percentage - a.percentage)
+      .slice(0, 6); // Show top 6
+    
+    sortedData.forEach(([racerId, raceData]) => {
+      const racer = this.racers.find(r => r.id == racerId);
+      if (!racer) return;
       
-      // Clear existing content
-      topWinners.innerHTML = '';
+      const legendItem = document.createElement('div');
+      legendItem.className = 'legend-item';
+      legendItem.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        margin: 4px 0;
+        background: linear-gradient(135deg, rgba(30, 30, 40, 0.9), rgba(45, 45, 55, 0.9));
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+        min-height: 40px;
+      `;
       
-      // Create winner items using DOM API
-      winners.forEach((racer, index) => {
-        const winnerItem = document.createElement('div');
-        winnerItem.className = 'winner-item';
-        
-        const winnerInfo = document.createElement('div');
-        winnerInfo.className = 'winner-info';
-        
-        const racerIcon = document.createElement('div');
-        const colorClass = this.getRacerColorClass(racer.color);
-        racerIcon.className = `racer-icon-small ${colorClass}`;
-        racerIcon.textContent = racer.name;
-        
-        const winnerName = document.createElement('span');
-        winnerName.className = 'winner-name';
-        winnerName.textContent = racer.name;
-        
-        const winnerAmount = document.createElement('div');
-        winnerAmount.className = 'winner-amount';
-        winnerAmount.textContent = `Position: ${index + 1}`;
-        
-        // Assemble winner item
-        winnerInfo.appendChild(racerIcon);
-        winnerInfo.appendChild(winnerName);
-        winnerItem.appendChild(winnerInfo);
-        winnerItem.appendChild(winnerAmount);
-        topWinners.appendChild(winnerItem);
+      // Left side container
+      const leftSide = document.createElement('div');
+      leftSide.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+      `;
+      
+      // Color dot
+      const colorDot = document.createElement('div');
+      colorDot.style.cssText = `
+        width: 12px;
+        height: 12px;
+        background: ${racer.color || '#ff69b4'};
+        border-radius: 50%;
+        flex-shrink: 0;
+        box-shadow: 0 0 8px ${racer.color}40;
+      `;
+      
+      // Character image
+      const imageContainer = document.createElement('div');
+      imageContainer.style.cssText = `
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 2px solid ${racer.color || '#ff69b4'};
+        flex-shrink: 0;
+        background: ${racer.color || '#ff69b4'}20;
+      `;
+      
+      const img = document.createElement('img');
+      img.src = racer.avatar || `images/characters/${racer.name.toLowerCase()}-face.png`;
+      img.alt = racer.name;
+      img.style.cssText = `
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      `;
+      
+      img.onerror = () => {
+        imageContainer.innerHTML = `
+          <div style="
+            width: 100%;
+            height: 100%;
+            background: ${racer.color || '#ff69b4'};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+          ">${racer.name.charAt(0).toUpperCase()}</div>
+        `;
+      };
+      
+      imageContainer.appendChild(img);
+      
+      // Character name
+      const nameSpan = document.createElement('span');
+      nameSpan.style.cssText = `
+        color: white;
+        font-size: 14px;
+        font-weight: 600;
+        flex: 1;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+      `;
+      nameSpan.textContent = racer.name;
+      
+      // Right side container
+      const rightSide = document.createElement('div');
+      rightSide.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 2px;
+      `;
+      
+      // Percentage
+      const percentSpan = document.createElement('span');
+      percentSpan.style.cssText = `
+        color: ${racer.color || '#ff69b4'};
+        font-size: 16px;
+        font-weight: bold;
+        text-shadow: 0 0 8px ${racer.color}60;
+      `;
+      percentSpan.textContent = `${raceData.percentage.toFixed(1)}%`;
+      
+      // Odds (calculated from percentage)
+      const odds = (100 / raceData.percentage).toFixed(2);
+      const oddsSpan = document.createElement('span');
+      oddsSpan.style.cssText = `
+        color: #9ca3af;
+        font-size: 11px;
+        font-weight: 500;
+      `;
+      oddsSpan.textContent = `${odds}x`;
+      
+      // Assemble the legend item
+      leftSide.appendChild(colorDot);
+      leftSide.appendChild(imageContainer);
+      leftSide.appendChild(nameSpan);
+      
+      rightSide.appendChild(percentSpan);
+      rightSide.appendChild(oddsSpan);
+      
+      legendItem.appendChild(leftSide);
+      legendItem.appendChild(rightSide);
+      
+      // Add hover effect
+      legendItem.addEventListener('mouseenter', () => {
+        legendItem.style.background = `linear-gradient(135deg, rgba(40, 40, 50, 0.9), rgba(55, 55, 65, 0.9))`;
+        legendItem.style.transform = 'translateY(-2px)';
+        legendItem.style.boxShadow = `0 4px 12px ${racer.color}30`;
       });
-    }
-    
-    // Populate user results (placeholder - would need user bet data)
-    const yourResults = document.getElementById('yourResults');
-    if (yourResults) {
-      // Clear existing content
-      yourResults.innerHTML = '';
       
-      // Create user stats container
-      const userStats = document.createElement('div');
-      userStats.className = 'user-stats';
+      legendItem.addEventListener('mouseleave', () => {
+        legendItem.style.background = 'linear-gradient(135deg, rgba(30, 30, 40, 0.9), rgba(45, 45, 55, 0.9))';
+        legendItem.style.transform = 'translateY(0)';
+        legendItem.style.boxShadow = 'none';
+      });
       
-      // Create Your Bets stat
-      const yourBetsItem = document.createElement('div');
-      yourBetsItem.className = 'stat-item';
-      const yourBetsLabel = document.createElement('span');
-      yourBetsLabel.className = 'stat-label';
-      yourBetsLabel.textContent = 'Your Bets:';
-      const yourBetsValue = document.createElement('span');
-      yourBetsValue.className = 'stat-value';
-      yourBetsValue.textContent = '0.0000 SOL';
-      yourBetsItem.appendChild(yourBetsLabel);
-      yourBetsItem.appendChild(yourBetsValue);
-      
-      // Create Result stat
-      const resultItem = document.createElement('div');
-      resultItem.className = 'stat-item';
-      const resultLabel = document.createElement('span');
-      resultLabel.className = 'stat-label';
-      resultLabel.textContent = 'Result:';
-      const resultValue = document.createElement('span');
-      resultValue.className = 'stat-value';
-      resultValue.textContent = 'No bets placed';
-      resultItem.appendChild(resultLabel);
-      resultItem.appendChild(resultValue);
-      
-      // Assemble user stats
-      userStats.appendChild(yourBetsItem);
-      userStats.appendChild(resultItem);
-      yourResults.appendChild(userStats);
-    }
+      distributionLegend.appendChild(legendItem);
+    });
     
-    // Show the modal
-    const modal = document.getElementById('winnerModal');
-    if (modal) {
-      modal.style.display = 'flex';
-      modal.classList.add('show');
-      
-      // Auto-hide after 5 seconds
-      setTimeout(() => {
-        this.hideWinnerModal();
-      }, 5000);
-    }
-  }
-  
-  // Hide winner modal
-  hideWinnerModal() {
-    const modal = document.getElementById('winnerModal');
-    if (modal) {
-      modal.classList.remove('show');
-      setTimeout(() => {
-        modal.style.display = 'none';
-      }, 300); // Match CSS transition duration
-    }
-  }
-
-  // Handle bet placed event for live updates
-  handleBetPlaced(data) {
-    // Update pot statistics in real-time
-    this.updatePotStatistics(data);
-    
-    // Show notification for new bet
-    if (window.ui) {
-      window.ui.showNotification(
-        `New bet placed: ${data.bet.amount} SOL on Racer ${data.bet.racerId}`,
-        'info',
-        3000
-      );
-    }
-  }
-
-  // Update pot statistics display
-  updatePotStatistics(data) {
-    // Update HUD total pot display
-    const hudTotalPotElement = document.getElementById('totalPot');
-    if (hudTotalPotElement && data.totalPot) {
-      // Handle string or number values, check for safe integer range
-      const potValue = typeof data.totalPot === 'string' ? parseFloat(data.totalPot) : data.totalPot;
-      if (potValue <= Number.MAX_SAFE_INTEGER) {
-        hudTotalPotElement.textContent = `${potValue.toFixed(4)} SOL`;
-      } else {
-        // For very large values, display as string to preserve precision
-        hudTotalPotElement.textContent = `${data.totalPot} SOL`;
-      }
-    } else if (hudTotalPotElement) {
-      hudTotalPotElement.textContent = '0.0000 SOL';
-    }
-    
-    // Update HUD total bets count
-    const hudTotalBetsElement = document.getElementById('totalBets');
-    if (hudTotalBetsElement && typeof data.totalBets === 'number') {
-      hudTotalBetsElement.textContent = data.totalBets.toString();
-    } else if (hudTotalBetsElement) {
-      hudTotalBetsElement.textContent = '0';
-    }
-    
-    // Update modal total pot display using specific ID
-    const totalPotElement = document.getElementById('modalTotalPot');
-    if (totalPotElement && data.totalPot) {
-      // Handle string or number values, check for safe integer range
-      const potValue = typeof data.totalPot === 'string' ? parseFloat(data.totalPot) : data.totalPot;
-      if (potValue <= Number.MAX_SAFE_INTEGER) {
-        totalPotElement.textContent = `${potValue.toFixed(4)} SOL`;
-      } else {
-        // For very large values, display as string to preserve precision
-        totalPotElement.textContent = `${data.totalPot} SOL`;
-      }
-    } else if (totalPotElement) {
-      totalPotElement.textContent = '0.0000 SOL';
-    }
-    
-    // Update modal total bets count using specific ID
-    const totalBetsElement = document.getElementById('modalTotalBets');
-    if (totalBetsElement && typeof data.totalBets === 'number') {
-      totalBetsElement.textContent = data.totalBets.toString();
-    } else if (totalBetsElement) {
-      totalBetsElement.textContent = '0';
-    }
-    
-    // Update race ID if available
-    const raceIdElement = document.getElementById('modalRaceId');
-    if (raceIdElement && data.raceId) {
-      raceIdElement.textContent = `#${data.raceId}`;
-    }
-  }
-
-  // Request race state
-  requestRaceState() {
-    this.socket.emit('race:state');
+    console.log(`✅ Updated distribution legend with ${sortedData.length} items`);
   }
 }

@@ -3,6 +3,50 @@ export class UI {
   constructor() {
     this.modals = new Map();
     this.notifications = [];
+    this.initializeEventListeners();
+  }
+
+  // Initialize event listeners
+  initializeEventListeners() {
+    // Close winner modal when close button is clicked
+    const closeWinnerBtn = document.getElementById('closeWinnerBtn');
+    if (closeWinnerBtn) {
+      closeWinnerBtn.addEventListener('click', () => {
+        this.hideWinnerModal();
+      });
+    }
+
+    // Close winner modal when clicking outside
+    const winnerModal = document.getElementById('winnerModal');
+    if (winnerModal) {
+      winnerModal.addEventListener('click', (e) => {
+        if (e.target === winnerModal) {
+          this.hideWinnerModal();
+        }
+      });
+    }
+  }
+
+  // Hide winner modal
+  hideWinnerModal() {
+    const modal = document.getElementById('winnerModal');
+    if (modal) {
+      modal.classList.remove('show');
+      modal.style.display = 'none';
+    }
+  }
+
+  // Test function to show winner modal (for debugging)
+  testWinnerModal() {
+    const testWinner = {
+      name: 'Hana',
+      image: 'images/characters/hana-face.png',
+      totalPot: '20.00 SOL ($3305.60)',
+      yourBet: '5.00 SOL ($825.00)',
+      winnings: '+15.00 SOL ($2475.00)',
+      netResult: '+10.00 SOL ($1650.00)'
+    };
+    this.showWinnerModal(testWinner);
   }
 
   // Show notification
@@ -146,34 +190,51 @@ export class UI {
 
   // Show winner modal
   showWinnerModal(winner) {
-    // Create modal content using safe DOM API
-    const content = document.createElement('div');
+    const modal = document.getElementById('winnerModal');
+    const winnerAvatar = document.getElementById('winnerAvatar');
+    const winnerName = document.getElementById('winnerName');
+    const modalWinnerName = document.getElementById('modalWinnerName');
+    const modalTotalPot = document.getElementById('modalTotalPot');
+    const modalYourBet = document.getElementById('modalYourBet');
+    const modalYourWinnings = document.getElementById('modalYourWinnings');
+    const modalNetResult = document.getElementById('modalNetResult');
     
-    // Create title
-    const title = document.createElement('h2');
-    title.textContent = '🏆 Race Winner!';
-    
-    // Create winner info container
-    const winnerInfo = document.createElement('div');
-    winnerInfo.className = 'winner-info';
-    
-    // Create winner name
-    const winnerName = document.createElement('div');
-    winnerName.className = 'winner-name';
-    winnerName.textContent = winner.name;
-    
-    // Create winner time
-    const winnerTime = document.createElement('div');
-    winnerTime.className = 'winner-time';
-    winnerTime.textContent = winner.finishTime ? new Date(winner.finishTime).toLocaleTimeString() : 'N/A';
-    
-    // Assemble content
-    winnerInfo.appendChild(winnerName);
-    winnerInfo.appendChild(winnerTime);
-    content.appendChild(title);
-    content.appendChild(winnerInfo);
-    
-    this.showModal('winner', content);
+    if (modal) {
+      // Update winner information
+      if (winnerAvatar && winner.image) {
+        winnerAvatar.src = winner.image;
+        winnerAvatar.alt = winner.name;
+      }
+      
+      if (winnerName) {
+        winnerName.textContent = winner.name || 'Unknown';
+      }
+      
+      if (modalWinnerName) {
+        modalWinnerName.textContent = winner.name || 'Unknown';
+      }
+      
+      // Update pot and betting information (you can customize these values)
+      if (modalTotalPot) {
+        modalTotalPot.textContent = winner.totalPot || '0.00 SOL';
+      }
+      
+      if (modalYourBet) {
+        modalYourBet.textContent = winner.yourBet || '0.00 SOL ($0.00)';
+      }
+      
+      if (modalYourWinnings) {
+        modalYourWinnings.textContent = winner.winnings || '+0.00 SOL ($0.00)';
+      }
+      
+      if (modalNetResult) {
+        modalNetResult.textContent = winner.netResult || '+0.00 SOL ($0.00)';
+      }
+      
+      // Show the modal
+      modal.classList.add('show');
+      modal.style.display = 'flex';
+    }
   }
 
   // Show bet modal

@@ -6,6 +6,14 @@
     <title>racers.fun - Waifu Racing Battles</title>
     <link rel="icon" type="image/png" href="images/ui/favicon.png">
     <link rel="stylesheet" href="styles.css">
+    <!-- Add CSS for pulse animation -->
+    <style>
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    </style>
 </head>
 <body>
     <!-- Animated Background -->
@@ -94,58 +102,82 @@
             </div>
 
             <div class="race-track-container">
-                <canvas id="raceCanvas"></canvas>
-                <div class="race-overlay" id="raceOverlay">
-                    <div class="countdown-display" id="countdown">60</div>
-                    <div class="countdown-message hidden" id="countdownMessage">Race starting in 10 seconds...</div>
+                <!-- Update your HTML structure for better layout -->
+                <div id="raceContainer" style="display: none; height: 80vh; width: 100%;">
+                  <div class="race-display">
+                    <!-- Positions Display -->
+                    <div id="positionsDisplay"></div>
+                    
+                    <!-- Canvas Container -->
+                    <div class="canvas-container">
+                      <canvas id="raceCanvas"></canvas>
+                    </div>
+                    
+                    <!-- Speed Display -->
+                    <div id="speedDisplay"></div>
+                  </div>
                 </div>
             </div>
 
             <!-- Winner Modal -->
             <div class="winner-modal" id="winnerModal">
                 <div class="winner-content">
-                    <div class="victory-section">
-                        <div class="victory-header">
-                            <h2 class="victory-title">VICTORY!</h2>
+                    <button class="close-winner-btn" id="closeWinnerBtn"></button>
+                    <div class="winner-left">
+                        <h2 class="victory-title">VICTORY!</h2>
+                        <div class="winner-racer" id="winnerDisplay">
+                            <img class="winner-racer-avatar" id="winnerAvatar" src="" alt="Winner">
+                            <div class="winner-racer-name" id="winnerName">Character Name</div>
                         </div>
-                        <div class="winner-racer-display" id="winnerDisplay"></div>
+                        <div class="winner-buttons">
+                            <button class="winner-btn">Download Image</button>
+                            <button class="winner-btn">Share to Twitter</button>
+                        </div>
                     </div>
-                    <div class="race-statistics" id="raceStatistics">
-                        <div class="stats-header">
+                    <div class="winner-right">
+                        <div class="race-statistics">
                             <h3>Race Statistics</h3>
-                        </div>
-                        <div class="pot-summary">
-                            <div class="stats-subheader">
+                            <div class="pot-summary">
                                 <h4>Pot Summary</h4>
-                            </div>
-                            <div class="stats-content" id="potSummary">
-                                <div class="pot-stats">
-                                    <div class="stat-item">
-                                        <span class="stat-label">Total Pot:</span>
-                                        <span class="stat-value" id="modalTotalPot">0.0000 SOL</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-label">Participants:</span>
-                                        <span class="stat-value" id="modalTotalBets">0</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-label">Race ID:</span>
-                                        <span class="stat-value" id="modalRaceId">#0</span>
-                                    </div>
+                                <div class="pot-item">
+                                    <span class="label">Total Pot:</span>
+                                    <span class="value" id="modalTotalPot">0.00 SOL</span>
+                                </div>
+                                <div class="pot-item">
+                                    <span class="label">Winner:</span>
+                                    <span class="value" id="modalWinnerName">Character</span>
                                 </div>
                             </div>
-                        </div>
-                        <div class="top-winners">
-                            <div class="stats-subheader">
+                            <div class="top-winners">
                                 <h4>Top Winners</h4>
+                                <div class="top-winner-item">
+                                    <span>#1 ---</span>
+                                    <span>---</span>
+                                </div>
+                                <div class="top-winner-item">
+                                    <span>#2 ---</span>
+                                    <span>---</span>
+                                </div>
+                                <div class="top-winner-item">
+                                    <span>#3 ---</span>
+                                    <span>---</span>
+                                </div>
                             </div>
-                            <div class="stats-content" id="topWinners"></div>
-                        </div>
-                        <div class="your-results">
-                            <div class="stats-subheader">
+                            <div class="your-results">
                                 <h4>Your Results</h4>
+                                <div class="result-item">
+                                    <span class="label">Total Bet:</span>
+                                    <span class="value" id="modalYourBet">0.00 SOL ($0.00)</span>
+                                </div>
+                                <div class="result-item">
+                                    <span class="label">Winnings:</span>
+                                    <span class="value positive" id="modalYourWinnings">+0.00 SOL ($0.00)</span>
+                                </div>
+                                <div class="result-item">
+                                    <span class="label">Net Result:</span>
+                                    <span class="value positive" id="modalNetResult">+0.00 SOL ($0.00)</span>
+                                </div>
                             </div>
-                            <div class="stats-content" id="yourResults"></div>
                         </div>
                     </div>
                 </div>
@@ -307,7 +339,20 @@
         </div>
     </div>
 
-
+    <!-- Countdown Display Element -->
+    <div id="countdownDisplay" style="
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      background: rgba(0,0,0,0.8);
+      padding: 40px;
+      border-radius: 20px;
+      text-align: center;
+    ">
+    </div>
 
   <!-- Privy SDK Loader -->
   <script src="/js/privy-loader.js"></script>
