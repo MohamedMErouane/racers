@@ -57,6 +57,18 @@ export class UI {
       });
     }
 
+    // Theme toggle button
+    const themeBtn = document.getElementById('themeBtn');
+    if (themeBtn) {
+      // Initialize theme from localStorage or default to dark
+      this.currentTheme = localStorage.getItem('theme') || 'dark';
+      this.applyTheme(this.currentTheme);
+      
+      themeBtn.addEventListener('click', () => {
+        this.toggleTheme();
+      });
+    }
+
     // Modal close buttons
     const faqClose = document.getElementById('faqClose');
     if (faqClose) {
@@ -496,5 +508,33 @@ export class UI {
     if (element) {
       element.classList.remove('loading');
     }
+  }
+
+  // Toggle between light and dark theme
+  toggleTheme() {
+    this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
+    this.applyTheme(this.currentTheme);
+    localStorage.setItem('theme', this.currentTheme);
+  }
+
+  // Apply theme to the body
+  applyTheme(theme) {
+    const body = document.body;
+    
+    if (theme === 'light') {
+      body.classList.add('light-theme');
+    } else {
+      body.classList.remove('light-theme');
+    }
+    
+    // Notify other components about theme change
+    window.dispatchEvent(new CustomEvent('theme:changed', {
+      detail: { theme: theme }
+    }));
+  }
+
+  // Get current theme
+  getCurrentTheme() {
+    return this.currentTheme || 'dark';
   }
 }
