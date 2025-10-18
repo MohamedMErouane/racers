@@ -25,6 +25,154 @@ export class UI {
         }
       });
     }
+
+    // Initialize button functionality
+    this.initializeButtons();
+  }
+
+  // Initialize button functionality
+  initializeButtons() {
+    // Voice/Mute button
+    const voiceBtn = document.getElementById('voiceBtn');
+    if (voiceBtn) {
+      this.isMuted = false;
+      voiceBtn.addEventListener('click', () => {
+        this.toggleSound();
+      });
+    }
+
+    // FAQ button
+    const faqBtn = document.getElementById('faqBtn');
+    if (faqBtn) {
+      faqBtn.addEventListener('click', () => {
+        this.showFAQModal();
+      });
+    }
+
+    // Provably Fair button
+    const fairBtn = document.getElementById('fairBtn');
+    if (fairBtn) {
+      fairBtn.addEventListener('click', () => {
+        this.showFairModal();
+      });
+    }
+
+    // Modal close buttons
+    const faqClose = document.getElementById('faqClose');
+    if (faqClose) {
+      faqClose.addEventListener('click', () => {
+        this.hideFAQModal();
+      });
+    }
+
+    const fairClose = document.getElementById('fairClose');
+    if (fairClose) {
+      fairClose.addEventListener('click', () => {
+        this.hideFairModal();
+      });
+    }
+
+    // Close modals when clicking outside
+    const faqModal = document.getElementById('faqModal');
+    if (faqModal) {
+      faqModal.addEventListener('click', (e) => {
+        if (e.target === faqModal) {
+          this.hideFAQModal();
+        }
+      });
+    }
+
+    const fairModal = document.getElementById('fairModal');
+    if (fairModal) {
+      fairModal.addEventListener('click', (e) => {
+        if (e.target === fairModal) {
+          this.hideFairModal();
+        }
+      });
+    }
+  }
+
+  // Toggle sound/mute
+  toggleSound() {
+    this.isMuted = !this.isMuted;
+    const voiceBtn = document.getElementById('voiceBtn');
+    
+    if (this.isMuted) {
+      voiceBtn.textContent = '🔇';
+      voiceBtn.classList.add('muted');
+      voiceBtn.title = 'Unmute Sound';
+      // TODO: Implement actual audio muting logic here
+      console.log('🔇 Sound muted');
+    } else {
+      voiceBtn.textContent = '🔊';
+      voiceBtn.classList.remove('muted');
+      voiceBtn.title = 'Mute Sound';
+      // TODO: Implement actual audio unmuting logic here
+      console.log('🔊 Sound unmuted');
+    }
+  }
+
+  // Show FAQ Modal
+  showFAQModal() {
+    const modal = document.getElementById('faqModal');
+    if (modal) {
+      modal.classList.add('show');
+      modal.style.display = 'flex';
+    }
+  }
+
+  // Hide FAQ Modal
+  hideFAQModal() {
+    const modal = document.getElementById('faqModal');
+    if (modal) {
+      modal.classList.remove('show');
+      modal.style.display = 'none';
+    }
+  }
+
+  // Show Provably Fair Modal
+  showFairModal() {
+    const modal = document.getElementById('fairModal');
+    if (modal) {
+      modal.classList.add('show');
+      modal.style.display = 'flex';
+      this.updateFairModalData();
+    }
+  }
+
+  // Hide Provably Fair Modal
+  hideFairModal() {
+    const modal = document.getElementById('fairModal');
+    if (modal) {
+      modal.classList.remove('show');
+      modal.style.display = 'none';
+    }
+  }
+
+  // Update Provably Fair modal with current data
+  updateFairModalData() {
+    // Update current round info
+    const gameStatus = document.getElementById('gameStatus');
+    const currentRoundId = document.getElementById('currentRoundId');
+    const currentRandomness = document.getElementById('currentRandomness');
+
+    if (gameStatus) gameStatus.textContent = 'Active'; // TODO: Get from game state
+    if (currentRoundId) currentRoundId.textContent = '1'; // TODO: Get from game state
+    if (currentRandomness) currentRandomness.textContent = 'Hash: 0x...' // TODO: Get from game state
+
+    // TODO: Update recent rounds data from API/game state
+    const recentRounds = document.getElementById('recentRounds');
+    if (recentRounds) {
+      // This would be populated with actual round data
+      recentRounds.innerHTML = `
+        <div class="round-item">
+          <p><strong>Round ID:</strong> Previous round data will appear here</p>
+          <p><strong>Randomness:</strong> Will show actual VRF values or revealed seeds</p>
+          <p><strong>Winner:</strong> Character index (0-7)</p>
+          <p><strong>Settlement Tx:</strong> <a href="#" target="_blank">View on Explorer</a></p>
+        </div>
+      `;
+    }
   }
 
   // Hide winner modal

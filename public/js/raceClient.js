@@ -11,7 +11,7 @@ export class RaceClient {
     this.characterImages = new Map();
     this.characterFrames = new Map(); // Store both frames for animation
     this.raceStartTime = null;
-    this.raceDuration = 30000; // 30 seconds race
+    this.raceDuration = 35000; // 35 seconds race - longer duration for full distance
     this.currentBackground = null;
     this.currentBackgroundName = 'default';
     this.animationFrame = 0; // Track animation frame for switching
@@ -222,8 +222,7 @@ export class RaceClient {
     // Draw racing lanes
     this.drawRacingLanes();
     
-    // Draw finish line
-    this.drawFinishLine();
+    // Don't draw finish line - use the one from background image
     
     // Draw racers at starting positions
     this.drawRacers();
@@ -300,11 +299,18 @@ export class RaceClient {
       const speedVariation = (Math.random() - 0.5) * 0.1;
       const adjustedSpeed = position.speed + speedVariation;
       
-      // Update progress - characters move from bottom (0) to top (1)
-      position.progress = Math.min(raceProgress * (adjustedSpeed / 4.5), 1);
+      // Update progress - ensure characters can reach the finish line (100%)
+      // Allow faster characters to finish early and slower ones to catch up
+      const speedMultiplier = (adjustedSpeed / 4.5);
+      position.progress = Math.min(raceProgress * speedMultiplier * 1.5, 1); // Increased multiplier to reach full distance
+      
+      // Debug: Log progress for first character to monitor
+      if (racer.id === 1 && Math.floor(elapsedTime / 1000) % 5 === 0) {
+        console.log(`Character ${racer.name}: progress=${(position.progress * 100).toFixed(1)}%, raceProgress=${(raceProgress * 100).toFixed(1)}%`);
+      }
     });
     
-    // Update position rankings (highest progress = closest to top = best position)
+    // Update position rankings (highest progress = closest to finish = best position)
     const sortedRacers = [...this.raceState.racers].sort((a, b) => {
       return this.raceState.positions[b.id].progress - this.raceState.positions[a.id].progress;
     });
@@ -331,8 +337,7 @@ export class RaceClient {
     // Draw racing lanes
     this.drawRacingLanes();
     
-    // Draw finish line
-    this.drawFinishLine();
+    // Don't draw finish line - use the one from background image
     
     // Draw racers
     this.drawRacers();
@@ -421,7 +426,9 @@ export class RaceClient {
     if (!this.raceState) return;
     
     const laneWidth = this.canvas.width / 8; // Divide canvas into 8 vertical lanes
-    const raceHeight = this.canvas.height - 120; // Leave space for finish line at top
+    const raceHeight = this.canvas.height - 60; // Use full height minus small margin
+    const finishLineY = 10; // Y position at the very back/top of the background
+    const startingY = this.canvas.height - 40; // Starting Y position at bottom
     
     // Update animation frame counter for switching between frames
     this.animationFrame++;
@@ -430,10 +437,32 @@ export class RaceClient {
       const position = this.raceState.positions[racer.id];
       if (!position) return;
       
-      const laneX = (index * laneWidth) + (laneWidth / 2); // Horizontal position in lane
+      // Calculate perspective trajectory
+      const progress = position.progress; // 0 to 1
       
-      // Characters move from BOTTOM to TOP
-      const racerY = this.canvas.height - 80 - (position.progress * raceHeight);
+      // Starting position: each character in their lane at bottom (spread out)
+      const startLaneX = (index * laneWidth) + (laneWidth / 2);
+      
+      // Ending position: characters finish VERY close together at the far back of background
+      const finishCenterX = this.canvas.width / 2;
+      const finishSpread = 80; // Even tighter at the very back (distance effect)
+      const charactersCount = this.raceState.racers.length;
+      const finishLaneWidth = finishSpread / charactersCount;
+      const finishX = finishCenterX - (finishSpread / 2) + (index * finishLaneWidth) + (finishLaneWidth / 2);
+      
+      // Calculate current position with strong perspective convergence
+      // Characters move from their starting lane towards their tight finish position
+      const currentX = startLaneX + (finishX - startLaneX) * progress;
+      
+      // Characters move from BOTTOM all the way to the very back of the background
+      const currentY = startingY - (progress * (startingY - finishLineY));
+      
+      // Scale characters much smaller as they reach the very back (strong perspective)
+      const baseCharacterWidth = 60;
+      const baseCharacterHeight = 80;
+      const scaleFactor = 1.0 - (progress * 0.6); // Characters get 60% smaller at the very back
+      const characterWidth = baseCharacterWidth * scaleFactor;
+      const characterHeight = baseCharacterHeight * scaleFactor;
       
       // Get character frames for animation
       const characterFrames = this.characterFrames.get(racer.id);
@@ -463,23 +492,19 @@ export class RaceClient {
         characterImg = this.characterImages.get(racer.id);
       }
       
-      // Draw character - LARGER SIZE like in reference image
+      // Draw character with perspective positioning and scaling
       if (characterImg && characterImg.complete) {
-        // Much larger character sprites (similar to second image)
-        const characterWidth = 60;  // Increased from 40
-        const characterHeight = 80; // Increased from 40, taller for anime style
-        
         // Add subtle shadow for depth
         this.ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-        this.ctx.shadowBlur = 8;
-        this.ctx.shadowOffsetX = 2;
-        this.ctx.shadowOffsetY = 4;
+        this.ctx.shadowBlur = 8 * scaleFactor;
+        this.ctx.shadowOffsetX = 2 * scaleFactor;
+        this.ctx.shadowOffsetY = 4 * scaleFactor;
         
-        // Draw character sprite
+        // Draw character sprite with perspective scaling
         this.ctx.drawImage(
           characterImg, 
-          laneX - characterWidth/2, 
-          racerY - characterHeight/2, 
+          currentX - characterWidth/2, 
+          currentY - characterHeight/2, 
           characterWidth, 
           characterHeight
         );
@@ -490,40 +515,40 @@ export class RaceClient {
         this.ctx.shadowOffsetX = 0;
         this.ctx.shadowOffsetY = 0;
         
-        // Add character name below character
+        // Add character name below character (also scaled)
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = 'bold 12px Arial';
+        this.ctx.font = `bold ${12 * scaleFactor}px Arial`;
         this.ctx.textAlign = 'center';
         this.ctx.strokeStyle = '#000';
-        this.ctx.lineWidth = 3;
-        this.ctx.strokeText(racer.name, laneX, racerY + characterHeight/2 + 15);
-        this.ctx.fillText(racer.name, laneX, racerY + characterHeight/2 + 15);
+        this.ctx.lineWidth = 3 * scaleFactor;
+        this.ctx.strokeText(racer.name, currentX, currentY + characterHeight/2 + 15 * scaleFactor);
+        this.ctx.fillText(racer.name, currentX, currentY + characterHeight/2 + 15 * scaleFactor);
         
       } else {
-        // Fallback: larger colored circle with character initial
+        // Fallback: larger colored circle with character initial (also with perspective)
         this.ctx.fillStyle = racer.color;
         this.ctx.beginPath();
-        this.ctx.arc(laneX, racerY, 25, 0, 2 * Math.PI); // Increased from 15
+        this.ctx.arc(currentX, currentY, 25 * scaleFactor, 0, 2 * Math.PI);
         this.ctx.fill();
         
         // White border
         this.ctx.strokeStyle = '#fff';
-        this.ctx.lineWidth = 3; // Thicker border
+        this.ctx.lineWidth = 3 * scaleFactor;
         this.ctx.stroke();
         
         // Character initial
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = 'bold 18px Arial'; // Larger font
+        this.ctx.font = `bold ${18 * scaleFactor}px Arial`;
         this.ctx.textAlign = 'center';
-        this.ctx.fillText(racer.name.charAt(0), laneX, racerY + 6);
+        this.ctx.fillText(racer.name.charAt(0), currentX, currentY + 6 * scaleFactor);
         
         // Character name below
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = 'bold 12px Arial';
+        this.ctx.font = `bold ${12 * scaleFactor}px Arial`;
         this.ctx.strokeStyle = '#000';
-        this.ctx.lineWidth = 3;
-        this.ctx.strokeText(racer.name, laneX, racerY + 45);
-        this.ctx.fillText(racer.name, laneX, racerY + 45);
+        this.ctx.lineWidth = 3 * scaleFactor;
+        this.ctx.strokeText(racer.name, currentX, currentY + 45 * scaleFactor);
+        this.ctx.fillText(racer.name, currentX, currentY + 45 * scaleFactor);
       }
     });
   }

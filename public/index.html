@@ -33,6 +33,24 @@
         <div class="logo">
             <h1>racers.fun</h1>
         </div>
+        <div class="race-stats-nav">
+            <div class="stat-item">
+                <div class="stat-value" id="totalPot">0.00 SOL</div>
+                <div class="stat-label">Total Pot</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalBets">0</div>
+                <div class="stat-label">Total Bets</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="myBets">0 SOL</div>
+                <div class="stat-label">My Bets</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="userBalance">100.0 SOL</div>
+                <div class="stat-label">My Balance</div>
+            </div>
+        </div>
         <div class="wallet-controls">
             <button class="wallet-btn" id="walletBtn">Connect</button>
             <div class="wallet-actions" id="walletActions">
@@ -66,9 +84,9 @@
                     <span class="price-value" id="solanaPrice">$0.00</span>
                 </div>
                 <div class="rules-icons">
-                    <span>🔊</span>
-                    <span>❓</span>
-                    <span>⚖️</span>
+                    <button class="icon-btn voice-btn" id="voiceBtn" title="Toggle Sound">🔊</button>
+                    <button class="icon-btn faq-btn" id="faqBtn" title="FAQ">❓</button>
+                    <button class="icon-btn fair-btn" id="fairBtn" title="Provably Fair">⚖️</button>
                 </div>
             </div>
             
@@ -80,24 +98,6 @@
                 <div class="race-header">
                     <h2>Race #<span id="raceNumber">1</span></h2>
                     <span>Next race in: <span id="nextRaceTime">60s</span></span>
-                </div>
-                <div class="race-stats">
-                    <div class="stat-item">
-                        <div class="stat-value" id="totalPot">0 SOL</div>
-                        <div class="stat-label">Total Pot</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="totalBets">0</div>
-                        <div class="stat-label">Total Bets</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="myBets">0 SOL</div>
-                        <div class="stat-label">My Bets</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="userBalance">100.0 SOL</div>
-                        <div class="stat-label">My Balance</div>
-                    </div>
                 </div>
             </div>
 
@@ -357,6 +357,127 @@
   <!-- Privy SDK Loader -->
   <script src="/js/privy-loader.js"></script>
   
+    </div>
+
+  <!-- FAQ Modal -->
+  <div class="modal-overlay" id="faqModal">
+    <div class="modal-content faq-modal">
+      <div class="modal-header">
+        <h2>Frequently Asked Questions</h2>
+        <button class="modal-close" id="faqClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="faq-item">
+          <h3>1) How does a round work?</h3>
+          <p>Pick 1 of 8 racers and place your bet before the countdown hits 0. All bets go into one pot. When the race ends, the smart contract pays out automatically: 86% of the pot goes to wallets that picked the winner (split pro-rata by their winning stake), 10% is returned as cashback to all losing wallets (also pro-rata by their losing stake), and 4% is the platform fee.</p>
+          <p><strong>Quick example:</strong> Pot = 10 SOL. Winners' total stake = 3 SOL. You bet 0.5 SOL on the winner. Your payout = (0.5 / 3) × 8.6 = 1.433 SOL.<br>
+          If you lost 0.20 SOL in that round and total losing stake was 7 SOL, your cashback = (0.20 / 7) × 1.0 = 0.0286 SOL.</p>
+        </div>
+        
+        <div class="faq-item">
+          <h3>2) What's the house edge / fee?</h3>
+          <p>We take a flat 4% of every round's total pot. That means 96% of the pot always returns to players (86% winners + 10% losers). Long-run expected return to players is 96% of total wagered volume.</p>
+        </div>
+        
+        <div class="faq-item">
+          <h3>3) How is the game fair? Can I verify results?</h3>
+          <p>All logic runs on-chain on Solana (SVM). Each round's outcome is produced by the contract's randomness routine and finalized on-chain; results and payouts are transparent in the transaction logs. We publish:</p>
+          <ul>
+            <li>the program address,</li>
+            <li>the round ID + randomness inputs (e.g., seed/commit-reveal or VRF proof),</li>
+            <li>and the settlement tx.</li>
+          </ul>
+          <p>With those, anyone can check: (a) the winning racer, (b) the pot size, and (c) every wallet's payout.</p>
+        </div>
+        
+        <div class="faq-item">
+          <h3>4) Do I need a wallet? Which ones work?</h3>
+          <p>Yes. Wallet connection is required to place bets and to chat. Any major Solana wallet works (e.g., Phantom, Solflare, Backpack). You sign a tx for each bet/withdrawal. Gas fees are tiny on Solana, but they still exist.</p>
+        </div>
+        
+        <div class="faq-item">
+          <h3>5) How much can I bet? Are there limits?</h3>
+          <p>You can bet any denomination up to your available balance (e.g., if you deposited 1 SOL, you can bet 0.03, 0.2, 0.77—your call—up to 1 SOL). Bets lock when the countdown hits 0; if your transaction confirms after lock, it won't enter the pot and your funds stay in your balance.</p>
+        </div>
+        
+        <div class="faq-item">
+          <h3>6) How does the 10% cashback for losers work?</h3>
+          <p>After the winner is settled, the contract takes 10% of the pot and splits it pro-rata across all losing stakes from that round. Bigger losing stakes get a bigger share; tiny stakes get a tiny share. Cashback is credited instantly in the same settlement tx.</p>
+        </div>
+        
+        <div class="faq-item">
+          <h3>7) Deposits, withdrawals, and failed transactions</h3>
+          <ul>
+            <li><strong>Deposits:</strong> Send SOL to the game program via the site flow; your in-game balance updates after confirmation.</li>
+            <li><strong>Withdrawals:</strong> You can withdraw your available balance any time; it's a standard Solana tx back to your wallet.</li>
+            <li><strong>Failed/Pending bets:</strong> If a bet tx fails or confirms after the round lock, it's not included in the pot and no fee is taken. Your balance remains unchanged.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Provably Fair Modal -->
+  <div class="modal-overlay" id="fairModal">
+    <div class="modal-content fair-modal">
+      <div class="modal-header">
+        <h2>Provably Fair System</h2>
+        <button class="modal-close" id="fairClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="intro">racers.fun uses a provably fair system. Winner selection is derived from a verifiable random value, and payouts are executed by program code on Solana. You can verify every round yourself.</p>
+        
+        <div class="fair-section">
+          <h3>How it works</h3>
+          <ol>
+            <li>Before lock we publish either a VRF request or a seed hash.</li>
+            <li>After the round, the randomness value is finalized on-chain.</li>
+            <li>The program computes winner_index and settles payouts.</li>
+            <li>You can verify the randomness and all transfers on an explorer.</li>
+          </ol>
+        </div>
+        
+        <div class="fair-section">
+          <h3>Current Round</h3>
+          <div class="round-info">
+            <p><strong>Game Status:</strong> <span id="gameStatus">Active</span></p>
+            <p><strong>Round ID:</strong> <span id="currentRoundId">1</span></p>
+            <p><strong>Randomness:</strong> <span id="currentRandomness">Hash pending...</span></p>
+            <p class="note">Note: The seed is revealed after the game ends.</p>
+          </div>
+        </div>
+        
+        <div class="fair-section">
+          <h3>Recent Rounds</h3>
+          <div class="recent-rounds" id="recentRounds">
+            <div class="round-item">
+              <p><strong>Round ID:</strong> Previous round data will appear here</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="fair-section">
+          <h3>Payout Rules</h3>
+          <div class="payout-rules">
+            <p><strong>Winners:</strong> 86% of pot split pro-rata by winning stake</p>
+            <p><strong>Losers:</strong> 10% of pot split equally among losing wallets</p>
+            <p><strong>Platform Fee:</strong> 4% of pot</p>
+          </div>
+        </div>
+        
+        <div class="fair-section">
+          <h3>Legal & Responsible Play</h3>
+          <ul>
+            <li>You must be of legal age and permitted by your local laws.</li>
+            <li>This is a game of chance. Do not wager more than you can afford to lose.</li>
+            <li>Expected return to players is 96%. Long-run EV is negative.</li>
+            <li>All transactions are final and executed on-chain.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Mock Privy Fallback -->
   <script src="/js/mock-privy.js"></script>
   
