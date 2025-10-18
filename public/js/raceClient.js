@@ -9,10 +9,12 @@ export class RaceClient {
     this.ctx = null;
     this.animationId = null;
     this.characterImages = new Map();
+    this.characterFrames = new Map(); // Store both frames for animation
     this.raceStartTime = null;
     this.raceDuration = 30000; // 30 seconds race
     this.currentBackground = null;
     this.currentBackgroundName = 'default';
+    this.animationFrame = 0; // Track animation frame for switching
   }
 
   // Setup event handlers
@@ -109,21 +111,45 @@ export class RaceClient {
       
       racers.forEach(racer => {
         if (racer.name && racer.id) {
-          const img = new Image();
-          
-          // Use the exact paths from your JSON
-          const imagePath = racer.avatar2 || racer.avatar || `images/characters/${racer.name.toLowerCase()}-face.png`;
-          
-          img.onload = () => {
-            console.log(`✅ Loaded sprite for ${racer.name}: ${imagePath}`);
-            this.characterImages.set(racer.id, img);
+          // Load both animation frames for each character
+          const frames = {
+            frame1: null,
+            frame2: null
           };
           
-          img.onerror = () => {
-            console.warn(`❌ Failed to load sprite for ${racer.name}: ${imagePath}`);
-          };
+          const characterName = racer.name.toLowerCase();
           
-          img.src = imagePath;
+          // Load frame1 (RUNNING FRAME 1 - NOT FACE!)
+          const frame1Path = `images/characters/${characterName}-frame1.png`;
+          const img1 = new Image();
+          img1.onload = () => {
+            console.log(`✅ Loaded RUNNING frame1 for ${racer.name}: ${frame1Path}`);
+            frames.frame1 = img1;
+            this.characterFrames.set(racer.id, frames);
+            this.characterImages.set(racer.id, frames.frame1);
+          };
+          img1.onerror = () => {
+            console.warn(`❌ Failed to load running frame1 for ${racer.name}: ${frame1Path}`);
+          };
+          img1.src = frame1Path;
+          
+          // Load frame2 (RUNNING FRAME 2 - NOT FACE!)
+          const frame2Path = `images/characters/${characterName}-frame2.png`;
+          const img2 = new Image();
+          img2.onload = () => {
+            console.log(`✅ Loaded RUNNING frame2 for ${racer.name}: ${frame2Path}`);
+            frames.frame2 = img2;
+            this.characterFrames.set(racer.id, frames);
+            if (!frames.frame1) {
+              this.characterImages.set(racer.id, frames.frame2);
+            }
+          };
+          img2.onerror = () => {
+            console.warn(`❌ Failed to load running frame2 for ${racer.name}: ${frame2Path}`);
+          };
+          img2.src = frame2Path;
+          
+          console.log(`🏃‍♀️ Loading RUNNING frames for ${racer.name}: ${frame1Path} & ${frame2Path}`);
         }
       });
     } catch (error) {
@@ -397,6 +423,9 @@ export class RaceClient {
     const laneWidth = this.canvas.width / 8; // Divide canvas into 8 vertical lanes
     const raceHeight = this.canvas.height - 120; // Leave space for finish line at top
     
+    // Update animation frame counter for switching between frames
+    this.animationFrame++;
+    
     this.raceState.racers.forEach((racer, index) => {
       const position = this.raceState.positions[racer.id];
       if (!position) return;
@@ -404,30 +433,97 @@ export class RaceClient {
       const laneX = (index * laneWidth) + (laneWidth / 2); // Horizontal position in lane
       
       // Characters move from BOTTOM to TOP
-      const racerY = this.canvas.height - 50 - (position.progress * raceHeight);
+      const racerY = this.canvas.height - 80 - (position.progress * raceHeight);
       
-      // Draw character
-      const characterImg = this.characterImages.get(racer.id);
-      if (characterImg && characterImg.complete) {
-        // Draw character sprite
-        this.ctx.drawImage(characterImg, laneX - 20, racerY - 20, 40, 40);
+      // Get character frames for animation
+      const characterFrames = this.characterFrames.get(racer.id);
+      let characterImg = null;
+      
+      if (characterFrames) {
+        // Animate between frame1 and frame2 for running effect
+        // Switch frames every 10 animation cycles (faster animation for better running effect)
+        const frameSwitch = Math.floor(this.animationFrame / 10) % 2;
+        
+        if (this.raceState.isRunning) {
+          // ONLY use running frames when race is running - NO FACE IMAGES!
+          if (frameSwitch === 0 && characterFrames.frame1) {
+            characterImg = characterFrames.frame1;
+          } else if (frameSwitch === 1 && characterFrames.frame2) {
+            characterImg = characterFrames.frame2;
+          } else {
+            // If one frame is missing, use the available running frame
+            characterImg = characterFrames.frame1 || characterFrames.frame2;
+          }
+        } else {
+          // When not running, use frame1 as idle pose (still a running frame, not face)
+          characterImg = characterFrames.frame1 || characterFrames.frame2;
+        }
       } else {
-        // Fallback: colored circle with character initial
+        // Fallback to old system only if no frames loaded
+        characterImg = this.characterImages.get(racer.id);
+      }
+      
+      // Draw character - LARGER SIZE like in reference image
+      if (characterImg && characterImg.complete) {
+        // Much larger character sprites (similar to second image)
+        const characterWidth = 60;  // Increased from 40
+        const characterHeight = 80; // Increased from 40, taller for anime style
+        
+        // Add subtle shadow for depth
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+        this.ctx.shadowBlur = 8;
+        this.ctx.shadowOffsetX = 2;
+        this.ctx.shadowOffsetY = 4;
+        
+        // Draw character sprite
+        this.ctx.drawImage(
+          characterImg, 
+          laneX - characterWidth/2, 
+          racerY - characterHeight/2, 
+          characterWidth, 
+          characterHeight
+        );
+        
+        // Reset shadow
+        this.ctx.shadowColor = 'transparent';
+        this.ctx.shadowBlur = 0;
+        this.ctx.shadowOffsetX = 0;
+        this.ctx.shadowOffsetY = 0;
+        
+        // Add character name below character
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = 'bold 12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.strokeStyle = '#000';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeText(racer.name, laneX, racerY + characterHeight/2 + 15);
+        this.ctx.fillText(racer.name, laneX, racerY + characterHeight/2 + 15);
+        
+      } else {
+        // Fallback: larger colored circle with character initial
         this.ctx.fillStyle = racer.color;
         this.ctx.beginPath();
-        this.ctx.arc(laneX, racerY, 15, 0, 2 * Math.PI);
+        this.ctx.arc(laneX, racerY, 25, 0, 2 * Math.PI); // Increased from 15
         this.ctx.fill();
         
         // White border
         this.ctx.strokeStyle = '#fff';
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 3; // Thicker border
         this.ctx.stroke();
         
         // Character initial
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = 'bold 14px Arial';
+        this.ctx.font = 'bold 18px Arial'; // Larger font
         this.ctx.textAlign = 'center';
-        this.ctx.fillText(racer.name.charAt(0), laneX, racerY + 5);
+        this.ctx.fillText(racer.name.charAt(0), laneX, racerY + 6);
+        
+        // Character name below
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = 'bold 12px Arial';
+        this.ctx.strokeStyle = '#000';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeText(racer.name, laneX, racerY + 45);
+        this.ctx.fillText(racer.name, laneX, racerY + 45);
       }
     });
   }
