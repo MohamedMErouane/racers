@@ -670,7 +670,7 @@ export class BettingClient {
     const sortedData = Object.entries(data)
       .filter(([racerId, raceData]) => raceData.percentage > 0)
       .sort(([,a], [,b]) => b.percentage - a.percentage)
-      .slice(0, 6); // Show top 6
+      .slice(0, 4); // Show top 4 to keep it compact
     
     sortedData.forEach(([racerId, raceData]) => {
       const racer = this.racers.find(r => r.id == racerId);
@@ -682,12 +682,12 @@ export class BettingClient {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 8px;
-        padding: 8px 12px;
-        border-radius: 8px;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 6px;
         background: rgba(30, 30, 40, 0.8);
-        margin-bottom: 6px;
-        border-left: 4px solid ${racer.color || '#ff69b4'};
+        margin-bottom: 3px;
+        border-left: 3px solid ${racer.color || '#ff69b4'};
         transition: all 0.3s ease;
       `;
       
@@ -696,15 +696,15 @@ export class BettingClient {
       leftSide.style.cssText = `
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         flex: 1;
       `;
       
       // Color indicator
       const colorDot = document.createElement('div');
       colorDot.style.cssText = `
-        width: 12px;
-        height: 12px;
+        width: 8px;
+        height: 8px;
         background: ${racer.color || '#ff69b4'};
         border-radius: 50%;
         flex-shrink: 0;
@@ -715,19 +715,19 @@ export class BettingClient {
       img.src = racer.avatar || `images/characters/${racer.name.toLowerCase()}-face.png`;
       img.alt = racer.name;
       img.style.cssText = `
-        width: 24px;
-        height: 24px;
+        width: 18px;
+        height: 18px;
         border-radius: 50%;
         object-fit: cover;
-        border: 2px solid ${racer.color || '#ff69b4'};
+        border: 1px solid ${racer.color || '#ff69b4'};
         flex-shrink: 0;
       `;
       
       img.onerror = () => {
         const fallback = document.createElement('div');
         fallback.style.cssText = `
-          width: 24px;
-          height: 24px;
+          width: 18px;
+          height: 18px;
           background: ${racer.color || '#ff69b4'};
           border-radius: 50%;
           display: flex;
@@ -735,8 +735,8 @@ export class BettingClient {
           justify-content: center;
           color: white;
           font-weight: bold;
-          font-size: 12px;
-          border: 2px solid ${racer.color || '#ff69b4'};
+          font-size: 10px;
+          border: 1px solid ${racer.color || '#ff69b4'};
           flex-shrink: 0;
         `;
         fallback.textContent = racer.name.charAt(0).toUpperCase();
@@ -747,19 +747,19 @@ export class BettingClient {
       const nameSpan = document.createElement('span');
       nameSpan.style.cssText = `
         color: white;
-        font-size: 14px;
+        font-size: 12px;
         font-weight: bold;
         flex: 1;
       `;
-      nameSpan.textContent = racer.name;
+      nameSpan.textContent = racer.name.substring(0, 2);
       
       // Right side: Percentage
       const percentSpan = document.createElement('span');
       percentSpan.style.cssText = `
         color: ${racer.color || '#ff69b4'};
-        font-size: 14px;
+        font-size: 12px;
         font-weight: bold;
-        min-width: 45px;
+        min-width: 35px;
         text-align: right;
       `;
       percentSpan.textContent = `${raceData.percentage.toFixed(1)}%`;

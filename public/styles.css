@@ -1,11 +1,30 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Russo+One&display=swap');
 
+/* Universal anti-scroll rules */
+* {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+*::-webkit-scrollbar {
+    display: none; /* WebKit */
+}
+
+html, body {
+    overflow: hidden !important;
+    scroll-behavior: auto !important;
+    overscroll-behavior: none !important;
+}
+
 /* ===============================
    LIGHT THEME STYLES
 =============================== */
 body.light-theme {
     background: linear-gradient(135deg, #e8f5e8 0%, #f0fff0 50%, #e0f7fa 100%);
     color: #1b5e20;
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
 }
 
 body.light-theme #animatedBg {
@@ -28,6 +47,27 @@ body.light-theme .logo {
     color: #ffffff;
     text-shadow: 0 0 15px rgba(255, 255, 255, 0.8), 0 0 25px rgba(76, 175, 80, 0.6);
     font-weight: 900;
+}
+
+body.light-theme .logo-image {
+    filter: brightness(1.15) contrast(1.2) saturate(1.15) drop-shadow(0 2px 8px rgba(76, 175, 80, 0.5));
+    box-shadow: 
+        0 4px 15px rgba(76, 175, 80, 0.2),
+        0 0 30px rgba(76, 175, 80, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    border-color: rgba(76, 175, 80, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-theme .logo-image:hover {
+    filter: brightness(1.35) contrast(1.3) saturate(1.25) drop-shadow(0 4px 12px rgba(76, 175, 80, 0.7)) drop-shadow(0 0 15px rgba(255, 255, 255, 0.6));
+    box-shadow: 
+        0 8px 25px rgba(76, 175, 80, 0.3),
+        0 0 40px rgba(76, 175, 80, 0.4),
+        0 0 60px rgba(129, 199, 132, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    border-color: rgba(76, 175, 80, 0.4);
+    background: rgba(255, 255, 255, 0.2);
 }
 
 body.light-theme .wallet-controls {
@@ -169,14 +209,16 @@ body.light-theme .chat-input-container {
     border-top: 2px solid #4CAF50;
 }
 
-body.light-theme .chat-input {
+body.light-theme .chat-input, body.light-theme #chatInput {
+    width: 100%;
     background: linear-gradient(135deg, #ffffff 0%, #f8fff8 100%);
     border: 2px solid #4CAF50;
     color: #1b5e20;
     font-weight: 500;
+    box-sizing: border-box;
 }
 
-body.light-theme .chat-input:focus {
+body.light-theme .chat-input:focus, body.light-theme #chatInput:focus {
     border-color: #2e7d32;
     box-shadow: 0 0 15px rgba(76, 175, 80, 0.4);
     background: #ffffff;
@@ -547,6 +589,7 @@ body.light-theme .quick-bet-buttons {
     margin-bottom: 15px;
     align-items: center;
     flex-wrap: nowrap;
+    width: 100%;
 }
 
 body.light-theme .quick-bet-btn {
@@ -559,7 +602,7 @@ body.light-theme .quick-bet-btn {
     cursor: pointer;
     transition: all 0.3s ease;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    min-width: 70px;
+    flex: 1;
     text-align: center;
     font-size: 14px;
 }
@@ -578,7 +621,6 @@ body.light-theme #customBetAmount {
     color: #1b5e20;
     font-weight: bold;
     flex: 1;
-    min-width: 80px;
     font-size: 14px;
     text-align: center;
 }
@@ -878,29 +920,33 @@ body.light-theme .chat-messages::-webkit-scrollbar-thumb:hover {
 .quick-bet-buttons {
     display: flex !important;
     gap: 10px !important;
-    justify-content: center !important;
+    justify-content: space-between !important;
     align-items: center !important;
     flex-wrap: nowrap !important;
+    width: 100% !important;
+    margin-bottom: 15px !important;
 }
 
 .quick-bet-btn {
-    flex: none !important;
+    flex: 0 0 auto !important;
     padding: 10px 16px !important;
-    min-width: 70px !important;
     text-align: center !important;
     font-size: 14px !important;
     font-weight: bold !important;
-    border-radius: 12px !important;
+    border-radius: 8px !important;
     cursor: pointer !important;
     transition: all 0.3s ease !important;
+    min-width: 70px !important;
 }
 
 #customBetAmount {
     padding: 10px 16px !important;
-    min-width: 80px !important;
+    flex: 0 0 auto !important;
     text-align: center !important;
     font-size: 14px !important;
-    border-radius: 12px !important;
+    border-radius: 8px !important;
+    min-width: 65px !important;
+    width: 65px !important;
 }
 
 .place-bet-btn {
@@ -922,12 +968,20 @@ body.light-theme .chat-messages::-webkit-scrollbar-thumb:hover {
     box-sizing: border-box;
 }
 
+html {
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden !important;
+}
+
 body {
     font-family: 'Orbitron', sans-serif;
     background: #000;
     color: #fff;
-    overflow: hidden;
+    overflow: hidden !important;
     position: relative;
+    height: 100vh;
+    max-height: 100vh;
 }
 
 /* Animated Background */
@@ -1023,7 +1077,7 @@ body {
     background: linear-gradient(135deg, rgba(147, 51, 234, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%);
     backdrop-filter: blur(10px);
     border-bottom: 2px solid #9333ea;
-    padding: 20px 30px;
+    padding: 12px 30px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1033,6 +1087,7 @@ body {
     right: 0;
     z-index: 1000;
     box-shadow: 0 4px 20px rgba(147, 51, 234, 0.3);
+    height: 70px;
 }
 
 /* Race Stats in Navbar */
@@ -1070,6 +1125,43 @@ body {
     display: flex;
     align-items: center;
     gap: 15px;
+}
+
+.logo-image {
+    height: 90px;
+    width: auto;
+    max-width: 300px;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    padding: 6px 10px;
+}
+
+.logo-image:hover {
+    filter: brightness(1.25) contrast(1.2) saturate(1.3) drop-shadow(0 6px 20px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 25px rgba(147, 51, 234, 0.6));
+    transform: scale(1.08) translateY(-2px);
+    box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.4),
+        0 0 40px rgba(147, 51, 234, 0.4),
+        0 0 60px rgba(59, 130, 246, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border-color: rgba(147, 51, 234, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+@keyframes logoGlow {
+    0% { 
+        box-shadow: 
+            0 4px 15px rgba(0, 0, 0, 0.3),
+            0 0 30px rgba(147, 51, 234, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    100% { 
+        box-shadow: 
+            0 4px 15px rgba(0, 0, 0, 0.3),
+            0 0 35px rgba(147, 51, 234, 0.4),
+            0 0 50px rgba(59, 130, 246, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
 }
 
 .logo h1 {
@@ -2783,7 +2875,7 @@ body.loaded .chat-collapse-btn {
 .betting-distribution {
   background: linear-gradient(135deg, rgba(20, 20, 30, 0.95), rgba(30, 30, 40, 0.95));
   border-radius: 16px;
-  padding: 24px;
+  padding: 164px;
   margin: 16px 0;
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
@@ -2829,7 +2921,7 @@ body.loaded .chat-collapse-btn {
   text-align: center;
   color: white;
   font-size: 14px;
-  margin-bottom: 20px;
+  margin-bottom: -20px;
   padding: 8px 16px;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 20px;
@@ -5418,8 +5510,8 @@ body.loaded .chat-collapse-btn {
     align-items: center;
 }
 
-#chatInput {
-    flex: 1;
+#chatInput, .chat-input {
+    width: 100%;
     background: rgba(20, 20, 30, 0.8);
     border: 1px solid rgba(147, 51, 234, 0.3);
     border-radius: 8px;
@@ -5428,14 +5520,15 @@ body.loaded .chat-collapse-btn {
     font-size: 14px;
     outline: none;
     transition: all 0.3s ease;
+    box-sizing: border-box;
 }
 
-#chatInput:focus {
+#chatInput:focus, .chat-input:focus {
     border-color: #9333ea;
     box-shadow: 0 0 10px rgba(147, 51, 234, 0.3);
 }
 
-#chatInput::placeholder {
+#chatInput::placeholder, .chat-input::placeholder {
     color: #6b7280;
 }
 
@@ -6201,3 +6294,245 @@ body.light-theme .theme-btn::before {
         margin: 0 2px;
     }
 }
+
+/* Compact legend override */
+.distribution-legend {
+    max-height: 150px !important;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)) !important;
+    gap: 4px !important;
+    padding: 8px !important;
+    overflow-y: auto !important;
+}
+
+/* Default dark theme legend styles */
+.legend-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 4px 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    transition: all 0.2s ease;
+    min-height: 24px;
+    box-sizing: border-box;
+}
+
+.legend-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.legend-color {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.legend-name {
+    font-weight: 500;
+    color: #e5e7eb;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    font-size: 10px;
+}
+
+.legend-percentage {
+    font-weight: 600;
+    color: #10b981;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+/* Race container styling */
+#raceContainer {
+    position: relative;
+    overflow: hidden;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.race-display {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.canvas-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+#raceCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+}
+
+/* Override any margins/padding on race track container */
+.race-track-container {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Chat collapsed - game panel takes full width */
+.main-container.chat-collapsed .game-panel {
+    width: 100%;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ensure chat collapse button is always visible */
+.chat-collapse-btn {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Race position and speed displays */
+#positionsDisplay, #speedDisplay {
+    font-family: 'Arial', sans-serif;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    position: absolute !important;
+    z-index: 1000 !important;
+}
+
+#positionsDisplay {
+    top: 20px !important;
+    left: 20px !important;
+    animation: slideInLeft 0.5s ease-out;
+}
+
+#speedDisplay {
+    top: 20px !important;
+    right: 20px !important;
+    animation: slideInRight 0.5s ease-out;
+}
+
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Attractive Legend Styles - 2x2 Grid like image */
+.distribution-legend {
+    max-height: 80px !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: 1fr 1fr !important;
+    gap: 8px !important;
+    padding: 12px !important;
+    overflow: hidden !important;
+}
+
+/* Legend item - horizontal layout in grid */
+.legend-item {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-size: 12px !important;
+    transition: all 0.2s ease !important;
+    min-height: auto !important;
+    max-height: auto !important;
+    box-sizing: border-box !important;
+}
+
+.legend-item:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 4px !important;
+    padding: 2px !important;
+}
+
+.legend-color {
+    width: 12px !important;
+    height: 12px !important;
+    border-radius: 2px !important;
+    flex-shrink: 0 !important;
+    border: none !important;
+}
+
+.legend-name {
+    font-weight: 500 !important;
+    color: #ffffff !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    flex: 1 !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+}
+
+.legend-percentage {
+    font-weight: 600 !important;
+    color: #ffffff !important;
+    font-size: 12px !important;
+    flex-shrink: 0 !important;
+    line-height: 1.2 !important;
+    opacity: 0.8 !important;
+}
+
+/* Light theme attractive legend overrides */
+body.light-theme .distribution-legend {
+    max-height: 80px !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: 1fr 1fr !important;
+    gap: 8px !important;
+    padding: 12px !important;
+    overflow: hidden !important;
+}
+
+body.light-theme .legend-item {
+    padding: 0 !important;
+    font-size: 12px !important;
+    min-height: auto !important;
+    max-height: auto !important;
+    gap: 8px !important;
+}
+
+body.light-theme .legend-item:hover {
+    background: rgba(76, 175, 80, 0.1) !important;
+    padding: 2px !important;
+}
+
+body.light-theme .legend-color {
+    width: 12px !important;
+    height: 12px !important;
+    border: none !important;
+}
+
+body.light-theme .legend-name {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    color: #1b5e20 !important;
+}
+
+body.light-theme .legend-percentage {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    color: #2e7d32 !important;
+}
+

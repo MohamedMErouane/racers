@@ -60,6 +60,9 @@ class RacersApp {
       // Hide loading screen
       this.hideLoadingScreen();
       
+      // Restore chat panel state
+      this.restoreChatPanelState();
+      
       // Show welcome notification
       this.ui.showNotification('Welcome to Racers.fun!', 'success');
       
@@ -110,6 +113,14 @@ class RacersApp {
     window.addEventListener('wallet:connected', (event) => {
       this.handleWalletConnected(event.detail);
     });
+    
+    // Chat collapse/expand toggle
+    const chatCollapseBtn = document.getElementById('chatCollapseBtn');
+    if (chatCollapseBtn) {
+      chatCollapseBtn.addEventListener('click', () => {
+        this.toggleChatPanel();
+      });
+    }
   }
 
   // Handle bet placement
@@ -163,6 +174,53 @@ class RacersApp {
     if (loadingScreen) {
       loadingScreen.style.display = 'none';
     }
+    
+    // Add 'loaded' class to body to show chat collapse button and other loaded-state elements
+    document.body.classList.add('loaded');
+  }
+
+  // Toggle chat panel visibility
+  toggleChatPanel() {
+    const chatPanel = document.getElementById('chatPanel');
+    const mainContainer = document.querySelector('.main-container');
+    if (!chatPanel || !mainContainer) return;
+    
+    const isCollapsed = chatPanel.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+      // Expand chat panel
+      chatPanel.classList.remove('collapsed');
+      mainContainer.classList.remove('chat-collapsed');
+      console.log('Chat panel expanded');
+    } else {
+      // Collapse chat panel
+      chatPanel.classList.add('collapsed');
+      mainContainer.classList.add('chat-collapsed');
+      console.log('Chat panel collapsed');
+    }
+    
+    // Optional: Save state to localStorage
+    try {
+      localStorage.setItem('chatPanelCollapsed', !isCollapsed);
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+  }
+
+  // Restore chat panel state from localStorage
+  restoreChatPanelState() {
+    try {
+      const isCollapsed = localStorage.getItem('chatPanelCollapsed') === 'true';
+      const chatPanel = document.getElementById('chatPanel');
+      const mainContainer = document.querySelector('.main-container');
+      
+      if (chatPanel && mainContainer && isCollapsed) {
+        chatPanel.classList.add('collapsed');
+        mainContainer.classList.add('chat-collapsed');
+      }
+    } catch (e) {
+      // Ignore localStorage errors
+    }
   }
 
   // Start the application
@@ -177,6 +235,14 @@ class RacersApp {
 document.addEventListener('DOMContentLoaded', () => {
   const app = new RacersApp();
   app.start();
+  
+  // Safety fallback: Ensure 'loaded' class is added after a short delay
+  setTimeout(() => {
+    if (!document.body.classList.contains('loaded')) {
+      document.body.classList.add('loaded');
+      console.log('✅ Added "loaded" class to body as fallback');
+    }
+  }, 2000);
   
   // Make app globally available for debugging (development only)
   if ((typeof process !== 'undefined' && process.env.NODE_ENV === 'development') || window.location.hostname === 'localhost') {

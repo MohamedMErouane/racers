@@ -1,0 +1,34 @@
+/* Fix betting panel height to prevent page scrolling */
+.betting-panel {
+    height: 100% !important;
+    max-height: calc(100vh - 70px) !important;
+    margin-top: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Also ensure main container doesn't overflow */
+.main-container {
+    height: calc(100vh - 70px) !important;
+    max-height: calc(100vh - 70px) !important;
+    overflow: hidden !important;
+}
+
+/* Prevent any scrolling on the entire page */
+html, body {
+    overflow: hidden !important;
+    scroll-behavior: auto !important;
+    overscroll-behavior: none !important;
+    position: fixed !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Hide all scrollbars */
+* {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+*::-webkit-scrollbar {
+    display: none !important;
+}

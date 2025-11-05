@@ -6,6 +6,7 @@
     <title>racers.fun - Waifu Racing Battles</title>
     <link rel="icon" type="image/png" href="images/ui/favicon.png">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="height-fix.css">
     <!-- Add CSS for pulse animation -->
     <style>
     @keyframes pulse {
@@ -31,7 +32,7 @@
     <!-- Header -->
     <header class="header">
         <div class="logo">
-            <h1>racers.fun</h1>
+            <img src="images/ui/racers.png" alt="racers.fun" class="logo-image">
         </div>
         <div class="race-stats-nav">
             <div class="stat-item">
@@ -210,13 +211,6 @@
                         <input type="number" id="customBetAmount" placeholder="_ SOL" min="0.1" step="0.1">
                     </div>
                     <button class="place-bet-btn" id="placeBetBtn">Place Bet - 0.0 SOL</button>
-                </div>
-            </div>
-            
-            <!-- Live Odds Display -->
-            <div class="odds-display">
-                <div class="odds-grid" id="oddsGrid">
-                    <!-- Odds items will be populated here by JavaScript -->
                 </div>
             </div>
             

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Winner Modal</title>
+    <link rel="stylesheet" href="public/styles.css">
+</head>
+<body>
+    <h1>Winner Modal Test</h1>
+    <button onclick="showTestModal()">Show Winner Modal</button>
+    
+    <!-- Winner Modal (copied from index.html) -->
+    <div class="winner-modal" id="winnerModal">
+        <div class="winner-content">
+            <button class="close-winner-btn" id="closeWinnerBtn"></button>
+            <div class="winner-left">
+                <h2 class="victory-title">VICTORY!</h2>
+                <div class="winner-racer" id="winnerDisplay">
+                    <img class="winner-racer-avatar" id="winnerAvatar" src="public/images/characters/hana-face.png" alt="Winner">
+                    <div class="winner-racer-name" id="winnerName">Hana</div>
+                </div>
+                <div class="winner-buttons">
+                    <button class="winner-btn">Download Image</button>
+                    <button class="winner-btn">Share to Twitter</button>
+                </div>
+            </div>
+            <div class="winner-right">
+                <div class="race-statistics">
+                    <h3>Race Statistics</h3>
+                    <div class="pot-summary">
+                        <h4>Pot Summary</h4>
+                        <div class="pot-item">
+                            <span class="label">Total Pot:</span>
+                            <span class="value" id="modalTotalPot">20.00 SOL ($3305.60)</span>
+                        </div>
+                        <div class="pot-item">
+                            <span class="label">Winner:</span>
+                            <span class="value" id="modalWinnerName">Hana</span>
+                        </div>
+                    </div>
+                    <div class="top-winners">
+                        <h4>Top Winners</h4>
+                        <div class="top-winner-item">
+                            <span>#1 ---</span>
+                            <span>---</span>
+                        </div>
+                        <div class="top-winner-item">
+                            <span>#2 ---</span>
+                            <span>---</span>
+                        </div>
+                        <div class="top-winner-item">
+                            <span>#3 ---</span>
+                            <span>---</span>
+                        </div>
+                    </div>
+                    <div class="your-results">
+                        <h4>Your Results</h4>
+                        <div class="result-item">
+                            <span class="label">Total Bet:</span>
+                            <span class="value" id="modalYourBet">5.00 SOL ($825.00)</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="label">Winnings:</span>
+                            <span class="value positive" id="modalYourWinnings">+15.00 SOL ($2475.00)</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="label">Net Result:</span>
+                            <span class="value positive" id="modalNetResult">+10.00 SOL ($1650.00)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showTestModal() {
+            const modal = document.getElementById('winnerModal');
+            modal.classList.add('show');
+            modal.style.display = 'flex';
+        }
+
+        function hideTestModal() {
+            const modal = document.getElementById('winnerModal');
+            modal.classList.remove('show');
+            modal.style.display = 'none';
+        }
+
+        // Close button functionality
+        document.getElementById('closeWinnerBtn').addEventListener('click', hideTestModal);
+        document.getElementById('winnerModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideTestModal();
+            }
+        });
+    </script>
+</body>
+</html>

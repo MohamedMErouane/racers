@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Light Theme Demo - Racers.fun</title>
+    <link rel="stylesheet" href="public/styles.css">
+    <style>
+        .demo-container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .demo-section {
+            margin: 30px 0;
+            padding: 20px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #4CAF50;
+        }
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body class="light-theme">
+    <div class="demo-container">
+        <h1>🎮 Light Theme Features Demo</h1>
+        
+        <div class="theme-toggle">
+            <button class="icon-btn theme-btn" onclick="toggleDemo()" title="Toggle Theme">🌙</button>
+        </div>
+
+        <div class="demo-section">
+            <h2>🎨 Color Palette</h2>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <div style="padding: 15px; background: #4CAF50; color: white; border-radius: 8px;">Primary Green</div>
+                <div style="padding: 15px; background: #66BB6A; color: white; border-radius: 8px;">Secondary Green</div>
+                <div style="padding: 15px; background: #2e7d32; color: white; border-radius: 8px;">Dark Green</div>
+                <div style="padding: 15px; background: linear-gradient(135deg, #ffffff 0%, #f8fff8 100%); border: 2px solid #4CAF50; border-radius: 8px;">Light Background</div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>🔘 Buttons & Controls</h2>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="icon-btn">🔊</button>
+                <button class="icon-btn">❓</button>
+                <button class="icon-btn">⚖️</button>
+                <button class="icon-btn theme-btn">🌙</button>
+                <button class="bet-btn" style="padding: 8px 16px;">Place Bet</button>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>📝 Text Styles</h2>
+            <p class="highlight-text">Highlighted Text with Gradient</p>
+            <p class="success-text">Success Text (Green)</p>
+            <p class="warning-text">Warning Text (Orange)</p>
+            <p class="error-text">Error Text (Red)</p>
+        </div>
+
+        <div class="demo-section">
+            <h2>🎪 Modal Preview</h2>
+            <div class="faq-item">
+                <h3 class="faq-question">Sample FAQ Question</h3>
+                <div class="faq-answer">
+                    <p>This is how FAQ answers look in the new light theme with beautiful green gradients and hover effects!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>🏁 Theme Features</h2>
+            <ul>
+                <li>✅ Vibrant green color scheme</li>
+                <li>✅ Gradient backgrounds and animations</li>
+                <li>✅ Enhanced hover effects</li>
+                <li>✅ Beautiful modal styling</li>
+                <li>✅ Colorful text classes</li>
+                <li>✅ Smooth transitions</li>
+                <li>✅ Professional appearance</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function toggleDemo() {
+            document.body.classList.toggle('light-theme');
+            const btn = document.querySelector('.theme-toggle .theme-btn');
+            if (document.body.classList.contains('light-theme')) {
+                btn.innerHTML = '☀️';
+            } else {
+                btn.innerHTML = '🌙';
+            }
+        }
+    </script>
+</body>
+</html>

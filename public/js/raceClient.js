@@ -54,9 +54,9 @@ export class RaceClient {
     const container = this.canvas.parentElement;
     const containerRect = container.getBoundingClientRect();
     
-    // Set canvas size based on container
-    this.canvas.width = Math.max(800, containerRect.width - 40);
-    this.canvas.height = Math.max(600, containerRect.height - 40);
+    // Set canvas size to fill the full container
+    this.canvas.width = Math.max(800, containerRect.width);
+    this.canvas.height = Math.max(600, containerRect.height);
     
     // Style canvas to fill container
     this.canvas.style.width = '100%';
@@ -72,12 +72,8 @@ export class RaceClient {
   loadRandomBackground() {
        const backgrounds = [
       'background-image17.png',           // Desert/Nuketown theme
-      'background-image19.png',    // Post-apocalyptic theme  
-      'background-image24.png',             // Ninja village theme
-      'background-image33.png',             // Pure desert theme
-      'background-image34.png',           // Springfield theme
-      'background-image35.png',          // Pirate ship theme
-      'background-image36.png',          // Night mountain theme
+      'background-image19.png',             // Pure desert theme
+      'background-image34.png',        // Night mountain theme
       'background-image37.png',       // Desert/RV theme
       'background-image38.png'          // Colorful fantasy theme
     ];
@@ -175,7 +171,8 @@ export class RaceClient {
       this.raceState.positions[racer.id] = {
         progress: 0,
         position: index + 1,
-        speed: racer.speed || (Math.random() * 2 + 3)
+        speed: racer.speed || (Math.random() * 2 + 3),
+        currentSpeed: 0 // Initialize current speed for display
       };
     });
     
@@ -185,8 +182,46 @@ export class RaceClient {
       raceContainer.style.display = 'block';
     }
     
+    // Initialize displays
+    this.initializeDisplays();
+    
     // Start countdown
     this.showCountdown();
+  }
+
+  // Initialize the position and speed displays
+  initializeDisplays() {
+    console.log('Initializing race displays');
+    
+    // Initialize positions display
+    const positionsDisplay = document.getElementById('positionsDisplay');
+    if (positionsDisplay) {
+      positionsDisplay.innerHTML = `
+        <div style="color: #fff; font-size: 18px; font-weight: bold; text-align: center; padding: 20px;">
+          Race Starting...
+        </div>
+      `;
+      positionsDisplay.style.display = 'block';
+      console.log('✅ Positions display initialized');
+    } else {
+      console.error('❌ positionsDisplay element not found');
+    }
+    
+    // Initialize speed display
+    const speedDisplay = document.getElementById('speedDisplay');
+    if (speedDisplay) {
+      speedDisplay.innerHTML = `
+        <div style="color: #fff; font-size: 14px; text-align: center; padding: 20px;">
+          <div style="margin-bottom: 8px;">TOP SPEED</div>
+          <div style="color: #ffd700; font-size: 32px; font-weight: bold;">--</div>
+          <div style="font-size: 16px;">km/h</div>
+        </div>
+      `;
+      speedDisplay.style.display = 'block';
+      console.log('✅ Speed display initialized');
+    } else {
+      console.error('❌ speedDisplay element not found');
+    }
   }
 
   // Add countdown method
@@ -221,8 +256,6 @@ export class RaceClient {
     
     // Draw racing lanes
     this.drawRacingLanes();
-    
-    // Don't draw finish line - use the one from background image
     
     // Draw racers at starting positions
     this.drawRacers();
@@ -299,10 +332,13 @@ export class RaceClient {
       const speedVariation = (Math.random() - 0.5) * 0.1;
       const adjustedSpeed = position.speed + speedVariation;
       
-      // Update progress - ensure characters can reach the finish line (100%)
+      // Update progress - ensure characters can reach and cross the finish line
       // Allow faster characters to finish early and slower ones to catch up
       const speedMultiplier = (adjustedSpeed / 4.5);
-      position.progress = Math.min(raceProgress * speedMultiplier * 1.5, 1); // Increased multiplier to reach full distance
+      position.progress = Math.min(raceProgress * speedMultiplier * 3.0, 1.5); // Increased multiplier to 3.0 and allow progress up to 1.5 to cross finish line
+      
+      // Update current speed for display (convert to km/h for realism)
+      position.currentSpeed = Math.round(adjustedSpeed * 20 + (Math.random() - 0.5) * 10); // Convert to km/h with variation
       
       // Debug: Log progress for first character to monitor
       if (racer.id === 1 && Math.floor(elapsedTime / 1000) % 5 === 0) {
@@ -320,8 +356,166 @@ export class RaceClient {
     });
     
     // Update displays
-    this.updatePositionsDisplay();
+    this.updatePositionsDisplay(sortedRacers);
     this.updateSpeedDisplay();
+  }
+
+  // Update the positions display on the left side
+  updatePositionsDisplay(sortedRacers) {
+    const positionsDisplay = document.getElementById('positionsDisplay');
+    if (!positionsDisplay) {
+      console.warn('positionsDisplay element not found');
+      return;
+    }
+
+    console.log('Updating positions display with', sortedRacers.length, 'racers');
+    
+    positionsDisplay.innerHTML = '';
+    positionsDisplay.style.cssText = `
+      background: rgba(0, 0, 0, 0.8);
+      border-radius: 12px;
+      padding: 16px;
+      min-width: 200px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      display: block;
+    `;
+
+    // Add header
+    const header = document.createElement('div');
+    header.style.cssText = `
+      color: #fff;
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 12px;
+      text-align: center;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+      padding-bottom: 8px;
+    `;
+    header.textContent = 'POSITIONS - 2000m Race';
+    positionsDisplay.appendChild(header);
+
+    // Add each racer position
+    sortedRacers.forEach((racer, index) => {
+      const position = this.raceState.positions[racer.id];
+      const positionItem = document.createElement('div');
+      positionItem.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px;
+        margin: 4px 0;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        border-left: 4px solid ${racer.color || '#ff69b4'};
+      `;
+
+      // Position number
+      const posNum = document.createElement('span');
+      posNum.style.cssText = `
+        color: ${index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : '#fff'};
+        font-size: 16px;
+        font-weight: bold;
+        min-width: 25px;
+      `;
+      posNum.textContent = `${index + 1}.`;
+
+      // Character name
+      const nameSpan = document.createElement('span');
+      nameSpan.style.cssText = `
+        color: white;
+        font-size: 14px;
+        font-weight: bold;
+        flex: 1;
+      `;
+      nameSpan.textContent = racer.name;
+
+      // Distance display (total race distance = 2000m)
+      const totalRaceDistance = 2000; // meters
+      const distanceRun = Math.round(position.progress * totalRaceDistance);
+      const progressSpan = document.createElement('span');
+      progressSpan.style.cssText = `
+        color: ${racer.color || '#ff69b4'};
+        font-size: 12px;
+        font-weight: bold;
+        text-align: right;
+        min-width: 50px;
+      `;
+      progressSpan.textContent = `${distanceRun}m`;
+
+      positionItem.appendChild(posNum);
+      positionItem.appendChild(nameSpan);
+      positionItem.appendChild(progressSpan);
+      positionsDisplay.appendChild(positionItem);
+    });
+  }
+
+  // Update the speed display on the right side
+  updateSpeedDisplay() {
+    const speedDisplay = document.getElementById('speedDisplay');
+    if (!speedDisplay) {
+      console.warn('speedDisplay element not found');
+      return;
+    }
+
+    console.log('Updating speed display');
+
+    // Find the fastest current speed and leading racer
+    let maxSpeed = 0;
+    let fastestRacer = null;
+    let leadingDistance = 0;
+    let leadingRacer = null;
+    
+    this.raceState.racers.forEach(racer => {
+      const position = this.raceState.positions[racer.id];
+      if (position) {
+        // Check for fastest speed
+        if (position.currentSpeed > maxSpeed) {
+          maxSpeed = position.currentSpeed;
+          fastestRacer = racer;
+        }
+        
+        // Check for leading distance
+        const distance = position.progress * 2000; // 2000m total race
+        if (distance > leadingDistance) {
+          leadingDistance = distance;
+          leadingRacer = racer;
+        }
+      }
+    });
+
+    speedDisplay.style.cssText = `
+      background: rgba(0, 0, 0, 0.8);
+      border-radius: 12px;
+      padding: 16px;
+      min-width: 150px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      text-align: center;
+      display: block;
+    `;
+
+    speedDisplay.innerHTML = `
+      <div style="color: #fff; font-size: 14px; margin-bottom: 8px; border-bottom: 2px solid rgba(255, 255, 255, 0.3); padding-bottom: 6px;">
+        TOP SPEED
+      </div>
+      <div style="color: #ffd700; font-size: 32px; font-weight: bold; margin-bottom: 4px;">
+        ${maxSpeed}
+      </div>
+      <div style="color: #fff; font-size: 16px; margin-bottom: 8px;">
+        km/h
+      </div>
+      <div style="color: ${fastestRacer?.color || '#ff69b4'}; font-size: 12px; font-weight: bold; margin-bottom: 12px;">
+        ${fastestRacer?.name || 'N/A'}
+      </div>
+      <div style="color: #fff; font-size: 14px; margin-bottom: 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding-bottom: 4px;">
+        LEADER
+      </div>
+      <div style="color: #00ff00; font-size: 24px; font-weight: bold; margin-bottom: 4px;">
+        ${Math.round(leadingDistance)}m
+      </div>
+      <div style="color: ${leadingRacer?.color || '#ff69b4'}; font-size: 12px; font-weight: bold;">
+        ${leadingRacer?.name || 'N/A'}
+      </div>
+    `;
   }
 
   // Draw the race
@@ -336,8 +530,6 @@ export class RaceClient {
     
     // Draw racing lanes
     this.drawRacingLanes();
-    
-    // Don't draw finish line - use the one from background image
     
     // Draw racers
     this.drawRacers();
@@ -378,47 +570,14 @@ export class RaceClient {
       this.ctx.fillStyle = i % 2 === 0 ? 'rgba(139, 69, 19, 0.3)' : 'rgba(160, 82, 45, 0.3)';
       this.ctx.fillRect(x, 0, laneWidth, this.canvas.height);
       
-      // Lane borders (vertical lines)
-      this.ctx.strokeStyle = 'rgba(101, 67, 33, 0.8)';
-      this.ctx.lineWidth = 2;
-      this.ctx.beginPath();
-      this.ctx.moveTo(x, 0);
-      this.ctx.lineTo(x, this.canvas.height);
-      this.ctx.stroke();
+      // Lane borders (vertical lines) - REMOVED
+      // this.ctx.strokeStyle = 'rgba(101, 67, 33, 0.8)';
+      // this.ctx.lineWidth = 2;
+      // this.ctx.beginPath();
+      // this.ctx.moveTo(x, 0);
+      // this.ctx.lineTo(x, this.canvas.height);
+      // this.ctx.stroke();
     }
-  }
-
-  // Draw finish line
-  drawFinishLine() {
-    const finishY = 60; // TOP of canvas
-    const trackWidth = this.canvas.width;
-    
-    // Finish line poles
-    this.ctx.fillStyle = '#8B4513';
-    this.ctx.fillRect(50, finishY - 10, 100, 20);
-    this.ctx.fillRect(trackWidth - 150, finishY - 10, 100, 20);
-    
-    // Checkered pattern across the top
-    this.ctx.fillStyle = '#000';
-    this.ctx.fillRect(0, finishY - 20, trackWidth, 40);
-    
-    this.ctx.fillStyle = '#fff';
-    for (let x = 0; x < trackWidth; x += 20) {
-      for (let y = finishY - 20; y < finishY + 20; y += 20) {
-        if ((Math.floor(x / 20) + Math.floor((y - (finishY - 20)) / 20)) % 2 === 0) {
-          this.ctx.fillRect(x, y, 20, 20);
-        }
-      }
-    }
-    
-    // "FINISH" text
-    this.ctx.fillStyle = '#FF0000';
-    this.ctx.font = 'bold 24px Arial';
-    this.ctx.textAlign = 'center';
-    this.ctx.strokeStyle = '#000';
-    this.ctx.lineWidth = 2;
-    this.ctx.strokeText('FINISH', trackWidth / 2, finishY - 30);
-    this.ctx.fillText('FINISH', trackWidth / 2, finishY - 30);
   }
 
   // Draw racers
@@ -427,7 +586,7 @@ export class RaceClient {
     
     const laneWidth = this.canvas.width / 8; // Divide canvas into 8 vertical lanes
     const raceHeight = this.canvas.height - 60; // Use full height minus small margin
-    const finishLineY = 10; // Y position at the very back/top of the background
+    const finishLineY = 0; // Characters should cross completely through to the very top edge
     const startingY = this.canvas.height - 40; // Starting Y position at bottom
     
     // Update animation frame counter for switching between frames
@@ -440,27 +599,44 @@ export class RaceClient {
       // Calculate perspective trajectory
       const progress = position.progress; // 0 to 1
       
-      // Starting position: each character in their lane at bottom (spread out)
-      const startLaneX = (index * laneWidth) + (laneWidth / 2);
+      // Starting position: characters start with more space between them
+      const startingSpread = 350; // Wider starting formation for better spacing
+      const startCenterX = this.canvas.width / 2;
+      const startLaneWidth = startingSpread / this.raceState.racers.length;
+      const startLaneX = startCenterX - (startingSpread / 2) + (index * startLaneWidth) + (startLaneWidth / 2);
       
-      // Ending position: characters finish VERY close together at the far back of background
+      // Ending position: characters finish very close together at the center
       const finishCenterX = this.canvas.width / 2;
-      const finishSpread = 80; // Even tighter at the very back (distance effect)
+      const finishSpread = 25; // Very tight at the finish line for dramatic effect
       const charactersCount = this.raceState.racers.length;
       const finishLaneWidth = finishSpread / charactersCount;
       const finishX = finishCenterX - (finishSpread / 2) + (index * finishLaneWidth) + (finishLaneWidth / 2);
       
-      // Calculate current position with strong perspective convergence
-      // Characters move from their starting lane towards their tight finish position
-      const currentX = startLaneX + (finishX - startLaneX) * progress;
+      // Calculate current position with perspective convergence
+      const currentX = startLaneX + (finishX - startLaneX) * Math.min(progress, 1);
       
-      // Characters move from BOTTOM all the way to the very back of the background
-      const currentY = startingY - (progress * (startingY - finishLineY));
+      // Characters move from BOTTOM to TOP of the canvas
+      const finishY = 0; // Top of the canvas
+      const beyondFinishY = -20; // Well past the top (negative = above canvas)
       
-      // Scale characters much smaller as they reach the very back (strong perspective)
-      const baseCharacterWidth = 60;
-      const baseCharacterHeight = 80;
-      const scaleFactor = 1.0 - (progress * 0.6); // Characters get 60% smaller at the very back
+      let currentY;
+      if (progress <= 0.85) {
+        // Phase 1: Move from start to near the top
+        currentY = startingY - (progress / 0.85) * (startingY - 30);
+      } else if (progress <= 1.0) {
+        // Phase 2: Cross through the top of the canvas
+        const crossProgress = (progress - 0.85) / 0.15;
+        currentY = 30 - crossProgress * (30 - beyondFinishY);
+      } else {
+        // Phase 3: Continue past the top (for races that go beyond 100%)
+        const extraProgress = progress - 1.0;
+        currentY = beyondFinishY - (extraProgress * 40);
+      }
+      
+      // Scale characters smaller so they can run closer together without overlapping
+      const baseCharacterWidth = 70;   // Reduced from 100 for tighter spacing
+      const baseCharacterHeight = 90;  // Reduced from 130 for tighter spacing
+      const scaleFactor = 1.0 - (Math.min(progress, 1) * 0.5); // Less scaling reduction (0.5 instead of 0.6)
       const characterWidth = baseCharacterWidth * scaleFactor;
       const characterHeight = baseCharacterHeight * scaleFactor;
       
@@ -517,38 +693,38 @@ export class RaceClient {
         
         // Add character name below character (also scaled)
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = `bold ${12 * scaleFactor}px Arial`;
+        this.ctx.font = `bold ${16 * scaleFactor}px Arial`; // Increased from 12
         this.ctx.textAlign = 'center';
         this.ctx.strokeStyle = '#000';
         this.ctx.lineWidth = 3 * scaleFactor;
-        this.ctx.strokeText(racer.name, currentX, currentY + characterHeight/2 + 15 * scaleFactor);
-        this.ctx.fillText(racer.name, currentX, currentY + characterHeight/2 + 15 * scaleFactor);
+        this.ctx.strokeText(racer.name, currentX, currentY + characterHeight/2 + 20 * scaleFactor); // Increased spacing
+        this.ctx.fillText(racer.name, currentX, currentY + characterHeight/2 + 20 * scaleFactor);
         
       } else {
-        // Fallback: larger colored circle with character initial (also with perspective)
+        // Fallback: smaller colored circle for tighter spacing
         this.ctx.fillStyle = racer.color;
         this.ctx.beginPath();
-        this.ctx.arc(currentX, currentY, 25 * scaleFactor, 0, 2 * Math.PI);
+        this.ctx.arc(currentX, currentY, 18 * scaleFactor, 0, 2 * Math.PI); // Reduced from 25 to 18
         this.ctx.fill();
         
         // White border
         this.ctx.strokeStyle = '#fff';
-        this.ctx.lineWidth = 3 * scaleFactor;
+        this.ctx.lineWidth = 2 * scaleFactor; // Reduced from 3 to 2
         this.ctx.stroke();
         
         // Character initial
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = `bold ${18 * scaleFactor}px Arial`;
+        this.ctx.font = `bold ${14 * scaleFactor}px Arial`; // Reduced from 18 to 14
         this.ctx.textAlign = 'center';
-        this.ctx.fillText(racer.name.charAt(0), currentX, currentY + 6 * scaleFactor);
+        this.ctx.fillText(racer.name.charAt(0), currentX, currentY + 5 * scaleFactor);
         
         // Character name below
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = `bold ${12 * scaleFactor}px Arial`;
+        this.ctx.font = `bold ${10 * scaleFactor}px Arial`; // Reduced from 12 to 10
         this.ctx.strokeStyle = '#000';
-        this.ctx.lineWidth = 3 * scaleFactor;
-        this.ctx.strokeText(racer.name, currentX, currentY + 45 * scaleFactor);
-        this.ctx.fillText(racer.name, currentX, currentY + 45 * scaleFactor);
+        this.ctx.lineWidth = 2 * scaleFactor; // Reduced from 3 to 2
+        this.ctx.strokeText(racer.name, currentX, currentY + 35 * scaleFactor); // Reduced from 45 to 35
+        this.ctx.fillText(racer.name, currentX, currentY + 35 * scaleFactor);
       }
     });
   }

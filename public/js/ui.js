@@ -194,6 +194,9 @@ export class UI {
       modal.classList.remove('show');
       modal.style.display = 'none';
     }
+    
+    // Stop confetti animation when modal is closed
+    this.stopConfettiAnimation();
   }
 
   // Test function to show winner modal (for debugging)
@@ -394,6 +397,216 @@ export class UI {
       // Show the modal
       modal.classList.add('show');
       modal.style.display = 'flex';
+      
+      // Start confetti animation
+      this.startConfettiAnimation();
+    }
+  }
+
+  // Confetti Animation System
+  startConfettiAnimation() {
+    // Create confetti container if it doesn't exist
+    let confettiContainer = document.getElementById('confettiContainer');
+    if (!confettiContainer) {
+      confettiContainer = document.createElement('div');
+      confettiContainer.id = 'confettiContainer';
+      confettiContainer.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 10000;
+        overflow: hidden;
+      `;
+      document.body.appendChild(confettiContainer);
+    }
+
+    // Clear any existing confetti
+    confettiContainer.innerHTML = '';
+
+    // Create confetti particles
+    const colors = [
+      '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', 
+      '#ff9ff3', '#54a0ff', '#5f27cd', '#ff7675', '#74b9ff',
+      '#fd79a8', '#fdcb6e', '#00b894', '#e17055', '#a29bfe',
+      '#6c5ce7', '#fd79a8', '#55a3ff', '#00cec9', '#ffb8b8'
+    ];
+    const particleCount = 200;
+
+    for (let i = 0; i < particleCount; i++) {
+      setTimeout(() => {
+        this.createConfettiParticle(confettiContainer, colors);
+      }, i * 30); // Faster stagger for more density
+    }
+
+    // Add some special sparkle effects
+    for (let i = 0; i < 50; i++) {
+      setTimeout(() => {
+        this.createSparkleParticle(confettiContainer);
+      }, i * 100);
+    }
+
+    // Stop confetti after 6 seconds
+    setTimeout(() => {
+      this.stopConfettiAnimation();
+    }, 6000);
+  }
+
+  createConfettiParticle(container, colors) {
+    const particle = document.createElement('div');
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const size = Math.random() * 10 + 3; // 3-13px
+    const startX = Math.random() * window.innerWidth;
+    const duration = Math.random() * 4000 + 2000; // 2-6 seconds
+    const rotation = Math.random() * 360;
+    const rotationSpeed = (Math.random() - 0.5) * 1080; // More rotation variation
+
+    // Different particle shapes
+    const shapes = ['circle', 'square', 'triangle', 'star'];
+    const shape = shapes[Math.floor(Math.random() * shapes.length)];
+
+    let particleStyle = `
+      position: absolute;
+      top: -10px;
+      left: ${startX}px;
+      width: ${size}px;
+      height: ${size}px;
+      background: ${color};
+      transform: rotate(${rotation}deg);
+      opacity: 0.9;
+      pointer-events: none;
+      box-shadow: 0 0 6px ${color}40;
+    `;
+
+    // Apply different shapes
+    switch(shape) {
+      case 'circle':
+        particleStyle += 'border-radius: 50%;';
+        break;
+      case 'square':
+        particleStyle += 'border-radius: 2px;';
+        break;
+      case 'triangle':
+        particleStyle += `
+          width: 0;
+          height: 0;
+          background: transparent;
+          border-left: ${size/2}px solid transparent;
+          border-right: ${size/2}px solid transparent;
+          border-bottom: ${size}px solid ${color};
+        `;
+        break;
+      case 'star':
+        particle.innerHTML = '★';
+        particleStyle += `
+          border-radius: 2px;
+          color: ${color};
+          background: transparent;
+          font-size: ${size}px;
+          text-align: center;
+          line-height: ${size}px;
+        `;
+        break;
+    }
+
+    particle.style.cssText = particleStyle;
+    container.appendChild(particle);
+
+    // More dynamic animation with sway effect
+    const swayAmount = (Math.random() - 0.5) * 400;
+    const animation = particle.animate([
+      {
+        transform: `translateY(0) translateX(0) rotate(${rotation}deg) scale(1)`,
+        opacity: 0.9
+      },
+      {
+        transform: `translateY(${window.innerHeight/2}px) translateX(${swayAmount/2}px) rotate(${rotation + rotationSpeed/2}deg) scale(0.8)`,
+        opacity: 0.7
+      },
+      {
+        transform: `translateY(${window.innerHeight + 20}px) translateX(${swayAmount}px) rotate(${rotation + rotationSpeed}deg) scale(0.5)`,
+        opacity: 0
+      }
+    ], {
+      duration: duration,
+      easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+    });
+
+    // Remove particle when animation completes
+    animation.addEventListener('finish', () => {
+      if (particle.parentNode) {
+        particle.parentNode.removeChild(particle);
+      }
+    });
+  }
+
+  createSparkleParticle(container) {
+    const sparkle = document.createElement('div');
+    const size = Math.random() * 4 + 2; // 2-6px
+    const startX = Math.random() * window.innerWidth;
+    const startY = Math.random() * window.innerHeight;
+    const duration = Math.random() * 2000 + 1000; // 1-3 seconds
+
+    sparkle.style.cssText = `
+      position: absolute;
+      top: ${startY}px;
+      left: ${startX}px;
+      width: ${size}px;
+      height: ${size}px;
+      background: radial-gradient(circle, #ffffff 0%, #ffff00 50%, transparent 70%);
+      border-radius: 50%;
+      opacity: 1;
+      pointer-events: none;
+      box-shadow: 0 0 10px #ffffff, 0 0 20px #ffff00, 0 0 30px #ffff00;
+    `;
+
+    container.appendChild(sparkle);
+
+    // Sparkle animation with twinkle effect
+    const animation = sparkle.animate([
+      {
+        transform: 'scale(0) rotate(0deg)',
+        opacity: 0
+      },
+      {
+        transform: 'scale(1.5) rotate(180deg)',
+        opacity: 1
+      },
+      {
+        transform: 'scale(0.5) rotate(360deg)',
+        opacity: 0.8
+      },
+      {
+        transform: 'scale(0) rotate(540deg)',
+        opacity: 0
+      }
+    ], {
+      duration: duration,
+      easing: 'ease-in-out'
+    });
+
+    // Remove sparkle when animation completes
+    animation.addEventListener('finish', () => {
+      if (sparkle.parentNode) {
+        sparkle.parentNode.removeChild(sparkle);
+      }
+    });
+  }
+
+  stopConfettiAnimation() {
+    const confettiContainer = document.getElementById('confettiContainer');
+    if (confettiContainer) {
+      // Fade out the container
+      confettiContainer.style.transition = 'opacity 1s ease-out';
+      confettiContainer.style.opacity = '0';
+      
+      setTimeout(() => {
+        if (confettiContainer.parentNode) {
+          confettiContainer.parentNode.removeChild(confettiContainer);
+        }
+      }, 1000);
     }
   }
 
