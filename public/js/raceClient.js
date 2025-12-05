@@ -600,14 +600,14 @@ export class RaceClient {
       const progress = position.progress; // 0 to 1
       
       // Starting position: characters start with more space between them
-      const startingSpread = 350; // Wider starting formation for better spacing
+      const startingSpread = 500; // Maximum starting formation for excellent spacing
       const startCenterX = this.canvas.width / 2;
       const startLaneWidth = startingSpread / this.raceState.racers.length;
       const startLaneX = startCenterX - (startingSpread / 2) + (index * startLaneWidth) + (startLaneWidth / 2);
       
       // Ending position: characters finish very close together at the center
       const finishCenterX = this.canvas.width / 2;
-      const finishSpread = 25; // Very tight at the finish line for dramatic effect
+      const finishSpread = 40; // Wider finish spread for better visibility
       const charactersCount = this.raceState.racers.length;
       const finishLaneWidth = finishSpread / charactersCount;
       const finishX = finishCenterX - (finishSpread / 2) + (index * finishLaneWidth) + (finishLaneWidth / 2);

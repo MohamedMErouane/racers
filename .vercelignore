@@ -1,0 +1,71 @@
+# Vercel ignore file - exclude these from deployment
+
+# Server files (backend)
+server/
+server.js
+routes/
+services/
+
+# Configuration files
+.env
+.env.local
+.env.production
+env.example
+env.production
+
+# Database files
+*.sql
+setup-database.sql
+add-user-balance.sql
+
+# Docker files
+Dockerfile
+docker-compose.yml
+docker-compose.production.yml
+.dockerignore
+
+# Tests
+tests/
+*.test.js
+vitest.config.js
+
+# Documentation
+*.md
+!README.md
+
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Solana program
+solana-program/
+
+# Scripts
+*.bat
+*.sh
+
+# AWS/Deployment
+aws-ecs-task-definition.json
+buildspec.yml
+
+# Nginx
+nginx/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+.DS_Store
+test-*.js
+test-*.json
+test-*.html
+generate-wallet.js
+quick-test.bat
