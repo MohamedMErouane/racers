@@ -7,6 +7,8 @@
     <link rel="icon" type="image/png" href="images/ui/favicon.png">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="height-fix.css">
+    <!-- Allow loading Socket.IO CDN and unpkg resources when served statically (Vercel) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' https://auth.privy.io https://unpkg.com https://cdn.socket.io 'unsafe-inline'; connect-src 'self' https://api.privy.io https://auth.privy.io https://unpkg.com ws://localhost:3001 wss://api.devnet.solana.com https://api.devnet.solana.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:;">
     <!-- Add CSS for pulse animation -->
     <style>
     @keyframes pulse {
