@@ -1,8 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 
-// Read environment variables
-require('dotenv').config();
+// Try to load dotenv, but don't fail if it's not available (Docker build)
+try {
+  require('dotenv').config();
+} catch (e) {
+  // dotenv not available, environment variables should come from Docker/system
+  console.log('Running without dotenv (using system environment variables)');
+}
 
 // Check required environment variables
 if (!process.env.PRIVY_APP_ID) {
