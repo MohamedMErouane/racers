@@ -51,4 +51,3 @@ configContent = configContent.replace(
 fs.writeFileSync(configPath, configContent);
 
 console.log('✅ Config file generated successfully');
-console.log(`   API_URL: ${apiUrl}`);
