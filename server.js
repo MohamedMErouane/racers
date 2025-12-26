@@ -273,13 +273,21 @@ const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 
 async function startServer() {
-  await initializeServices();
-  
-  server.listen(PORT, HOST, () => {
-    logger.info(`🚀 Server running on ${HOST}:${PORT}`);
-    logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    logger.info(`🔗 CORS Origin: ${process.env.CORS_ORIGIN || 'https://racers.fun'}`);
-  });
+  try {
+    logger.info('🔧 Starting server initialization...');
+    await initializeServices();
+    logger.info('✅ Services initialized successfully');
+    
+    server.listen(PORT, HOST, () => {
+      logger.info(`🚀 Server running on ${HOST}:${PORT}`);
+      logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`🔗 CORS Origin: ${process.env.CORS_ORIGIN || 'https://racers.fun'}`);
+    });
+  } catch (error) {
+    logger.error('❌ Failed to start server:', error);
+    logger.error('Stack trace:', error.stack);
+    process.exit(1);
+  }
 }
 
 // Graceful shutdown
