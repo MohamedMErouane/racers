@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy package.json only
 COPY package.json ./
 
-# Install dependencies
-RUN npm install --production
+# Install ALL dependencies (needed for build)
+RUN npm install
 
 # Copy application code
 COPY . .
@@ -22,6 +22,9 @@ ENV API_URL=$API_URL
 
 # Run build to inject environment variables
 RUN npm run build
+
+# Remove dev dependencies after build
+RUN npm prune --production
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
