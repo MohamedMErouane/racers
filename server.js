@@ -108,7 +108,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       connectSrc: connectSrc,
-      scriptSrc: ["'self'", "https://auth.privy.io", "https://unpkg.com"],
+      scriptSrc: ["'self'", "https://auth.privy.io", "https://unpkg.com", "https://cdn.socket.io"],
       styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],

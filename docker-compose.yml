@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     environment:
@@ -13,13 +14,64 @@ services:
     ports:
       - "5433:5432"
     restart: unless-stopped
+    networks:
+      - racers-network
 
+  # Redis Cache
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
     restart: unless-stopped
     command: redis-server --appendonly yes
+    networks:
+      - racers-network
+
+  # Racers App (Backend + Frontend)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PRIVY_APP_ID: ${PRIVY_APP_ID}
+        WS_URL: ${WS_URL}
+        API_URL: ${API_URL}
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - HOST=0.0.0.0
+      - DATABASE_URL=postgresql://racers:racers123@postgres:5432/racers
+      - REDIS_URL=redis://redis:6379
+      - PRIVY_APP_ID=${PRIVY_APP_ID}
+      - PRIVY_APP_SECRET=${PRIVY_APP_SECRET}
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL}
+      - SOLANA_WS_URL=${SOLANA_WS_URL}
+      - PROGRAM_ID=${PROGRAM_ID}
+      - PHANTOM_PRIVATE_KEY=${PHANTOM_PRIVATE_KEY}
+      - PHANTOM_PUBLIC_KEY=${PHANTOM_PUBLIC_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      - WS_URL=${WS_URL}
+      - API_URL=${API_URL}
+      - ADMIN_ADDRESSES=${ADMIN_ADDRESSES}
+      - RACE_DURATION_MS=12000
+      - RACE_SETTLE_MS=2000
+      - RACE_COUNTDOWN_MS=10000
+      - HOUSE_EDGE_PERCENT=4
+      - WINNER_PAYOUT_PERCENT=86
+      - RAKEBACK_PERCENT=10
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - racers-network
+
+networks:
+  racers-network:
+    driver: bridge
 
 volumes:
   postgres_data:
