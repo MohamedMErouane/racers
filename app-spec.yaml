@@ -10,12 +10,17 @@ services:
     build_args:
       - key: PRIVY_APP_ID
         value: cmfq86fx6005yk10cfyapbkjk
+      - key: APP_URL
+        value: https://starfish-app-qqr68.ondigitalocean.app
     envs:
       - key: PORT
         value: "3001"
         scope: RUN_AND_BUILD
       - key: NODE_ENV
         value: production
+        scope: RUN_AND_BUILD
+      - key: APP_URL
+        value: https://starfish-app-qqr68.ondigitalocean.app
         scope: RUN_AND_BUILD
       - key: DATABASE_URL
         value: ${dev-db-132655.DATABASE_URL}
@@ -33,7 +38,7 @@ services:
         value: test-jwt-secret-for-development-only
         scope: RUN
       - key: CORS_ORIGIN
-        value: "*"
+        value: https://starfish-app-qqr68.ondigitalocean.app
         scope: RUN
       - key: SOLANA_RPC_URL
         value: https://api.devnet.solana.com
