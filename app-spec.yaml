@@ -3,24 +3,26 @@ services:
   # Docker-based service (racers1)
   - name: racers-docker
     dockerfile_path: Dockerfile
-    run_command: npm start
+    run_command: node server.js
     instance_count: 1
     instance_size_slug: basic-xxs
     http_port: 3001
     build_args:
-      PRIVY_APP_ID: cmfq86fx6005yk10cfyapbkjk
-      WS_URL: ws://localhost:3001
-      API_URL: http://localhost:3001/api
+      - key: PRIVY_APP_ID
+        value: cmfq86fx6005yk10cfyapbkjk
     envs:
       - key: PORT
         value: "3001"
-        scope: RUN
+        scope: RUN_AND_BUILD
       - key: NODE_ENV
         value: production
-        scope: RUN
+        scope: RUN_AND_BUILD
       - key: DATABASE_URL
         value: ${dev-db-132655.DATABASE_URL}
         scope: RUN
+      - key: PRIVY_APP_ID
+        value: cmfq86fx6005yk10cfyapbkjk
+        scope: RUN_AND_BUILD
       - key: PRIVY_APP_SECRET
         value: 4D8y2LKFWjM7ckDmC3merA94XfkRJnejL3o6cxG8cfVcNNmY9amTQxivjUe3YGusSgFEcUPjcp6K19kiMQgnewpk
         scope: RUN
@@ -31,7 +33,7 @@ services:
         value: test-jwt-secret-for-development-only
         scope: RUN
       - key: CORS_ORIGIN
-        value: http://localhost:3001,https://racer-ghw7utxdp-mohamedmerouanes-projects.vercel.app
+        value: "*"
         scope: RUN
       - key: SOLANA_RPC_URL
         value: https://api.devnet.solana.com
@@ -41,9 +43,6 @@ services:
         scope: RUN
       - key: PROGRAM_ID
         value: RacersFun1111111111111111111111111111111111
-        scope: RUN
-      - key: REDIS_URL
-        value: redis://localhost:6379
         scope: RUN
       - key: RACE_DURATION_MS
         value: "12000"

@@ -172,6 +172,12 @@ const io = socketIo(server, {
 async function initializeServices() {
   try {
     logger.info('🚀 Initializing services...');
+    logger.info('📋 Environment check:');
+    logger.info(`   NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+    logger.info(`   PORT: ${process.env.PORT || '3001'}`);
+    logger.info(`   DATABASE_URL: ${process.env.DATABASE_URL ? 'set (hidden)' : 'NOT SET!'}`);
+    logger.info(`   REDIS_URL: ${process.env.REDIS_URL ? 'set (hidden)' : 'not set'}`);
+    logger.info(`   PRIVY_APP_ID: ${process.env.PRIVY_APP_ID ? 'set' : 'not set'}`);
     
     // Initialize Redis (optional - app works without it)
     const redisClient = await initializeRedis();
@@ -182,18 +188,37 @@ async function initializeServices() {
     }
     
     
-    // Initialize Solana
-    await initializeSolana();
-    logger.info('✅ Solana connected');
+    // Initialize Solana (optional - app works without it)
+    try {
+      const solanaResult = await initializeSolana();
+      if (solanaResult && solanaResult.initialized) {
+        logger.info('✅ Solana connected');
+      } else {
+        logger.warn('⚠️ Running without Solana - blockchain features disabled');
+      }
+    } catch (solanaError) {
+      logger.warn('⚠️ Solana initialization failed:', solanaError.message);
+      logger.warn('⚠️ Continuing without Solana features');
+    }
     
     // Initialize Privy
-    const { initPrivy } = require('./lib/privy');
-    initPrivy();
-    logger.info('✅ Privy initialized');
+    try {
+      const { initPrivy } = require('./lib/privy');
+      initPrivy();
+      logger.info('✅ Privy initialized');
+    } catch (privyError) {
+      logger.warn('⚠️ Privy initialization failed:', privyError.message);
+    }
     
     // Initialize database tables
-    await initializeTables();
-    logger.info('✅ Database tables initialized');
+    try {
+      await initializeTables();
+      logger.info('✅ Database tables initialized');
+    } catch (dbError) {
+      logger.error('❌ Database initialization failed:', dbError.message);
+      logger.error('   Make sure DATABASE_URL is set correctly');
+      throw dbError; // Database is required
+    }
     
     // Initialize Socket handlers
     // Chat is handled via HTTP POST, no socket handler needed
