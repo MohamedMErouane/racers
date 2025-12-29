@@ -1,5 +1,5 @@
 const { Pool } = require('pg');
-const { getRedis } = require('../services/redis');
+const { getRedis, isRedisAvailable } = require('../services/redis');
 const logger = require('../services/logger');
 
 // Postgres client
@@ -7,20 +7,27 @@ const pg = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgres://localhost:5432/racers'
 });
 
-// Redis operations
+// In-memory fallback for when Redis is not available
+const memoryStore = {
+  chat: [],
+  bets: [],
+  races: new Map()
+};
+
+// Redis operations with fallback
 const redisOps = {
   // Chat operations
   async getChatMessages(limit = 100) {
     try {
       const redis = getRedis();
       if (!redis) {
-        throw new Error('Redis client not initialized');
+        return memoryStore.chat.slice(-limit);
       }
       const messages = await redis.lrange('chat', -limit, -1);
       return messages.map(msg => JSON.parse(msg));
     } catch (error) {
       logger.error('Error getting chat messages:', error);
-      throw error; // Rethrow to let callers handle the error
+      return memoryStore.chat.slice(-limit);
     }
   },
 
@@ -28,14 +35,17 @@ const redisOps = {
     try {
       const redis = getRedis();
       if (!redis) {
-        throw new Error('Redis client not initialized');
+        memoryStore.chat.push(message);
+        if (memoryStore.chat.length > 1000) {
+          memoryStore.chat = memoryStore.chat.slice(-1000);
+        }
+        return;
       }
       await redis.rpush('chat', JSON.stringify(message));
-      // Keep only last 1000 messages
       await redis.ltrim('chat', -1000, -1);
     } catch (error) {
       logger.error('Error adding chat message:', error);
-      throw error; // Rethrow to let callers handle the error
+      memoryStore.chat.push(message);
     }
   },
 
@@ -44,13 +54,13 @@ const redisOps = {
     try {
       const redis = getRedis();
       if (!redis) {
-        throw new Error('Redis client not initialized');
+        return memoryStore.bets.slice(-limit);
       }
       const bets = await redis.lrange('bets', -limit, -1);
       return bets.map(bet => JSON.parse(bet));
     } catch (error) {
       logger.error('Error getting bets:', error);
-      throw error; // Rethrow to let callers handle the error
+      return memoryStore.bets.slice(-limit);
     }
   },
 
@@ -58,14 +68,17 @@ const redisOps = {
     try {
       const redis = getRedis();
       if (!redis) {
-        throw new Error('Redis client not initialized');
+        memoryStore.bets.push(bet);
+        if (memoryStore.bets.length > 1000) {
+          memoryStore.bets = memoryStore.bets.slice(-1000);
+        }
+        return;
       }
       await redis.rpush('bets', JSON.stringify(bet));
-      // Keep only last 1000 bets
       await redis.ltrim('bets', -1000, -1);
     } catch (error) {
       logger.error('Error adding bet:', error);
-      throw error; // Rethrow to let callers handle the error
+      memoryStore.bets.push(bet);
     }
   },
 
@@ -74,12 +87,13 @@ const redisOps = {
     try {
       const redis = getRedis();
       if (!redis) {
-        throw new Error('Redis client not initialized');
+        memoryStore.races.set(`race:${raceId}`, state);
+        return;
       }
-      await redis.setex(`race:${raceId}`, 3600, JSON.stringify(state)); // 1 hour TTL
+      await redis.setex(`race:${raceId}`, 3600, JSON.stringify(state));
     } catch (error) {
       logger.error('Error setting race state:', error);
-      throw error; // Rethrow to let callers handle the error
+      memoryStore.races.set(`race:${raceId}`, state);
     }
   },
 
@@ -87,13 +101,13 @@ const redisOps = {
     try {
       const redis = getRedis();
       if (!redis) {
-        throw new Error('Redis client not initialized');
+        return memoryStore.races.get(`race:${raceId}`) || null;
       }
       const state = await redis.get(`race:${raceId}`);
       return state ? JSON.parse(state) : null;
     } catch (error) {
       logger.error('Error getting race state:', error);
-      throw error; // Rethrow to let callers handle the error
+      return memoryStore.races.get(`race:${raceId}`) || null;
     }
   },
 
@@ -103,7 +117,16 @@ const redisOps = {
     try {
       const redis = getRedis();
       if (!redis) {
-        throw new Error('Redis client not initialized');
+        // Fallback: get from memory store
+        let highestRoundId = 0;
+        for (const key of memoryStore.races.keys()) {
+          const raceId = key.replace('race:', '');
+          const roundId = parseInt(raceId);
+          if (!isNaN(roundId) && roundId > highestRoundId) {
+            highestRoundId = roundId;
+          }
+        }
+        return highestRoundId > 0 ? highestRoundId : null;
       }
       
       let cursor = '0';
@@ -129,7 +152,7 @@ const redisOps = {
       return highestRoundId > 0 ? highestRoundId : null;
     } catch (error) {
       logger.error('Error getting highest race round ID:', error);
-      throw error;
+      return null;
     }
   },
 
@@ -138,12 +161,13 @@ const redisOps = {
     try {
       const redis = getRedis();
       if (!redis) {
-        throw new Error('Redis client not initialized');
+        // No-op when Redis is not available
+        return;
       }
       await redis.publish(`race:${raceId}`, JSON.stringify(update));
     } catch (error) {
       logger.error('Error publishing race update:', error);
-      throw error; // Rethrow to let callers handle the error
+      // Don't throw - pub/sub failure shouldn't break the app
     }
   },
 
@@ -151,7 +175,8 @@ const redisOps = {
     try {
       const redis = getRedis();
       if (!redis) {
-        throw new Error('Redis client not initialized');
+        // Return null when Redis is not available
+        return null;
       }
       const subscriber = redis.duplicate();
       

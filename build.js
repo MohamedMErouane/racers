@@ -11,8 +11,23 @@ try {
 
 // Check required environment variables and use defaults if not set
 const PRIVY_APP_ID = process.env.PRIVY_APP_ID;
-const WS_URL = process.env.WS_URL || 'ws://localhost:3001';
-const API_URL = process.env.API_URL || 'http://localhost:3001/api';
+
+// Auto-detect URLs - use APP_URL if WS_URL/API_URL not explicitly set
+const APP_URL = process.env.APP_URL;
+let WS_URL = process.env.WS_URL;
+let API_URL = process.env.API_URL;
+
+// If APP_URL is set, derive WS_URL and API_URL from it
+if (APP_URL && !WS_URL) {
+  WS_URL = APP_URL.replace('https://', 'wss://').replace('http://', 'ws://');
+}
+if (APP_URL && !API_URL) {
+  API_URL = `${APP_URL}/api`;
+}
+
+// Final defaults - use empty string to trigger auto-detection on client side
+WS_URL = WS_URL || '';
+API_URL = API_URL || '/api';
 
 if (!PRIVY_APP_ID) {
   console.error('❌ PRIVY_APP_ID environment variable is required');
@@ -22,7 +37,8 @@ if (!PRIVY_APP_ID) {
 
 console.log('✓ Building with:');
 console.log('  PRIVY_APP_ID:', PRIVY_APP_ID);
-console.log('  WS_URL:', WS_URL);
+console.log('  APP_URL:', APP_URL || '(not set)');
+console.log('  WS_URL:', WS_URL || '(auto-detect)');
 console.log('  API_URL:', API_URL);
 
 // Read the config template file

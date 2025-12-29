@@ -173,9 +173,13 @@ async function initializeServices() {
   try {
     logger.info('🚀 Initializing services...');
     
-    // Initialize Redis
-    await initializeRedis();
-    logger.info('✅ Redis connected');
+    // Initialize Redis (optional - app works without it)
+    const redisClient = await initializeRedis();
+    if (redisClient) {
+      logger.info('✅ Redis connected');
+    } else {
+      logger.warn('⚠️ Running without Redis - some features disabled');
+    }
     
     
     // Initialize Solana
@@ -223,29 +227,36 @@ async function initializeServices() {
       logger.warn('⚠️ Solana transaction listener disabled');
     }
     
-    // Subscribe to race updates for horizontal scaling
-    try {
-      const { redis } = require('./server/db');
-      await redis.subscribeToRace('*', (update, channel) => {
-        // Broadcast race updates to all connected clients
-        // Only emit if this is a race update (not other race events)
-        if (update.racers && update.tick !== undefined) {
-          io.emit('race:update', update);
+    // Subscribe to race updates for horizontal scaling (only if Redis is available)
+    const { isRedisAvailable } = require('./services/redis');
+    if (isRedisAvailable()) {
+      try {
+        const { redis } = require('./server/db');
+        const subscriber = await redis.subscribeToRace('*', (update, channel) => {
+          // Broadcast race updates to all connected clients
+          // Only emit if this is a race update (not other race events)
+          if (update.racers && update.tick !== undefined) {
+            io.emit('race:update', update);
+          }
+        });
+        if (subscriber) {
+          logger.info('✅ Race pub/sub subscription initialized (pattern: race:*)');
         }
-      });
-      logger.info('✅ Race pub/sub subscription initialized (pattern: race:*)');
-    } catch (error) {
-      logger.error('❌ Failed to initialize race pub/sub:', error);
+      } catch (error) {
+        logger.warn('⚠️ Race pub/sub not available:', error.message);
+      }
+    } else {
+      logger.warn('⚠️ Race pub/sub disabled (Redis not available)');
     }
     
     // Check admin configuration
     const adminAddresses = process.env.ADMIN_ADDRESSES;
     if (!adminAddresses || adminAddresses.trim() === '') {
-      logger.error('❌ ADMIN_ADDRESSES environment variable is required but not set');
-      logger.error('Please set ADMIN_ADDRESSES to a comma-separated list of admin wallet addresses');
-      process.exit(1);
+      logger.warn('⚠️ ADMIN_ADDRESSES not set - admin features will be disabled');
+      logger.warn('Set ADMIN_ADDRESSES to enable race control features');
+    } else {
+      logger.info('✅ Admin configuration validated');
     }
-    logger.info('✅ Admin configuration validated');
     
     logger.info('🎉 All services initialized successfully!');
   } catch (error) {
