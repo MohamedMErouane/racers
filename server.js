@@ -65,7 +65,11 @@ function getSolanaRpcOrigin() {
 const connectSrc = [
   "'self'", 
   "https://api.privy.io", 
-  "https://auth.privy.io"
+  "https://auth.privy.io",
+  "https://unpkg.com",
+  "https://cdn.socket.io",
+  "wss://*.ondigitalocean.app",
+  "https://*.ondigitalocean.app"
 ];
 
 // Add WebSocket connections based on environment variables
@@ -79,8 +83,10 @@ function getWebSocketOrigins() {
       origin = origin.trim();
       if (origin.startsWith('http://')) {
         origins.push(origin.replace('http://', 'ws://'));
+        origins.push(origin); // Also add HTTP
       } else if (origin.startsWith('https://')) {
         origins.push(origin.replace('https://', 'wss://'));
+        origins.push(origin); // Also add HTTPS
       }
     });
   }
@@ -103,22 +109,32 @@ if (solanaRpcOrigin) {
   connectSrc.push(solanaRpcOrigin);
 }
 
+// Log CSP configuration for debugging
+console.log('📋 CSP connect-src:', connectSrc.join(', '));
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
       connectSrc: connectSrc,
-      scriptSrc: ["'self'", "https://auth.privy.io", "https://unpkg.com", "https://cdn.socket.io"],
+      scriptSrc: ["'self'", "https://auth.privy.io", "https://unpkg.com", "https://cdn.socket.io", "'unsafe-inline'"],
       styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
+      workerSrc: ["'self'", "blob:"],
     },
   },
 }));
 
-// CORS configuration
+// CORS configuration - allow all origins in production for now
+const corsOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+  : ['http://localhost:3000', 'http://localhost:3001', 'https://racers.fun'];
+
+console.log('📋 CORS origins:', corsOrigins.join(', '));
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000', 'https://racers.fun'],
+  origin: corsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
