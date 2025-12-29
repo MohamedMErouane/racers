@@ -80,16 +80,24 @@ class RacersApp {
     return new Promise((resolve, reject) => {
       try {
         // Socket.IO is already loaded via script tag in index.html
-        this.socket = io();
+        // Force WebSocket transport only - DigitalOcean App Platform doesn't support sticky sessions for polling
+        this.socket = io({
+          transports: ['websocket'],
+          upgrade: false,
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          reconnectionAttempts: 10
+        });
         
         this.socket.on('connect', () => {
-          console.log('✅ Connected to server');
+          console.log('✅ Connected to server via WebSocket');
           resolve();
         });
         
-        this.socket.on('disconnect', () => {
-          console.log('❌ Disconnected from server');
-          this.ui.showNotification('Connection lost', 'error');
+        this.socket.on('disconnect', (reason) => {
+          console.log('❌ Disconnected from server:', reason);
+          this.ui.showNotification('Connection lost - reconnecting...', 'error');
         });
         
         this.socket.on('connect_error', (error) => {

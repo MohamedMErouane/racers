@@ -174,14 +174,18 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api', apiRoutes);
 
-// Initialize Socket.IO
+// Initialize Socket.IO with WebSocket-first configuration for cloud deployments
 const io = socketIo(server, {
   cors: {
     origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000', 'https://racers.fun'],
     methods: ['GET', 'POST'],
     credentials: true
   },
-  transports: ['websocket', 'polling']
+  // WebSocket transport only - DigitalOcean App Platform doesn't support sticky sessions for polling
+  transports: ['websocket'],
+  allowUpgrades: false,
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
 // Initialize services
