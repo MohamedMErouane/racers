@@ -1,3 +1,14 @@
+/* Chat error message style */
+.chat-error {
+    color: #fff;
+    background: #d32f2f;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin: 10px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1em;
+}
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Russo+One&display=swap');
 
 /* Universal anti-scroll rules */

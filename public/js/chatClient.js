@@ -12,26 +12,32 @@ export class ChatClient {
     try {
       const token = this.getToken ? await this.getToken() : null;
       const headers = {};
-      
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
       const response = await fetch('/api/chat', { headers });
-      
       if (!response.ok) {
         if (response.status === 401) {
-          console.log('Chat history requires authentication - will retry after login');
+          this.showChatError('Please connect your wallet to view chat history.');
           return;
         }
+        this.showChatError('Failed to load chat history.');
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
       const messages = await response.json();
       this.messages = messages;
       this.renderChatMessages();
     } catch (error) {
+      this.showChatError('Error fetching chat history.');
       console.error('Error fetching chat history:', error);
+    }
+  }
+
+  // Show error in chat UI
+  showChatError(message) {
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages) {
+      chatMessages.innerHTML = `<div class="chat-error">${message}</div>`;
     }
   }
 
@@ -167,6 +173,12 @@ export class ChatClient {
     if (this.socket) {
       this.socket.on('chat:message', (message) => {
         this.addMessage(message);
+      });
+      this.socket.on('disconnect', () => {
+        this.showChatError('Disconnected from server. Reconnecting...');
+      });
+      this.socket.on('connect', () => {
+        this.fetchChatHistory();
       });
     }
   }

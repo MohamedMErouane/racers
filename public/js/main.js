@@ -53,6 +53,18 @@ class RacersApp {
         this.chatClient.initialize(),
         this.bettingClient.initialize()
       ]);
+
+      // Enable/disable chat input on wallet events
+      const chatInput = document.getElementById('chatInput');
+      if (chatInput) {
+        if (this.walletClient.isAuthenticated) {
+          chatInput.disabled = false;
+          chatInput.placeholder = 'Type your message...';
+        } else {
+          chatInput.disabled = true;
+          chatInput.placeholder = 'Connect wallet to chat...';
+        }
+      }
       
       this.isInitialized = true;
       console.log('✅ Racers.fun initialized successfully!');
@@ -129,6 +141,15 @@ class RacersApp {
         this.toggleChatPanel();
       });
     }
+
+    // Listen for wallet disconnect to disable chat input
+    window.addEventListener('wallet:disconnected', () => {
+      const chatInput = document.getElementById('chatInput');
+      if (chatInput) {
+        chatInput.disabled = true;
+        chatInput.placeholder = 'Connect wallet to chat...';
+      }
+    });
   }
 
   // Handle bet placement
@@ -165,7 +186,12 @@ class RacersApp {
   handleWalletConnected(walletData) {
     this.ui.showNotification('Wallet connected successfully!', 'success');
     
-    // Refresh chat history now that user is authenticated
+    // Enable chat input and refresh chat history now that user is authenticated
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+      chatInput.disabled = false;
+      chatInput.placeholder = 'Type your message...';
+    }
     if (this.chatClient) {
       this.chatClient.fetchChatHistory();
     }

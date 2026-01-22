@@ -21,8 +21,19 @@ export class RaceClient {
   setupEventHandlers() {
     if (!this.socket) return;
 
+
     this.socket.on('race:start', (data) => {
-      this.handleRaceStart(data);
+      // Only start race if status is 'racing'
+      if (data.status === 'racing') {
+        this.handleRaceStart(data);
+      } else if (data.status === 'countdown') {
+        // Optionally handle initial countdown state
+        this.handleRaceCountdown(data);
+      }
+    });
+
+    this.socket.on('race:countdown', (data) => {
+      this.handleRaceCountdown(data);
     });
 
     this.socket.on('race:update', (data) => {
@@ -153,19 +164,62 @@ export class RaceClient {
     }
   }
 
-  // Handle race start
+
+  // Handle race countdown (waiting period for bets)
+  handleRaceCountdown(data) {
+    // Show waiting period for bets
+    const countdown = data.countdown;
+    const roundId = data.roundId;
+    console.log(`⏳ Race countdown: ${countdown}s (Round ${roundId})`);
+
+    // Show race container
+    const raceContainer = document.getElementById('raceContainer');
+    if (raceContainer) {
+      raceContainer.style.display = 'block';
+    }
+
+    // Optionally update displays/UI to show waiting for bets
+    const positionsDisplay = document.getElementById('positionsDisplay');
+    if (positionsDisplay) {
+      positionsDisplay.innerHTML = `<div style="color: #fff; font-size: 18px; font-weight: bold; text-align: center; padding: 20px;">Waiting for bets...<br>Race starts in <span id='raceCountdownValue'>${countdown}</span>s</div>`;
+      positionsDisplay.style.display = 'block';
+    }
+
+    // Start or update countdown timer
+    if (this._countdownInterval) {
+      clearInterval(this._countdownInterval);
+    }
+    let countdownValue = countdown;
+    this._countdownInterval = setInterval(() => {
+      countdownValue--;
+      const countdownElem = document.getElementById('raceCountdownValue');
+      if (countdownElem) {
+        countdownElem.textContent = countdownValue;
+      }
+      if (countdownValue <= 0) {
+        clearInterval(this._countdownInterval);
+      }
+    }, 1000);
+  }
+
+  // Handle race start (actual race begins)
   handleRaceStart(data) {
-    console.log('🏁 Race starting soon...', data);
-    
+    console.log('🏁 Race starting!', data);
+
+    // Clear any countdown interval
+    if (this._countdownInterval) {
+      clearInterval(this._countdownInterval);
+    }
+
     // Load random background for this race
     this.loadRandomBackground();
-    
+
     this.raceState = {
       racers: data.racers || this.generateMockRacers(),
-      isRunning: false, // Don't start immediately
+      isRunning: true,
       positions: {}
     };
-    
+
     // Initialize positions
     this.raceState.racers.forEach((racer, index) => {
       this.raceState.positions[racer.id] = {
@@ -175,18 +229,19 @@ export class RaceClient {
         currentSpeed: 0 // Initialize current speed for display
       };
     });
-    
+
     // Show race container
     const raceContainer = document.getElementById('raceContainer');
     if (raceContainer) {
       raceContainer.style.display = 'block';
     }
-    
+
     // Initialize displays
     this.initializeDisplays();
-    
-    // Start countdown
-    this.showCountdown();
+
+    // Start the race animation
+    this.raceStartTime = Date.now();
+    this.startRaceAnimation();
   }
 
   // Initialize the position and speed displays
@@ -584,146 +639,97 @@ export class RaceClient {
   drawRacers() {
     if (!this.raceState) return;
     
-    const laneWidth = this.canvas.width / 8; // Divide canvas into 8 vertical lanes
-    const raceHeight = this.canvas.height - 60; // Use full height minus small margin
-    const finishLineY = 0; // Characters should cross completely through to the very top edge
-    const startingY = this.canvas.height - 40; // Starting Y position at bottom
-    
-    // Update animation frame counter for switching between frames
+    // Responsive and consistent alignment for any number of racers
+    const numRacers = this.raceState.racers.length;
+    const margin = 40; // Margin from left/right edges
+    const availableWidth = this.canvas.width - margin * 2;
+    const laneSpacing = availableWidth / (numRacers - 1);
+    const startingY = this.canvas.height - 40;
+    const finishY = 40;
     this.animationFrame++;
-    
+
     this.raceState.racers.forEach((racer, index) => {
       const position = this.raceState.positions[racer.id];
       if (!position) return;
-      
-      // Calculate perspective trajectory
       const progress = position.progress; // 0 to 1
-      
-      // Starting position: characters start with more space between them
-      const startingSpread = 500; // Maximum starting formation for excellent spacing
-      const startCenterX = this.canvas.width / 2;
-      const startLaneWidth = startingSpread / this.raceState.racers.length;
-      const startLaneX = startCenterX - (startingSpread / 2) + (index * startLaneWidth) + (startLaneWidth / 2);
-      
-      // Ending position: characters finish very close together at the center
-      const finishCenterX = this.canvas.width / 2;
-      const finishSpread = 40; // Wider finish spread for better visibility
-      const charactersCount = this.raceState.racers.length;
-      const finishLaneWidth = finishSpread / charactersCount;
-      const finishX = finishCenterX - (finishSpread / 2) + (index * finishLaneWidth) + (finishLaneWidth / 2);
-      
-      // Calculate current position with perspective convergence
-      const currentX = startLaneX + (finishX - startLaneX) * Math.min(progress, 1);
-      
-      // Characters move from BOTTOM to TOP of the canvas
-      const finishY = 0; // Top of the canvas
-      const beyondFinishY = -20; // Well past the top (negative = above canvas)
-      
-      let currentY;
-      if (progress <= 0.85) {
-        // Phase 1: Move from start to near the top
-        currentY = startingY - (progress / 0.85) * (startingY - 30);
-      } else if (progress <= 1.0) {
-        // Phase 2: Cross through the top of the canvas
-        const crossProgress = (progress - 0.85) / 0.15;
-        currentY = 30 - crossProgress * (30 - beyondFinishY);
-      } else {
-        // Phase 3: Continue past the top (for races that go beyond 100%)
-        const extraProgress = progress - 1.0;
-        currentY = beyondFinishY - (extraProgress * 40);
-      }
-      
-      // Scale characters smaller so they can run closer together without overlapping
-      const baseCharacterWidth = 70;   // Reduced from 100 for tighter spacing
-      const baseCharacterHeight = 90;  // Reduced from 130 for tighter spacing
-      const scaleFactor = 1.0 - (Math.min(progress, 1) * 0.5); // Less scaling reduction (0.5 instead of 0.6)
+
+      // Evenly space racers horizontally, always centered
+      const startX = margin + index * laneSpacing;
+      const endX = margin + index * laneSpacing;
+      const currentX = startX + (endX - startX) * Math.min(progress, 1);
+
+      // Move from bottom to top
+      const currentY = startingY - (startingY - finishY) * Math.min(progress, 1);
+
+      // Scale for perspective
+      const baseCharacterWidth = 70;
+      const baseCharacterHeight = 90;
+      const scaleFactor = 1.0 - (Math.min(progress, 1) * 0.5);
       const characterWidth = baseCharacterWidth * scaleFactor;
       const characterHeight = baseCharacterHeight * scaleFactor;
-      
-      // Get character frames for animation
+
+      // Animation frames
       const characterFrames = this.characterFrames.get(racer.id);
       let characterImg = null;
-      
       if (characterFrames) {
-        // Animate between frame1 and frame2 for running effect
-        // Switch frames every 10 animation cycles (faster animation for better running effect)
         const frameSwitch = Math.floor(this.animationFrame / 10) % 2;
-        
         if (this.raceState.isRunning) {
-          // ONLY use running frames when race is running - NO FACE IMAGES!
           if (frameSwitch === 0 && characterFrames.frame1) {
             characterImg = characterFrames.frame1;
           } else if (frameSwitch === 1 && characterFrames.frame2) {
             characterImg = characterFrames.frame2;
           } else {
-            // If one frame is missing, use the available running frame
             characterImg = characterFrames.frame1 || characterFrames.frame2;
           }
         } else {
-          // When not running, use frame1 as idle pose (still a running frame, not face)
           characterImg = characterFrames.frame1 || characterFrames.frame2;
         }
       } else {
-        // Fallback to old system only if no frames loaded
         characterImg = this.characterImages.get(racer.id);
       }
-      
-      // Draw character with perspective positioning and scaling
+
+      // Draw character
       if (characterImg && characterImg.complete) {
-        // Add subtle shadow for depth
         this.ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
         this.ctx.shadowBlur = 8 * scaleFactor;
         this.ctx.shadowOffsetX = 2 * scaleFactor;
         this.ctx.shadowOffsetY = 4 * scaleFactor;
-        
-        // Draw character sprite with perspective scaling
         this.ctx.drawImage(
-          characterImg, 
-          currentX - characterWidth/2, 
-          currentY - characterHeight/2, 
-          characterWidth, 
+          characterImg,
+          currentX - characterWidth/2,
+          currentY - characterHeight/2,
+          characterWidth,
           characterHeight
         );
-        
-        // Reset shadow
         this.ctx.shadowColor = 'transparent';
         this.ctx.shadowBlur = 0;
         this.ctx.shadowOffsetX = 0;
         this.ctx.shadowOffsetY = 0;
-        
-        // Add character name below character (also scaled)
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = `bold ${16 * scaleFactor}px Arial`; // Increased from 12
+        this.ctx.font = `bold ${16 * scaleFactor}px Arial`;
         this.ctx.textAlign = 'center';
         this.ctx.strokeStyle = '#000';
         this.ctx.lineWidth = 3 * scaleFactor;
-        this.ctx.strokeText(racer.name, currentX, currentY + characterHeight/2 + 20 * scaleFactor); // Increased spacing
+        this.ctx.strokeText(racer.name, currentX, currentY + characterHeight/2 + 20 * scaleFactor);
         this.ctx.fillText(racer.name, currentX, currentY + characterHeight/2 + 20 * scaleFactor);
-        
       } else {
-        // Fallback: smaller colored circle for tighter spacing
+        // Fallback: colored circle
         this.ctx.fillStyle = racer.color;
         this.ctx.beginPath();
-        this.ctx.arc(currentX, currentY, 18 * scaleFactor, 0, 2 * Math.PI); // Reduced from 25 to 18
+        this.ctx.arc(currentX, currentY, 18 * scaleFactor, 0, 2 * Math.PI);
         this.ctx.fill();
-        
-        // White border
         this.ctx.strokeStyle = '#fff';
-        this.ctx.lineWidth = 2 * scaleFactor; // Reduced from 3 to 2
+        this.ctx.lineWidth = 2 * scaleFactor;
         this.ctx.stroke();
-        
-        // Character initial
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = `bold ${14 * scaleFactor}px Arial`; // Reduced from 18 to 14
+        this.ctx.font = `bold ${14 * scaleFactor}px Arial`;
         this.ctx.textAlign = 'center';
         this.ctx.fillText(racer.name.charAt(0), currentX, currentY + 5 * scaleFactor);
-        
-        // Character name below
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = `bold ${10 * scaleFactor}px Arial`; // Reduced from 12 to 10
+        this.ctx.font = `bold ${10 * scaleFactor}px Arial`;
         this.ctx.strokeStyle = '#000';
-        this.ctx.lineWidth = 2 * scaleFactor; // Reduced from 3 to 2
-        this.ctx.strokeText(racer.name, currentX, currentY + 35 * scaleFactor); // Reduced from 45 to 35
+        this.ctx.lineWidth = 2 * scaleFactor;
+        this.ctx.strokeText(racer.name, currentX, currentY + 35 * scaleFactor);
         this.ctx.fillText(racer.name, currentX, currentY + 35 * scaleFactor);
       }
     });
