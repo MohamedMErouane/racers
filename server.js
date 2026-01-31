@@ -66,10 +66,16 @@ const connectSrc = [
   "'self'", 
   "https://api.privy.io", 
   "https://auth.privy.io",
+  "https://*.privy.io",
+  "wss://*.privy.io",
   "https://unpkg.com",
   "https://cdn.socket.io",
   "wss://*.ondigitalocean.app",
-  "https://*.ondigitalocean.app"
+  "https://*.ondigitalocean.app",
+  "wss://starfish-app-qqr68.ondigitalocean.app",
+  "https://starfish-app-qqr68.ondigitalocean.app",
+  "ws://localhost:3001",
+  "http://localhost:3001"
 ];
 
 // Add WebSocket connections based on environment variables
@@ -117,11 +123,12 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       connectSrc: connectSrc,
-      scriptSrc: ["'self'", "https://auth.privy.io", "https://unpkg.com", "https://cdn.socket.io", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "https://auth.privy.io", "https://*.privy.io", "https://unpkg.com", "https://cdn.socket.io", "'unsafe-inline'", "'unsafe-eval'"],
       styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
       workerSrc: ["'self'", "blob:"],
+      frameSrc: ["'self'", "https://auth.privy.io", "https://*.privy.io"],
     },
   },
 }));

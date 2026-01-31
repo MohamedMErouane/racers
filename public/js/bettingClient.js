@@ -11,42 +11,44 @@ export class BettingClient {
     this.setupSocketListeners();
   }
 
+  // Show 'race in progress' message and disable betting
+  showRaceInProgress() {
+    const bettingPanel = document.querySelector('.betting-panel');
+    const placeBetBtn = document.getElementById('placeBetBtn');
+    let statusMsg = document.getElementById('bettingStatusMsg');
+    if (!statusMsg && bettingPanel) {
+      statusMsg = document.createElement('div');
+      statusMsg.id = 'bettingStatusMsg';
+      statusMsg.style.cssText = 'color: #fff; background: #e53e3e; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 10px; font-weight: bold;';
+      statusMsg.textContent = 'Race in progress! Betting is closed.';
+      bettingPanel.insertBefore(statusMsg, bettingPanel.firstChild);
+    } else if (statusMsg) {
+      statusMsg.textContent = 'Race in progress! Betting is closed.';
+      statusMsg.style.display = 'block';
+    }
+    if (placeBetBtn) placeBetBtn.disabled = true;
+  }
+
+  // Hide 'race in progress' message and enable betting
+  hideRaceInProgress() {
+    const statusMsg = document.getElementById('bettingStatusMsg');
+    const placeBetBtn = document.getElementById('placeBetBtn');
+    if (statusMsg) statusMsg.style.display = 'none';
+    if (placeBetBtn) placeBetBtn.disabled = false;
+  }
+
   // Setup socket event listeners for betting
   setupSocketListeners() {
-        // Listen for race start (racing phase)
-        this.socket.on('race:start', (data) => {
-          if (data.status === 'racing') {
-            this.showRaceInProgress();
-          } else if (data.status === 'countdown') {
-            this.hideRaceInProgress();
-          }
-        });
-      // Show 'race in progress' message and disable betting
-      showRaceInProgress() {
-        const bettingPanel = document.querySelector('.betting-panel');
-        const placeBetBtn = document.getElementById('placeBetBtn');
-        let statusMsg = document.getElementById('bettingStatusMsg');
-        if (!statusMsg && bettingPanel) {
-          statusMsg = document.createElement('div');
-          statusMsg.id = 'bettingStatusMsg';
-          statusMsg.style.cssText = 'color: #fff; background: #e53e3e; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 10px; font-weight: bold;';
-          statusMsg.textContent = 'Race in progress! Betting is closed.';
-          bettingPanel.insertBefore(statusMsg, bettingPanel.firstChild);
-        } else if (statusMsg) {
-          statusMsg.textContent = 'Race in progress! Betting is closed.';
-          statusMsg.style.display = 'block';
-        }
-        if (placeBetBtn) placeBetBtn.disabled = true;
-      }
-
-      // Hide 'race in progress' message and enable betting
-      hideRaceInProgress() {
-        const statusMsg = document.getElementById('bettingStatusMsg');
-        const placeBetBtn = document.getElementById('placeBetBtn');
-        if (statusMsg) statusMsg.style.display = 'none';
-        if (placeBetBtn) placeBetBtn.disabled = false;
-      }
     if (!this.socket) return;
+    
+    // Listen for race start (racing phase)
+    this.socket.on('race:start', (data) => {
+      if (data.status === 'racing') {
+        this.showRaceInProgress();
+      } else if (data.status === 'countdown') {
+        this.hideRaceInProgress();
+      }
+    });
     
     // Listen for winning notifications
     this.socket.on('bet:win', (data) => {
