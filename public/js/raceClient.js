@@ -639,11 +639,9 @@ export class RaceClient {
   drawRacers() {
     if (!this.raceState) return;
     
-    // Responsive and consistent alignment for any number of racers
-    const numRacers = this.raceState.racers.length;
-    const margin = 40; // Margin from left/right edges
-    const availableWidth = this.canvas.width - margin * 2;
-    const laneSpacing = availableWidth / (numRacers - 1);
+    // Align racers to the center of each lane
+    const numLanes = 8;
+    const laneWidth = this.canvas.width / numLanes;
     const startingY = this.canvas.height - 40;
     const finishY = 40;
     this.animationFrame++;
@@ -653,10 +651,21 @@ export class RaceClient {
       if (!position) return;
       const progress = position.progress; // 0 to 1
 
-      // Evenly space racers horizontally, always centered
-      const startX = margin + index * laneSpacing;
-      const endX = margin + index * laneSpacing;
-      const currentX = startX + (endX - startX) * Math.min(progress, 1);
+      // Place racers at the center of lanes 1-7 (for 8 lanes), avoiding borders
+      // laneCenterX = laneWidth * (index + 1) - laneWidth / 2
+      // This ensures index 0 is lane 1, index 7 is lane 8, but with margin
+      // Place racers perfectly centered in each lane
+      // Use a virtual lane count to reduce spacing
+      const numLanes = 16; // Maximum tightness for racer grouping
+      const laneWidth = this.canvas.width / numLanes;
+      const numRacers = this.raceState.racers.length;
+      // Center the group if fewer racers than lanes
+      const laneStart = Math.floor((numLanes - numRacers) / 2);
+      const laneCenterX = laneWidth * (laneStart + index + 0.5);
+      // Compress X positions toward center as progress increases (tighter at finish)
+      const centerX = this.canvas.width / 2;
+      const compressFactor = 0.5; // 0 = no compress, 1 = all at center at finish
+      const currentX = laneCenterX + (centerX - laneCenterX) * compressFactor * Math.min(progress, 1);
 
       // Move from bottom to top
       const currentY = startingY - (startingY - finishY) * Math.min(progress, 1);
