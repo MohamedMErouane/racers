@@ -807,18 +807,26 @@ export class RaceClient {
       this.animationId = null;
     }
     
-    // Show winner
-    if (this.raceState) {
-      const winner = [...this.raceState.racers].sort((a, b) => {
+    // Use server's authoritative winner if provided (provably fair)
+    let winner = null;
+    
+    if (data && data.winner) {
+      // Server provided the winner - use this for provably fair results
+      winner = data.winner;
+      console.log('🎯 Using server authoritative winner:', winner.name);
+    } else if (this.raceState) {
+      // Fallback to local calculation only if no server data
+      winner = [...this.raceState.racers].sort((a, b) => {
         return this.raceState.positions[b.id].progress - this.raceState.positions[a.id].progress;
       })[0];
-      
-      if (winner) {
-        // Add a small delay to ensure race animation completes
-        setTimeout(() => {
-          this.showWinner(winner);
-        }, 500);
-      }
+      console.log('⚠️ Using local winner (no server data):', winner?.name);
+    }
+    
+    if (winner) {
+      // Add a small delay to ensure race animation completes
+      setTimeout(() => {
+        this.showWinner(winner);
+      }, 500);
     }
   }
 

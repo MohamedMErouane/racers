@@ -346,14 +346,29 @@ async function updateRace() {
   const trackLength = 1000;
   const progress = timeElapsed / RACE_DURATION_MS;
   
+  // Normalize base speed - all racers have equal base chance
+  // Stats now only provide minor flavor differences
+  const baseSpeed = 4.5; // Equal base speed for all racers
+  
   raceState.racers.forEach((racer) => {
     if (!racer.finished) {
       // Use deterministic randomness based on seed, tick, and stable racer ID
       const randomValue = deterministicRandom(raceState.seed, raceState.tick, racer.id);
-      const randomFactor = 0.8 + randomValue * 0.4; // 0.8 to 1.2
-      const acceleration = racer.acceleration * progress;
       
-      racer.currentSpeed = racer.speed * randomFactor + acceleration;
+      // Much larger random factor range (0.3 to 1.7) for true unpredictability
+      const randomFactor = 0.3 + randomValue * 1.4;
+      
+      // Secondary random event for boost/stumble (changes every ~30 ticks)
+      const eventTick = Math.floor(raceState.tick / 30);
+      const eventRandom = deterministicRandom(raceState.seed, eventTick, racer.id + 1000);
+      const eventBoost = eventRandom > 0.7 ? 1.3 : (eventRandom < 0.3 ? 0.7 : 1.0);
+      
+      // Small stat influence (±5% max) - cosmetic difference only
+      const statInfluence = 0.95 + (racer.speed / 48); // Normalized so max speed gives ~1.05
+      
+      const acceleration = racer.acceleration * progress * 0.5; // Reduced acceleration impact
+      
+      racer.currentSpeed = baseSpeed * randomFactor * eventBoost * statInfluence + acceleration;
       racer.x = Math.min(trackLength, racer.x + racer.currentSpeed);
       
       // Check if racer finished
@@ -401,6 +416,18 @@ async function updateRace() {
       roundId: raceState.roundId,
       status: raceState.status
     });
+    
+    // Emit race:update to clients at ~10Hz (every 6 ticks) for visual sync
+    if (io && raceState.tick % 6 === 0) {
+      io.emit('race:update', {
+        racers: raceState.racers,
+        timeElapsed,
+        timeRemaining,
+        tick: raceState.tick,
+        roundId: raceState.roundId,
+        status: raceState.status
+      });
+    }
   } catch (error) {
     logger.error('Error storing/publishing race state:', error);
   }
